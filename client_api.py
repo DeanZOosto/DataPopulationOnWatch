@@ -530,16 +530,31 @@ class ClientApi:
                 raise ValueError(f"Could not extract upload UUID from prepare response: {prepare_result}")
             
             # Step 2: Upload file
+            # Read file content to ensure it's properly sent
             with open(logo_path, 'rb') as f:
-                files = {"files": (filename, f, content_type)}
-                response = self.session.post(
-                    f"{self.url}/upload/static-files/{upload_uuid}",
-                    headers=self.headers,
-                    files=files
-                )
-                response.raise_for_status()
+                file_content = f.read()
+            
+            # The API expects "files" as the field name (confirmed via testing)
+            files = {
+                "files": (filename, file_content, content_type)
+            }
+            # Remove Content-Type from headers to let requests set it automatically for multipart/form-data
+            upload_headers = {k: v for k, v in self.headers.items() if k.lower() != 'content-type'}
+            
+            response = self.session.post(
+                f"{self.url}/upload/static-files/{upload_uuid}",
+                headers=upload_headers,
+                files=files
+            )
+            response.raise_for_status()
+            result = response.json()
+            # Log the upload result for verification
+            if isinstance(result, list) and len(result) > 0:
+                upload_info = result[0]
+                logger.info(f"Uploaded {folder_name} logo: {filename} -> {upload_info.get('location', 'N/A')}")
+            else:
                 logger.info(f"Uploaded {folder_name} logo: {filename}")
-                return response
+            return response
         except FileNotFoundError:
             logger.error(f"Logo file not found: {logo_path}")
             raise
