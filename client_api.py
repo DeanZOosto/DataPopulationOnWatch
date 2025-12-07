@@ -549,11 +549,43 @@ class ClientApi:
             response.raise_for_status()
             result = response.json()
             # Log the upload result for verification
+            upload_info = None
+            file_location = None
             if isinstance(result, list) and len(result) > 0:
                 upload_info = result[0]
-                logger.info(f"Uploaded {folder_name} logo: {filename} -> {upload_info.get('location', 'N/A')}")
+                file_location = upload_info.get('location', '')
+                logger.info(f"Uploaded {folder_name} logo: {filename} -> {file_location}")
             else:
                 logger.info(f"Uploaded {folder_name} logo: {filename}")
+            
+            # After file upload, call GraphQL mutation to register the logo
+            if file_location:
+                try:
+                    # Map folder names to whiteLabel field names
+                    logo_field_map = {
+                        "company": "companyLogo",
+                        "sidebar": "sidebarLogo",
+                        "favicon": "favicon"
+                    }
+                    
+                    logo_field = logo_field_map.get(folder_name)
+                    if logo_field:
+                        # Get current whiteLabel settings first to preserve productName
+                        current_settings = self._get_current_white_label_settings()
+                        
+                        # Update the specific logo field
+                        white_label_update = current_settings.copy() if current_settings else {}
+                        white_label_update[logo_field] = f"/storage/{file_location}"
+                        
+                        # Call GraphQL mutation to update white label settings
+                        self._update_white_label(white_label_update)
+                        logger.info(f"✓ Registered {folder_name} logo via GraphQL")
+                    else:
+                        logger.warning(f"Unknown folder name: {folder_name}, skipping GraphQL update")
+                except Exception as e:
+                    logger.warning(f"Could not register {folder_name} logo via GraphQL: {e}")
+                    logger.warning("Logo file uploaded but may not appear in UI until registered")
+            
             return response
         except FileNotFoundError:
             logger.error(f"Logo file not found: {logo_path}")
@@ -566,4 +598,100 @@ class ClientApi:
                 logger.error(f"Response body: {e.response.text}")
             else:
                 logger.error(f"Failed to upload {folder_name} logo: {e}")
+            raise
+    
+    def _get_current_white_label_settings(self):
+        """
+        Get current white label settings to preserve existing values.
+        Returns dict with whiteLabel fields or None if not available.
+        """
+        try:
+            graphql_url = f"{self.url}/graphql"
+            query = """
+            query {
+              settings {
+                whiteLabel {
+                  productName
+                  companyLogo
+                  sidebarLogo
+                  favicon
+                }
+              }
+            }
+            """
+            payload = {
+                "query": query
+            }
+            
+            response = self.session.post(
+                graphql_url,
+                headers=self.headers,
+                json=payload
+            )
+            response.raise_for_status()
+            
+            result = response.json()
+            if 'errors' in result:
+                logger.warning(f"Could not get current white label settings: {result['errors']}")
+                return None
+            
+            if 'data' in result and 'settings' in result['data']:
+                return result['data']['settings'].get('whiteLabel', {})
+            
+            return None
+        except Exception as e:
+            logger.warning(f"Could not get current white label settings: {e}")
+            return None
+    
+    def _update_white_label(self, white_label_updates):
+        """
+        Update white label settings via GraphQL mutation.
+        
+        Args:
+            white_label_updates: Dict with whiteLabel fields to update
+                e.g., {"productName": "...", "favicon": "...", "companyLogo": "...", "sidebarLogo": "..."}
+        """
+        try:
+            graphql_url = f"{self.url}/graphql"
+            
+            # GraphQL mutation - matches what the browser sends
+            mutation = """
+            mutation updateWhiteLabel($applicationSettings: ApplicationSettingsInput) {
+              updateSettings(applicationSettings: $applicationSettings) {
+                defaultLanguage
+                whiteLabel {
+                  productName
+                  companyLogo
+                  sidebarLogo
+                  favicon
+                }
+              }
+            }
+            """
+            
+            payload = {
+                "operationName": "updateWhiteLabel",
+                "variables": {
+                    "applicationSettings": {
+                        "whiteLabel": white_label_updates
+                    }
+                },
+                "query": mutation
+            }
+            
+            response = self.session.post(
+                graphql_url,
+                headers=self.headers,
+                json=payload
+            )
+            response.raise_for_status()
+            
+            result = response.json()
+            if 'errors' in result:
+                logger.error(f"GraphQL errors for updateWhiteLabel: {result['errors']}")
+                raise Exception(f"GraphQL error: {result['errors']}")
+            
+            return result
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Failed to update white label settings: {e}")
             raise
