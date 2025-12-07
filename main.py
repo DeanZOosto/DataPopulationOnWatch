@@ -116,7 +116,8 @@ class OnWatchAutomation:
                         logger.warning(f"Could not create acknowledge action: {e}")
                         logger.warning("Continuing with other settings...")
             
-            # Handle logo uploads (use "me.jpg" from Yonatan subject in watch_list)
+            # Handle logo uploads
+            # Use "me.jpg" from Yonatan subject for company and sidebar logos
             watch_list = self.config.get('watch_list', {}).get('subjects', [])
             logo_path = None
             for subject in watch_list:
@@ -134,8 +135,8 @@ class OnWatchAutomation:
                     if logo_path:
                         break
             
+            # Upload company and sidebar logos (use me.jpg)
             if logo_path and os.path.exists(logo_path):
-                # Upload company and sidebar logos (can use jpg)
                 for logo_type in ["company", "sidebar"]:
                     try:
                         self.client_api.upload_logo(logo_path, logo_type)
@@ -143,20 +144,22 @@ class OnWatchAutomation:
                     except Exception as e:
                         logger.warning(f"Could not upload {logo_type} logo: {e}")
                         logger.warning("Continuing with other settings...")
-                
-                # Favicon requires .ico file, skip if not .ico
-                if logo_path.lower().endswith('.ico'):
-                    try:
-                        self.client_api.upload_logo(logo_path, "favicon")
-                        logger.info("✓ Uploaded favicon logo")
-                    except Exception as e:
-                        logger.warning(f"Could not upload favicon logo: {e}")
-                else:
-                    logger.warning(f"Skipping favicon upload: requires .ico file, but got {os.path.splitext(logo_path)[1]}")
             elif logo_path:
                 logger.warning(f"Logo image not found: {logo_path}")
             else:
                 logger.warning("Could not find 'me.jpg' image from Yonatan subject in watch_list")
+            
+            # Upload favicon (use favicon.ico from images directory)
+            config_dir = os.path.dirname(os.path.abspath(self.config_path))
+            favicon_path = os.path.join(config_dir, "images", "favicon.ico")
+            if os.path.exists(favicon_path):
+                try:
+                    self.client_api.upload_logo(favicon_path, "favicon")
+                    logger.info("✓ Uploaded favicon logo")
+                except Exception as e:
+                    logger.warning(f"Could not upload favicon logo: {e}")
+            else:
+                logger.warning(f"Favicon not found at {favicon_path}")
                 
         except Exception as e:
             logger.error(f"Failed to configure system settings via API: {e}")
