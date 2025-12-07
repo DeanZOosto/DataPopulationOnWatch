@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Main automation script for populating OnWatch system with data.
-This script orchestrates all automation tasks: API calls, UI automation, and Rancher configuration.
+This script orchestrates automation tasks via REST API, GraphQL API, and Rancher configuration.
 """
 import asyncio
 import yaml
@@ -10,7 +10,6 @@ import sys
 import logging
 from pathlib import Path
 from client_api import ClientApi
-from ui_automation import OnWatchUIAutomation
 from rancher_automation import RancherAutomation
 
 logging.basicConfig(
@@ -33,7 +32,6 @@ class OnWatchAutomation:
         self.config_path = config_path
         self.config = self.load_config()
         self.client_api = None
-        self.ui_automation = None
         self.rancher_automation = None
     
     def load_config(self):
@@ -62,7 +60,7 @@ class OnWatchAutomation:
         logger.info("API client initialized and logged in")
     
     async def set_kv_parameters(self):
-        """Set KV parameters via API or UI."""
+        """Set KV parameters via API."""
         kv_params = self.config.get('kv_parameters', {})
         if not kv_params:
             logger.info("No KV parameters to set")
@@ -70,25 +68,17 @@ class OnWatchAutomation:
         
         logger.info("Setting KV parameters...")
         
-        # Try API first - initialize client if needed
+        # Initialize client if needed
         if not self.client_api:
             self.initialize_api_client()
         
-        try:
-            for key, value in kv_params.items():
+        for key, value in kv_params.items():
+            try:
                 self.client_api.set_kv_parameter(key, value)
-                logger.info(f"Set KV parameter via API: {key} = {value}")
-        except Exception as e:
-            logger.warning(f"Failed to set KV parameters via API: {e}")
-            logger.info("Trying UI automation for KV parameters...")
-            # Fallback to UI
-            async with OnWatchUIAutomation(
-                base_url=self.config['onwatch'].get('base_url', f"https://{self.config['onwatch']['ip_address']}"),
-                username=self.config['onwatch']['username'],
-                password=self.config['onwatch']['password'],
-                headless=True  # Run in headless mode for automation
-            ) as ui:
-                await ui.set_kv_parameters(kv_params)
+                logger.info(f"✓ Set KV parameter: {key} = {value}")
+            except Exception as e:
+                logger.error(f"Failed to set KV parameter {key}: {e}")
+                raise
     
     async def configure_system_settings(self):
         """Configure system settings via API."""
@@ -150,21 +140,12 @@ class OnWatchAutomation:
             raise
     
     async def configure_devices(self):
-        """Configure devices/cameras via UI."""
+        """Configure devices/cameras - API not yet available."""
         devices = self.config.get('devices', [])
         if not devices:
             logger.info("No devices to configure")
             return
-        
-        logger.info(f"Configuring {len(devices)} devices...")
-        async with OnWatchUIAutomation(
-            base_url=self.config['onwatch'].get('base_url', f"https://{self.config['onwatch']['ip_address']}"),
-            username=self.config['onwatch']['username'],
-            password=self.config['onwatch']['password'],
-            headless=False
-        ) as ui:
-            for device in devices:
-                await ui.configure_device(device)
+        logger.warning(f"Devices configuration requires API endpoint - not yet implemented ({len(devices)} devices skipped)")
     
     def populate_watch_list(self):
         """Populate watch list with subjects via API."""
@@ -285,73 +266,37 @@ class OnWatchAutomation:
                 logger.error(f"Error adding subject {subject_name}: {e}", exc_info=True)
     
     async def configure_groups(self):
-        """Configure groups and profiles via UI."""
+        """Configure groups and profiles - API not yet available."""
         groups = self.config.get('groups', {})
         if not groups:
             logger.info("No groups to configure")
             return
-        
-        logger.info("Configuring groups and profiles...")
-        async with OnWatchUIAutomation(
-            base_url=self.config['onwatch'].get('base_url', f"https://{self.config['onwatch']['ip_address']}"),
-            username=self.config['onwatch']['username'],
-            password=self.config['onwatch']['password'],
-            headless=self.config.get('headless', False)
-        ) as ui:
-            await ui.configure_groups(groups)
+        logger.warning("Groups configuration requires API endpoint - not yet implemented")
     
     async def configure_accounts(self):
-        """Configure user accounts and groups via UI."""
+        """Configure user accounts - API not yet available."""
         accounts = self.config.get('accounts', {})
         if not accounts:
             logger.info("No accounts to configure")
             return
-        
-        logger.info("Configuring accounts...")
-        async with OnWatchUIAutomation(
-            base_url=self.config['onwatch'].get('base_url', f"https://{self.config['onwatch']['ip_address']}"),
-            username=self.config['onwatch']['username'],
-            password=self.config['onwatch']['password'],
-            headless=self.config.get('headless', False)
-        ) as ui:
-            await ui.configure_accounts(accounts)
+        logger.warning("Accounts configuration requires API endpoint - not yet implemented")
     
     async def configure_inquiries(self):
-        """Configure inquiries via UI."""
+        """Configure inquiries - API not yet available."""
         inquiries = self.config.get('inquiries', [])
         if not inquiries:
             logger.info("No inquiries to configure")
             return
-        
-        logger.info(f"Configuring {len(inquiries)} inquiries...")
-        async with OnWatchUIAutomation(
-            base_url=self.config['onwatch'].get('base_url', f"https://{self.config['onwatch']['ip_address']}"),
-            username=self.config['onwatch']['username'],
-            password=self.config['onwatch']['password'],
-            headless=self.config.get('headless', False)
-        ) as ui:
-            await ui.configure_inquiries(inquiries)
+        logger.warning(f"Inquiries configuration requires API endpoint - not yet implemented ({len(inquiries)} inquiries skipped)")
     
     async def configure_mass_import(self):
-        """Upload mass import via UI."""
+        """Upload mass import - API not yet available."""
         mass_import = self.config.get('mass_import', {})
         file_path = mass_import.get('file_path')
         if not file_path:
             logger.info("No mass import file specified")
             return
-        
-        if not os.path.exists(file_path):
-            logger.error(f"Mass import file not found: {file_path}")
-            return
-        
-        logger.info(f"Uploading mass import: {file_path}")
-        async with OnWatchUIAutomation(
-            base_url=self.config['onwatch'].get('base_url', f"https://{self.config['onwatch']['ip_address']}"),
-            username=self.config['onwatch']['username'],
-            password=self.config['onwatch']['password'],
-            headless=self.config.get('headless', False)
-        ) as ui:
-            await ui.upload_mass_import(file_path)
+        logger.warning(f"Mass import upload requires API endpoint - not yet implemented (file: {file_path})")
     
     async def configure_rancher(self):
         """Configure Rancher environment variables."""
@@ -371,20 +316,8 @@ class OnWatchAutomation:
             await rancher.set_environment_variables(env_vars)
     
     async def upload_files(self):
-        """Upload files (translation files, icons, etc.) via UI."""
-        file_uploads = self.config.get('file_uploads', {})
-        if not file_uploads or (not file_uploads.get('translation_file') and not file_uploads.get('icons')):
-            logger.info("No files to upload")
-            return
-        
-        logger.info("Uploading files...")
-        async with OnWatchUIAutomation(
-            base_url=self.config['onwatch'].get('base_url', f"https://{self.config['onwatch']['ip_address']}"),
-            username=self.config['onwatch']['username'],
-            password=self.config['onwatch']['password'],
-            headless=self.config.get('headless', False)
-        ) as ui:
-            await ui.upload_files(file_uploads)
+        """Upload files - API not yet available."""
+        logger.warning("File uploads require API endpoint - not yet implemented")
     
     async def run(self):
         """Run the complete automation process."""
@@ -458,11 +391,6 @@ def main():
         help='Path to configuration YAML file (default: config.yaml)'
     )
     parser.add_argument(
-        '--headless',
-        action='store_true',
-        help='Run browser in headless mode'
-    )
-    parser.add_argument(
         '--step',
         type=int,
         help='Run only a specific step (1-11)'
@@ -471,8 +399,6 @@ def main():
     args = parser.parse_args()
     
     automation = OnWatchAutomation(config_path=args.config)
-    if args.headless:
-        automation.config['headless'] = True
     
     if args.step:
         # Steps that need API client initialized first

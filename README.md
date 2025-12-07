@@ -11,9 +11,15 @@ Automated data population script for OnWatch on-premise software. This tool auto
 - **Logo Uploads**: Company, sidebar, and favicon logos (two-step upload process)
 - **Watch List**: Add subjects with multiple images via API
 
-### 🚧 Partially Implemented
-- **System Settings UI Automation**: Available as fallback if API fails
-- **Groups, Accounts, Devices, Inquiries, Mass Import**: UI automation methods exist but need API endpoints
+### 🚧 Not Yet Implemented (Requires API Endpoints)
+- **Groups Configuration** (Step 4): Waiting for API endpoint
+- **Accounts Configuration** (Step 5): Waiting for API endpoint
+- **Devices/Cameras Configuration** (Step 7): Waiting for API endpoint
+- **Inquiries Configuration** (Step 8): Waiting for API endpoint
+- **Mass Import Upload** (Step 9): Waiting for API endpoint
+- **File Uploads** (Step 11): Waiting for API endpoint
+
+**Note**: This project uses **API-only approach**. UI automation has been removed. Once API endpoints are available, those steps will be implemented.
 
 ### 📋 Future Enhancements
 - **Translation File Upload**: Currently requires manual bash script upload to service
@@ -23,9 +29,8 @@ Automated data population script for OnWatch on-premise software. This tool auto
 ## Prerequisites
 
 - Python 3.9 or higher
-- Chrome browser installed on macOS
 - Access to OnWatch system
-- Access to Rancher UI
+- Access to Rancher UI (for Step 10 - when implemented)
 
 ## Installation
 
@@ -37,11 +42,6 @@ cd /Users/deanzion/Work/DataPopulationOnWatch
 2. Install Python dependencies:
 ```bash
 pip install -r requirements.txt
-```
-
-3. Install Playwright browsers:
-```bash
-playwright install chromium
 ```
 
 ## Configuration
@@ -75,21 +75,15 @@ Edit the `config.yaml` file with your settings:
 
 Run the automation script:
 ```bash
-python main.py
+python3 main.py
 ```
 
 ### With Custom Config File
 
 ```bash
-python main.py --config my-config.yaml
+python3 main.py --config my-config.yaml
 ```
 
-### Headless Mode
-
-Run browser automation in headless mode (no visible browser):
-```bash
-python main.py --headless
-```
 
 ## Configuration File Structure
 
@@ -106,20 +100,17 @@ The `config.yaml` file contains all settings organized in sections:
 
 ## How It Works
 
-The automation primarily uses **REST API** and **GraphQL** for fast, reliable configuration:
+The automation uses **API-only approach**:
 
 1. **REST API** (via `ClientApi`): 
-   - Watch list population
-   - System settings (PATCH `/bt/api/settings`)
-   - Acknowledge actions
-   - Logo uploads
+   - Watch list population (Step 6)
+   - System settings (PATCH `/bt/api/settings`) (Step 3)
+   - Acknowledge actions (Step 3)
+   - Logo uploads (Step 3)
 2. **GraphQL API**: 
-   - KV parameters (mutation `updateSingleSetting`)
-3. **Browser Automation** (via Playwright): 
-   - Fallback for operations without API endpoints
-   - Available for future UI-based configurations
-4. **Rancher Automation**: 
-   - For setting Kubernetes pod environment variables (when implemented)
+   - KV parameters (mutation `updateSingleSetting`) (Step 2)
+3. **Rancher Automation**: 
+   - For setting Kubernetes pod environment variables (Step 10 - when implemented)
 
 ## Customization
 
@@ -130,13 +121,6 @@ If your OnWatch API endpoints differ from the defaults, update them in `client_a
 - Subject creation endpoint
 - Face extraction endpoint
 - Groups endpoint
-
-### UI Selectors
-
-The UI automation uses CSS selectors to find elements. If your UI structure differs, update selectors in `ui_automation.py`:
-- Login form selectors
-- Settings page selectors
-- Device configuration selectors
 
 ### Rancher UI
 
@@ -149,13 +133,6 @@ Rancher UI structure may vary by version. Update selectors in `rancher_automatio
 - Verify IP address and credentials in `config.yaml`
 - Check network connectivity to OnWatch system
 - Ensure SSL certificate issues are handled (script disables SSL verification)
-
-### UI Automation Issues
-
-- Run without `--headless` flag to see what's happening
-- Check browser console for errors
-- Verify UI selectors match your OnWatch version
-- Adjust timeouts in `ui_automation.py` if pages load slowly
 
 ### API Issues
 
@@ -178,15 +155,14 @@ The script provides detailed logging:
 
 Logs are printed to console. To save logs to file:
 ```bash
-python main.py 2>&1 | tee automation.log
+python3 main.py 2>&1 | tee automation.log
 ```
 
 ## Notes
 
 - The script disables SSL verification for self-signed certificates
-- Browser automation runs in visible mode by default for debugging
-- Some UI selectors may need adjustment based on your OnWatch version
-- File upload functionality may need implementation based on your UI structure
+- All automation is done via API calls (REST and GraphQL)
+- Steps without API endpoints will log warnings and skip configuration
 
 ## Support
 
@@ -200,16 +176,26 @@ For issues or questions:
 
 1. Install fresh OnWatch system
 2. Update `config.yaml` with your settings and image paths
-3. Run `python main.py`
+3. Run `python3 main.py`
 4. Monitor console output for progress
 5. Verify settings in OnWatch UI after completion
 
 ## Current Status
 
-### Working Features
-- ✅ KV Parameters (Step 2) - GraphQL API
-- ✅ System Settings (Step 3) - REST API with acknowledge actions and logo uploads
-- ✅ Watch List (Step 6) - REST API with multiple images per subject
+### ✅ Working Features (API-Based)
+- **KV Parameters (Step 2)**: GraphQL API mutation
+- **System Settings (Step 3)**: REST API with acknowledge actions and logo uploads
+- **Watch List (Step 6)**: REST API with multiple images per subject
+
+### 🚧 Steps Waiting for API Endpoints
+- **Groups (Step 4)**: Will log warning and skip
+- **Accounts (Step 5)**: Will log warning and skip
+- **Devices (Step 7)**: Will log warning and skip
+- **Inquiries (Step 8)**: Will log warning and skip
+- **Mass Import (Step 9)**: Will log warning and skip
+- **File Uploads (Step 11)**: Will log warning and skip
+
+**Note**: These steps will be implemented once API endpoints are available.
 
 ### Configuration Notes
 - **Privacy/GDPR Settings**: `privacyMode` and `gdprMode` are intentionally NOT modified

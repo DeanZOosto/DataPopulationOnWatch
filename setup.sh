@@ -12,9 +12,9 @@ echo "Python version: $python_version"
 echo "Installing Python dependencies..."
 pip3 install -r requirements.txt
 
-# Install Playwright browsers
-echo "Installing Playwright browsers..."
-playwright install chromium
+# Note: Playwright is only needed for Rancher automation (Step 10)
+# If you're using Rancher automation, install Playwright browsers:
+# playwright install chromium
 
 echo ""
 echo "Setup complete!"
