@@ -445,13 +445,19 @@ class ClientApi:
             response = self.session.patch(
                 f"{self.url}/acknowledge-actions/action-enforcement",
                 headers=self.headers,
-                json={"enabled": enabled}
+                json={"isEnabled": enabled}
             )
             response.raise_for_status()
             logger.info(f"Set acknowledge actions enabled: {enabled}")
             return response
         except requests.exceptions.RequestException as e:
-            logger.error(f"Failed to set acknowledge actions enabled: {e}")
+            # Log the response body for debugging
+            if hasattr(e, 'response') and e.response is not None:
+                logger.error(f"Failed to set acknowledge actions enabled: {e}")
+                logger.error(f"Response status: {e.response.status_code}")
+                logger.error(f"Response body: {e.response.text}")
+            else:
+                logger.error(f"Failed to set acknowledge actions enabled: {e}")
             raise
     
     def create_acknowledge_action(self, title, description=""):
@@ -465,9 +471,7 @@ class ClientApi:
         try:
             payload = {
                 "title": title,
-                "description": description,
-                "isEnabled": True,
-                "autoAck": False
+                "description": description
             }
             response = self.session.post(
                 f"{self.url}/acknowledge-actions",
@@ -479,7 +483,13 @@ class ClientApi:
             logger.info(f"Created acknowledge action: {title} (id: {result.get('id')})")
             return result
         except requests.exceptions.RequestException as e:
-            logger.error(f"Failed to create acknowledge action: {e}")
+            # Log the response body for debugging
+            if hasattr(e, 'response') and e.response is not None:
+                logger.error(f"Failed to create acknowledge action: {e}")
+                logger.error(f"Response status: {e.response.status_code}")
+                logger.error(f"Response body: {e.response.text}")
+            else:
+                logger.error(f"Failed to create acknowledge action: {e}")
             raise
     
     def upload_logo(self, logo_path, folder_name):
@@ -534,5 +544,11 @@ class ClientApi:
             logger.error(f"Logo file not found: {logo_path}")
             raise
         except requests.exceptions.RequestException as e:
-            logger.error(f"Failed to upload {folder_name} logo: {e}")
+            # Log the response body for debugging
+            if hasattr(e, 'response') and e.response is not None:
+                logger.error(f"Failed to upload {folder_name} logo: {e}")
+                logger.error(f"Response status: {e.response.status_code}")
+                logger.error(f"Response body: {e.response.text}")
+            else:
+                logger.error(f"Failed to upload {folder_name} logo: {e}")
             raise

@@ -101,12 +101,20 @@ class OnWatchAutomation:
             if 'map' in system_settings:
                 map_settings = system_settings['map']
                 if 'acknowledge' in map_settings and map_settings['acknowledge']:
-                    self.client_api.enable_acknowledge_actions(True)
-                    logger.info("✓ Acknowledge actions enabled")
+                    try:
+                        self.client_api.enable_acknowledge_actions(True)
+                        logger.info("✓ Acknowledge actions enabled")
+                    except Exception as e:
+                        logger.warning(f"Could not enable acknowledge actions: {e}")
+                        logger.warning("Continuing with other settings...")
                 
                 if 'action_title' in map_settings and map_settings['action_title']:
-                    self.client_api.create_acknowledge_action(map_settings['action_title'], description="")
-                    logger.info(f"✓ Created acknowledge action: {map_settings['action_title']}")
+                    try:
+                        self.client_api.create_acknowledge_action(map_settings['action_title'], description="")
+                        logger.info(f"✓ Created acknowledge action: {map_settings['action_title']}")
+                    except Exception as e:
+                        logger.warning(f"Could not create acknowledge action: {e}")
+                        logger.warning("Continuing with other settings...")
             
             # Handle logo uploads (use "me.jpg" from Yonatan subject in watch_list)
             watch_list = self.config.get('watch_list', {}).get('subjects', [])
@@ -127,9 +135,24 @@ class OnWatchAutomation:
                         break
             
             if logo_path and os.path.exists(logo_path):
-                for logo_type in ["company", "sidebar", "favicon"]:
-                    self.client_api.upload_logo(logo_path, logo_type)
-                    logger.info(f"✓ Uploaded {logo_type} logo")
+                # Upload company and sidebar logos (can use jpg)
+                for logo_type in ["company", "sidebar"]:
+                    try:
+                        self.client_api.upload_logo(logo_path, logo_type)
+                        logger.info(f"✓ Uploaded {logo_type} logo")
+                    except Exception as e:
+                        logger.warning(f"Could not upload {logo_type} logo: {e}")
+                        logger.warning("Continuing with other settings...")
+                
+                # Favicon requires .ico file, skip if not .ico
+                if logo_path.lower().endswith('.ico'):
+                    try:
+                        self.client_api.upload_logo(logo_path, "favicon")
+                        logger.info("✓ Uploaded favicon logo")
+                    except Exception as e:
+                        logger.warning(f"Could not upload favicon logo: {e}")
+                else:
+                    logger.warning(f"Skipping favicon upload: requires .ico file, but got {os.path.splitext(logo_path)[1]}")
             elif logo_path:
                 logger.warning(f"Logo image not found: {logo_path}")
             else:
