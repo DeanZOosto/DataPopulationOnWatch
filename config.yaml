@@ -1,0 +1,264 @@
+# OnWatch Automation Configuration
+# Complete baseline data from machine 10.1.71.14
+
+onwatch:
+  ip_address: "10.1.71.14"
+  username: "Administrator"
+  password: "pa$$word!"
+  base_url: "https://10.1.71.14"
+
+rancher:
+  ip_address: "10.1.71.14"
+  port: 9443
+  username: "admin"
+  password: "admin"
+  base_url: "https://10.1.71.14:9443"
+
+# KV Parameters (key-value settings)
+kv_parameters:
+  "applicationSettings/watchVideo/secondsAfterDetection": 6
+  "applicationSettings/watchVideo/secondsBeforeDetection": 6
+  "applicationSettings/defaultFaceThreshold": 0.6
+  "applicationSettings/maskClassifier/threshold": 0.7
+  "DEFAULT/collate-service/TRACKS_RETENTION_TIME_MS": 80000
+
+# System Settings
+system_settings:
+  general:
+    blur_all_faces_except_selected: false
+    discard_detections_not_in_watch_list: false
+    body_image_retention_period: "13h"
+    default_face_threshold: 0.61
+    default_body_threshold: 0.61
+    default_liveness_threshold: 0.55
+  
+  map:
+    seed_location:
+      lat: 34.01993376317111
+      long: -118.50479101075484
+    acknowledge: true
+    action_title: "call the police"
+    masks_access_control: false
+  
+  system_interface:
+    translation_file: ""  # Path to translation file (if available)
+    product_name: "metropolis"
+    icons: ""  # Path to icons directory (if available)
+  
+  engine:
+    video_storage:
+      all_videos_days: 6
+      videos_with_detections_days: 6
+    detection_storage_days: 8
+    alert_storage_days: 9
+    inquiry_storage_days: 8
+
+# Environment Variables (set via Rancher)
+env_vars:
+  ENABLE_DVR: "True"
+  OVERWRITE_FFMPEG_OPTIONS_VALUES: "ffmpeg-opts:rtsp_transport=udp_multicast,probesize=1000000000,stimeout=10000000,buffer_size=1048576,analyzeduration=10000000;v2urisourcebin:stream-connect-timeout=20"
+  SERVICE_TAGS: "engine-service,body-from-face-pipeline,body-pipeline,dvr,face-pipeline,ffmpeg-options,forensics,gdpr,image-processing,live-stream,roi,watch-video,webrtc"
+  SERVICE_DOMAIN: "cv-engine.default"
+  CUDA_DEVICE_ORDER: "PCI_BUS_ID"
+
+# Device/Camera Settings
+devices:
+  - name: "face camera"
+    details:
+      threshold: 0.5
+      location:
+        name: "holon"
+        long: 34.800
+        lat: 32.007
+    calibration:
+      tracker: 4
+      face_track_length:
+        min: 0.5
+        max: 11
+      calibration_tool:
+        padding:
+          top: 130
+          right: 1768
+          bottom: 1060
+          left: 201
+        detection_min_size: 48
+    security_access:
+      liveness: true
+      liveness_threshold: 0.6
+  
+  - name: "face camera 2"
+    details:
+      threshold: 0.61
+      location:
+        name: "default"
+    calibration:
+      tracker: 3
+      face_track_length:
+        min: 0.2
+        max: 10
+      calibration_tool:
+        padding:
+          top: 0
+          right: 0
+          bottom: 0
+          left: 0
+        detection_min_size: 48
+    security_access:
+      liveness: true
+      liveness_threshold: 0.55
+  
+  - name: "Moderate-from-streamer"
+    details:
+      threshold: 0.61
+      location:
+        name: "default"
+    calibration:
+      tracker: 3
+      face_track_length:
+        min: 0.2
+        max: 10
+      calibration_tool:
+        padding:
+          top: 0
+          right: 0
+          bottom: 0
+          left: 0
+        detection_min_size: 48
+    security_access:
+      liveness: false
+  
+  - name: "body camera"
+    details:
+      threshold: 0.3
+      location:
+        name: "London"
+    calibration:
+      tracker: 3
+      face_track_length:
+        min: 0.2
+        max: 10
+      calibration_tool:
+        padding:
+          top: 0
+          right: 0
+          bottom: 0
+          left: 0
+        detection_min_size: 20
+    security_access:
+      liveness: false
+
+# Groups and Profiles
+groups:
+  subject_groups:
+    - name: "OnPatrol subject"
+      authorization: "Always Unauthorized"
+      visibility: "Silent"
+      priority: 1
+    - name: "Cardholders"
+      authorization: "Always Authorized"
+      visibility: "Visible"
+      priority: 2
+    - name: "Default Group"
+      authorization: "Always Unauthorized"
+      visibility: "Silent"
+      priority: 0
+  
+  device_groups:
+    - name: "test device group"
+      priority: 0
+      description: "asdasd"
+    - name: "default device group"
+      priority: 3
+      description: "none"
+  
+  time_profile:
+    screenshot_reference: "Screenshot 2025-12-04 at 12.22.37.png"
+    # Note: Time profile may need manual configuration or screenshot reference
+
+# Account Management
+accounts:
+  users:
+    - username: "Test"
+      first_name: "test"
+      last_name: "test"
+      email: "test@test.com"
+      role: "operator"
+      user_group: "full data group"
+      api_key: null
+      password: "Test123123!"
+    - username: "Administrator"
+      first_name: "admin"
+      last_name: "admin"
+      email: null
+      role: "super admin"
+      user_group: "full data group"
+      api_key: null
+      password: null  # Keep existing password
+  
+  user_groups:
+    - name: "testUser group"
+      users_count: 0
+    - name: "Full Data Group"
+      users_count: 2
+
+# Inquiries
+inquiries:
+  - name: "upgrade test"
+    files:
+      - path: "Neo.mp4"
+        settings: "DEFAULT VALUES"
+      - path: "Neo.webm"
+        settings: ""  # Empty/default
+      - path: "Screenshot 2025-12-04 at 12.47.16.png"
+        settings: "custom"  # To be set as in screenshot
+      - path: "regular_avi_1.avi"
+        settings: "DEFAULT VALUES"
+      - path: "regular_avi_2.avi"
+        settings: "DEFAULT VALUES"
+    priority: "Medium"
+
+# Mass Import
+mass_import:
+  file_path: "/Users/deanzion/Work/Person Lists/mass-import-43.tar"
+
+# Watch List - 5 subjects
+watch_list:
+  subjects:
+    - name: "Yonatan"
+      images:
+        - path: "images/me.jpg"
+        - path: "images/me2.jpg"
+      group: "Default Group"
+    
+    - name: "crop 1"
+      images:
+        - path: "images/Crop 1.jpg"
+      group: "Default Group"
+    
+    - name: "crop 2"
+      images:
+        - path: "images/Crop 2.jpg"
+      group: "Default Group"
+    
+    - name: "women 1"
+      images:
+        - path: "images/A05131_2025-02-02T14_45_36.jpg"
+      group: "Default Group"
+    
+    - name: "moderate 1"
+      images:
+        - path: "images/image (3).jpg"
+      group: "Default Group"
+
+# Future Enhancements (Not Yet Implemented)
+# These features require additional API endpoints or manual setup:
+#
+# Translation File Upload:
+#   - File: /Users/deanzion/Downloads/Polski-updated3.json.json
+#   - Status: Currently loaded via bash script to service (no API endpoint available)
+#   - Future: Implement SSH/SCP upload or wait for API endpoint
+#
+# Additional Settings (Intentionally Excluded):
+#   - privacyMode (blur_all_faces_except_selected): Not modified per requirements
+#   - gdprMode (discard_detections_not_in_watch_list): Not modified per requirements
+#   - maskClassifier.access (masks_access_control): Not modified per requirements
