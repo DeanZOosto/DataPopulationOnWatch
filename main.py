@@ -292,12 +292,82 @@ class OnWatchAutomation:
                 logger.error(f"Error adding subject {subject_name}: {e}", exc_info=True)
     
     async def configure_groups(self):
-        """Configure groups and profiles - API not yet available."""
+        """Configure groups and profiles via API."""
         groups = self.config.get('groups', {})
         if not groups:
             logger.info("No groups to configure")
             return
-        logger.warning("Groups configuration requires API endpoint - not yet implemented")
+        
+        logger.info("Configuring groups and profiles...")
+        
+        # Initialize API client if needed
+        if not self.client_api:
+            self.initialize_api_client()
+        
+        # Process subject groups
+        subject_groups = groups.get('subject_groups', [])
+        if subject_groups:
+            logger.info(f"Creating {len(subject_groups)} subject groups...")
+            
+            # Get existing groups to check for duplicates
+            try:
+                existing_groups = self.client_api.get_groups()
+                existing_group_names = set()
+                if isinstance(existing_groups, list):
+                    existing_group_names = {g.get('title', '') for g in existing_groups if isinstance(g, dict)}
+                elif isinstance(existing_groups, dict) and 'items' in existing_groups:
+                    existing_group_names = {g.get('title', '') for g in existing_groups.get('items', []) if isinstance(g, dict)}
+                
+                logger.info(f"Found {len(existing_group_names)} existing groups")
+            except Exception as e:
+                logger.warning(f"Could not fetch existing groups: {e}")
+                existing_group_names = set()
+            
+            # Create each subject group
+            for group_config in subject_groups:
+                try:
+                    name = group_config.get('name')
+                    if not name:
+                        logger.warning(f"Subject group missing name: {group_config}")
+                        continue
+                    
+                    # Skip if group already exists
+                    if name in existing_group_names:
+                        logger.info(f"Subject group '{name}' already exists, skipping")
+                        continue
+                    
+                    authorization = group_config.get('authorization', 'Always Unauthorized')
+                    visibility = group_config.get('visibility', 'Silent')
+                    priority = group_config.get('priority', 0)
+                    description = group_config.get('description', '')
+                    color = group_config.get('color', '#D20300')
+                    camera_groups = group_config.get('camera_groups', None)
+                    
+                    self.client_api.create_subject_group(
+                        name=name,
+                        authorization=authorization,
+                        visibility=visibility,
+                        priority=priority,
+                        description=description,
+                        color=color,
+                        camera_groups=camera_groups
+                    )
+                    logger.info(f"✓ Created subject group: {name}")
+                    
+                except Exception as e:
+                    logger.error(f"Failed to create subject group '{group_config.get('name', 'unknown')}': {e}")
+        
+        # Device groups - TODO: implement once endpoint is available
+        device_groups = groups.get('device_groups', [])
+        if device_groups:
+            logger.warning(f"Device groups configuration not yet implemented ({len(device_groups)} groups skipped)")
+            logger.warning("Device groups use a different API endpoint - will be implemented when endpoint details are available")
+        
+        # Time profile - manual/screenshot based, not API-driven
+        time_profile = groups.get('time_profile')
+        if time_profile:
+            logger.info("Time profile configuration requires manual setup or screenshot reference")
+            logger.info(f"Reference: {time_profile.get('screenshot_reference', 'N/A')}")
     
     async def configure_accounts(self):
         """Configure user accounts - API not yet available."""

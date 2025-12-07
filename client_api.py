@@ -253,12 +253,31 @@ class ClientApi:
             logger.error(f"Error adding image to subject: {e}")
             raise
     
-    def get_groups(self):
-        """Get all groups. Returns list of groups or dict with 'items' key."""
+    def get_groups(self, limit=None, offset=None, search=None, with_subjects_count=True):
+        """
+        Get all groups. Returns list of groups or dict with 'items' key.
+        
+        Args:
+            limit: Maximum number of groups to return
+            offset: Offset for pagination
+            search: Search query string
+            with_subjects_count: Include subject count in response
+        """
         try:
+            params = {}
+            if limit is not None:
+                params['limit'] = limit
+            if offset is not None:
+                params['offset'] = offset
+            if search:
+                params['search'] = search
+            if with_subjects_count:
+                params['withSubjectsCount'] = 'true'
+            
             response = self.session.get(
                 f"{self.url}/groups",
-                headers=self.headers
+                headers=self.headers,
+                params=params
             )
             response.raise_for_status()
             data = response.json()
@@ -270,11 +289,11 @@ class ClientApi:
             else:
                 return data
         except requests.exceptions.RequestException as e:
-            print(f"Failed to get groups: {e}")
+            logger.error(f"Failed to get groups: {e}")
             raise
     
     def create_group(self, name):
-        """Create a new group."""
+        """Create a new group (legacy method - use create_subject_group for full control)."""
         try:
             payload = {"name": name}
             response = self.session.post(
@@ -285,7 +304,134 @@ class ClientApi:
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
-            print(f"Failed to create group: {e}")
+            logger.error(f"Failed to create group: {e}")
+            raise
+    
+    def _get_alert_level_by_visibility(self, visibility):
+        """
+        Get alertLevel UUID by matching visibility string.
+        Fetches existing groups and tries to match visibility.
+        
+        Args:
+            visibility: Visibility string ("Silent", "Visible", "Loud")
+        
+        Returns:
+            alertLevel UUID string or None if not found
+        """
+        try:
+            groups = self.get_groups()
+            if not isinstance(groups, list):
+                groups = groups.get('items', []) if isinstance(groups, dict) else []
+            
+            # Try to find a group that might match the visibility
+            # Since we don't have direct visibility in response, we'll use a mapping approach
+            # Based on user info: "Loud" (test), "Silent" (OnPatrol), "Visible" (Cardholders)
+            visibility_lower = visibility.lower() if visibility else ""
+            
+            # Look for known group patterns that match visibility
+            for group in groups:
+                if not isinstance(group, dict):
+                    continue
+                
+                title = group.get('title', '').lower()
+                alert_level = group.get('alertLevel')
+                
+                # Try to match based on known patterns
+                if visibility_lower == 'silent':
+                    # OnPatrol subjects are typically "Silent"
+                    if 'onpatrol' in title or 'patrol' in title:
+                        return alert_level
+                elif visibility_lower == 'visible':
+                    # Cardholders are typically "Visible"
+                    if 'cardholder' in title or 'card' in title:
+                        return alert_level
+                elif visibility_lower == 'loud':
+                    # Test groups might be "Loud"
+                    if 'test' in title:
+                        return alert_level
+            
+            # If no match found, try to get a default based on type
+            # For "Silent" or "Visible", try to find any group with matching characteristics
+            if visibility_lower in ['silent', 'visible']:
+                for group in groups:
+                    if isinstance(group, dict) and group.get('alertLevel'):
+                        # Use first available alertLevel as fallback
+                        return group.get('alertLevel')
+            
+            logger.warning(f"Could not find alertLevel for visibility '{visibility}', using default")
+            # Return a default UUID if available, or None
+            return None
+        except Exception as e:
+            logger.warning(f"Error fetching alertLevel for visibility '{visibility}': {e}")
+            return None
+    
+    def create_subject_group(self, name, authorization, visibility, priority=0, description="", color="#D20300", camera_groups=None):
+        """
+        Create a subject group with full configuration.
+        
+        Args:
+            name: Group name (title)
+            authorization: "Always Authorized" or "Always Unauthorized"
+            visibility: "Silent", "Visible", or "Loud"
+            priority: Priority/threshold value (default: 0)
+            description: Group description (default: empty string)
+            color: Hex color code (default: "#D20300")
+            camera_groups: List of camera group IDs (required if priority > 0)
+        
+        Returns:
+            Created group data
+        """
+        try:
+            # Map authorization to type
+            # 0 = "Always Unauthorized", 1 = "Always Authorized"
+            if authorization.lower() == "always authorized":
+                group_type = 1
+            else:  # "Always Unauthorized" or default
+                group_type = 0
+            
+            # Get alertLevel UUID based on visibility
+            alert_level = self._get_alert_level_by_visibility(visibility)
+            if not alert_level:
+                # Use a default alertLevel UUID if we can't find one
+                # This is a fallback - ideally we'd have the UUID
+                logger.warning(f"Using default alertLevel for visibility '{visibility}'")
+                alert_level = "00000000-0200-48f3-b728-10de4c0a906f"  # Default from example
+            
+            # If priority > 0, camera groups are required
+            # If no camera groups provided and priority > 0, set priority to 0
+            if priority > 0 and (not camera_groups or len(camera_groups) == 0):
+                logger.warning(f"Priority > 0 requires camera groups. Setting priority to 0 for group '{name}'")
+                priority = 0
+            
+            camera_groups_list = camera_groups if camera_groups else []
+            
+            payload = {
+                "title": name,
+                "description": description,
+                "th": priority,
+                "alertLevel": alert_level,
+                "type": group_type,
+                "color": color,
+                "authRules": [],
+                "cameraGroups": camera_groups_list
+            }
+            
+            response = self.session.post(
+                f"{self.url}/groups",
+                headers=self.headers,
+                json=payload
+            )
+            response.raise_for_status()
+            result = response.json()
+            logger.info(f"Created subject group: {name} (id: {result.get('id')})")
+            return result
+        except requests.exceptions.RequestException as e:
+            if hasattr(e, 'response') and e.response is not None:
+                logger.error(f"Failed to create subject group '{name}': {e}")
+                logger.error(f"Response status: {e.response.status_code}")
+                logger.error(f"Response body: {e.response.text}")
+            else:
+                logger.error(f"Failed to create subject group '{name}': {e}")
             raise
     
     def get_subjects(self):
