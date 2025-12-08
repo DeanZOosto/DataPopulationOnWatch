@@ -415,12 +415,170 @@ class OnWatchAutomation:
             logger.info(f"Reference: {time_profile.get('screenshot_reference', 'N/A')}")
     
     async def configure_accounts(self):
-        """Configure user accounts - API not yet available."""
+        """Configure user accounts and user groups via API."""
         accounts = self.config.get('accounts', {})
         if not accounts:
             logger.info("No accounts to configure")
             return
-        logger.warning("Accounts configuration requires API endpoint - not yet implemented")
+        
+        logger.info("Configuring accounts...")
+        
+        # Initialize API client if needed
+        if not self.client_api:
+            self.initialize_api_client()
+        
+        # Get roles and user groups for mapping
+        role_map = {}  # role name (lowercase) -> roleId
+        user_group_map = {}  # user group name (lowercase) -> userGroupId
+        
+        try:
+            roles = self.client_api.get_roles()
+            if isinstance(roles, list):
+                for role in roles:
+                    if isinstance(role, dict):
+                        title = role.get('title', '')
+                        role_id = role.get('id')
+                        if title and role_id:
+                            role_map[title.lower()] = role_id
+            logger.info(f"Found {len(role_map)} roles")
+        except Exception as e:
+            logger.warning(f"Could not get roles: {e}")
+        
+        try:
+            user_groups = self.client_api.get_user_groups()
+            if isinstance(user_groups, list):
+                for ug in user_groups:
+                    if isinstance(ug, dict):
+                        title = ug.get('title', '')
+                        ug_id = ug.get('id')
+                        if title and ug_id:
+                            user_group_map[title.lower()] = ug_id
+            logger.info(f"Found {len(user_group_map)} user groups")
+        except Exception as e:
+            logger.warning(f"Could not get user groups: {e}")
+        
+        # Process users
+        users = accounts.get('users', [])
+        if users:
+            logger.info(f"Creating {len(users)} users...")
+            
+            # Get existing users to check for duplicates
+            try:
+                existing_users = self.client_api.get_users()
+                existing_usernames = set()
+                if isinstance(existing_users, list):
+                    for u in existing_users:
+                        if isinstance(u, dict):
+                            username = u.get('username', '')
+                            if username:
+                                existing_usernames.add(username.lower())
+                elif isinstance(existing_users, dict) and 'items' in existing_users:
+                    for u in existing_users.get('items', []):
+                        if isinstance(u, dict):
+                            username = u.get('username', '')
+                            if username:
+                                existing_usernames.add(username.lower())
+                logger.info(f"Found {len(existing_usernames)} existing users")
+            except Exception as e:
+                logger.warning(f"Could not fetch existing users: {e}")
+                existing_usernames = set()
+            
+            for user_config in users:
+                try:
+                    username = user_config.get('username', '').strip()
+                    if not username:
+                        logger.warning(f"User missing username: {user_config}")
+                        continue
+                    
+                    # Skip if user already exists
+                    if username.lower() in existing_usernames:
+                        logger.info(f"User '{username}' already exists, skipping")
+                        continue
+                    
+                    first_name = user_config.get('first_name', '').strip()
+                    last_name = user_config.get('last_name', '').strip()
+                    email = user_config.get('email')
+                    email = email.strip() if email else None
+                    
+                    # Map role name to roleId
+                    role_name = user_config.get('role', '').strip()
+                    role_id = None
+                    if role_name:
+                        # Normalize role name and try to match
+                        role_lower = role_name.lower()
+                        # Try direct match first
+                        if role_lower in role_map:
+                            role_id = role_map[role_lower]
+                        else:
+                            # Try common variations
+                            # "operator" -> "Operator"
+                            if role_lower == 'operator':
+                                role_id = role_map.get('operator')
+                            # "super admin" or "superadmin" -> "Super Admin"
+                            elif role_lower in ['super admin', 'superadmin']:
+                                role_id = role_map.get('super admin')
+                            # "admin" -> "Admin"
+                            elif role_lower == 'admin':
+                                role_id = role_map.get('admin')
+                            # Try case-insensitive search
+                            else:
+                                for role_title, rid in role_map.items():
+                                    if role_title.lower() == role_lower:
+                                        role_id = rid
+                                        break
+                    
+                    if not role_id:
+                        logger.error(f"Could not find role '{role_name}' for user '{username}'. Available roles: {list(role_map.keys())}")
+                        continue
+                    
+                    # Map user group name to userGroupId
+                    user_group_name = user_config.get('user_group', '').strip()
+                    user_group_id = None
+                    if user_group_name:
+                        user_group_lower = user_group_name.lower()
+                        if user_group_lower in user_group_map:
+                            user_group_id = user_group_map[user_group_lower]
+                    
+                    if not user_group_id:
+                        logger.error(f"Could not find user group '{user_group_name}' for user '{username}'. Available groups: {list(user_group_map.keys())}")
+                        continue
+                    
+                    # Handle password
+                    password = user_config.get('password')
+                    if password is None:
+                        # Generate password: <FirstLetterCaps>rest_lowercase123!
+                        # Example: "Test" -> "Test123!", "Administrator" -> "Administrator123!"
+                        if username:
+                            password = f"{username[0].upper()}{username[1:].lower()}123!"
+                            logger.info(f"Generated password for user '{username}': {password}")
+                        else:
+                            logger.warning(f"Cannot generate password for user without username, skipping")
+                            continue
+                    elif password == "":
+                        # Empty string means skip password field (keep existing password)
+                        password = None
+                        logger.info(f"Skipping password for user '{username}' (keep existing)")
+                    
+                    # Create user
+                    self.client_api.create_user(
+                        username=username,
+                        first_name=first_name,
+                        last_name=last_name,
+                        email=email,
+                        role_id=role_id,
+                        user_group_id=user_group_id,
+                        password=password
+                    )
+                    logger.info(f"✓ Created user: {username}")
+                    
+                except Exception as e:
+                    logger.error(f"Failed to create user '{user_config.get('username', 'unknown')}': {e}")
+        
+        # User groups - TODO: implement creation if endpoint is available
+        user_groups_config = accounts.get('user_groups', [])
+        if user_groups_config:
+            logger.warning(f"User groups creation not yet implemented ({len(user_groups_config)} groups skipped)")
+            logger.warning("User groups may need to be created manually or via different endpoint")
     
     async def configure_inquiries(self):
         """Configure inquiries - API not yet available."""

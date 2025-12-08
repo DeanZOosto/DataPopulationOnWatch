@@ -455,7 +455,124 @@ class ClientApi:
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
-            print(f"Failed to get subjects: {e}")
+            logger.error(f"Failed to get subjects: {e}")
+            raise
+    
+    def get_roles(self):
+        """
+        Get all roles. Returns list of roles with id and title.
+        """
+        try:
+            response = self.session.get(
+                f"{self.url}/roles",
+                headers=self.headers
+            )
+            response.raise_for_status()
+            data = response.json()
+            # Handle both formats: direct list or {"items": [...]}
+            if isinstance(data, list):
+                return data
+            elif isinstance(data, dict) and 'items' in data:
+                return data['items']
+            else:
+                return data
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Failed to get roles: {e}")
+            raise
+    
+    def get_user_groups(self):
+        """
+        Get all user groups. Returns list of user groups with id and title.
+        """
+        try:
+            response = self.session.get(
+                f"{self.url}/user-groups",
+                headers=self.headers
+            )
+            response.raise_for_status()
+            data = response.json()
+            # Handle both formats: direct list or {"items": [...]}
+            if isinstance(data, list):
+                return data
+            elif isinstance(data, dict) and 'items' in data:
+                return data['items']
+            else:
+                return data
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Failed to get user groups: {e}")
+            raise
+    
+    def get_users(self):
+        """
+        Get all users. Returns list of users.
+        """
+        try:
+            response = self.session.get(
+                f"{self.url}/users",
+                headers=self.headers
+            )
+            response.raise_for_status()
+            data = response.json()
+            # Handle both formats: direct list or {"items": [...]}
+            if isinstance(data, list):
+                return data
+            elif isinstance(data, dict) and 'items' in data:
+                return data['items']
+            else:
+                return data
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Failed to get users: {e}")
+            raise
+    
+    def create_user(self, username, first_name, last_name, email, role_id, user_group_id, password=None):
+        """
+        Create a new user.
+        
+        Args:
+            username: Username
+            first_name: First name
+            last_name: Last name
+            email: Email address (can be None)
+            role_id: Role ID (UUID)
+            user_group_id: User group ID (UUID)
+            password: Password (optional, if None, password field is skipped)
+        
+        Returns:
+            Created user data
+        """
+        try:
+            payload = {
+                "username": username,
+                "firstName": first_name,
+                "lastName": last_name,
+                "roleId": role_id,
+                "userGroupId": user_group_id
+            }
+            
+            # Add email if provided
+            if email:
+                payload["email"] = email
+            
+            # Add password if provided (skip if None)
+            if password:
+                payload["password"] = password
+            
+            response = self.session.post(
+                f"{self.url}/users",
+                headers=self.headers,
+                json=payload
+            )
+            response.raise_for_status()
+            result = response.json()
+            logger.info(f"Created user: {username} (id: {result.get('id')})")
+            return result
+        except requests.exceptions.RequestException as e:
+            if hasattr(e, 'response') and e.response is not None:
+                logger.error(f"Failed to create user '{username}': {e}")
+                logger.error(f"Response status: {e.response.status_code}")
+                logger.error(f"Response body: {e.response.text}")
+            else:
+                logger.error(f"Failed to create user '{username}': {e}")
             raise
     
     def set_kv_parameter(self, key, value):
