@@ -917,6 +917,291 @@ class ClientApi:
             logger.warning(f"Could not get current white label settings: {e}")
             return None
     
+    def get_camera_groups(self):
+        """
+        Get all camera groups. Returns list of camera groups.
+        """
+        try:
+            response = self.session.get(
+                f"{self.url}/cameras/groups",
+                headers=self.headers
+            )
+            response.raise_for_status()
+            data = response.json()
+            # Handle response format: {"cameraGroups": [...]}
+            if isinstance(data, dict) and 'cameraGroups' in data:
+                return data['cameraGroups']
+            elif isinstance(data, list):
+                return data
+            else:
+                return data
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Failed to get camera groups: {e}")
+            raise
+    
+    def get_cameras(self, camera_id=""):
+        """
+        Get cameras. If camera_id is provided, get specific camera, otherwise get all cameras.
+        
+        Args:
+            camera_id: Optional camera ID (empty string for all cameras)
+        
+        Returns:
+            List of cameras or single camera object
+        """
+        try:
+            url = f"{self.url}/cameras/{camera_id}" if camera_id else f"{self.url}/cameras"
+            response = self.session.get(
+                url,
+                headers=self.headers
+            )
+            response.raise_for_status()
+            data = response.json()
+            # Handle response format: {"items": [...]} or direct list
+            if isinstance(data, dict) and 'items' in data:
+                return data['items']
+            elif isinstance(data, list):
+                return data
+            elif isinstance(data, dict):
+                return [data]  # Single camera
+            else:
+                return data
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Failed to get cameras: {e}")
+            raise
+    
+    def create_camera_group(self, name, description="", alert_level=None):
+        """
+        Create a camera group.
+        
+        Args:
+            name: Camera group name (title)
+            description: Description (optional)
+            alert_level: Alert level UUID (optional, uses default if not provided)
+        
+        Returns:
+            Created camera group data
+        """
+        try:
+            if not alert_level:
+                # Use default alert level (Visible)
+                alert_level = "00000000-0200-40e7-a33e-5f290f69366e"
+            
+            payload = {
+                "title": name,
+                "description": description,
+                "alertLevel": alert_level,
+                "isRestrictedGroup": False
+            }
+            
+            response = self.session.post(
+                f"{self.url}/cameras/groups",
+                headers=self.headers,
+                json=payload
+            )
+            response.raise_for_status()
+            result = response.json()
+            logger.info(f"Created camera group: {name} (id: {result.get('id')})")
+            return result
+        except requests.exceptions.RequestException as e:
+            if hasattr(e, 'response') and e.response is not None:
+                logger.error(f"Failed to create camera group '{name}': {e}")
+                logger.error(f"Response status: {e.response.status_code}")
+                logger.error(f"Response body: {e.response.text}")
+            else:
+                logger.error(f"Failed to create camera group '{name}': {e}")
+            raise
+    
+    def create_camera(self, name, video_url, camera_group_id, threshold, location=None, 
+                     calibration=None, security_access=None, camera_mode=1, pipe=None):
+        """
+        Create a camera using GraphQL mutation.
+        
+        Args:
+            name: Camera name (title)
+            video_url: RTSP video URL
+            camera_group_id: Camera group ID (UUID)
+            threshold: Detection threshold
+            location: [longitude, latitude] array or None
+            calibration: Dict with calibration settings
+            security_access: Dict with security access settings
+            camera_mode: Camera mode (default: 1)
+            pipe: Pipe name (optional)
+        
+        Returns:
+            Created camera data
+        """
+        try:
+            graphql_url = f"{self.url}/graphql"
+            
+            # Build configuration object
+            configuration = {
+                "cameraMode": [camera_mode],
+                "cameraPadding": {
+                    "top": "0",
+                    "left": "0",
+                    "right": "0",
+                    "bottom": "0"
+                },
+                "frameRotation": -1,
+                "frameSkip": {
+                    "autoSkipEnabled": True,
+                    "percent": 0
+                },
+                "livenessThreshold": 0.55,
+                "detectionMaxBodySize": -1,
+                "detectionMaxFaceSize": -1,
+                "detectionMinBodySize": 20,
+                "detectionMinFaceSize": 48,
+                "ffmpegOptions": "",
+                "trackBodyMaxLengthSec": 10,
+                "trackBodyMinLengthSec": 0.2,
+                "trackFaceMaxLengthSec": 10,
+                "trackFaceMinLengthSec": 0.2,
+                "trackerBodySeekTimeOutSec": 3,
+                "trackerFaceSeekTimeOutSec": 3
+            }
+            
+            # Apply calibration settings if provided
+            if calibration:
+                if 'tracker' in calibration:
+                    configuration["trackerFaceSeekTimeOutSec"] = calibration['tracker']
+                    configuration["trackerBodySeekTimeOutSec"] = calibration['tracker']
+                
+                if 'face_track_length' in calibration:
+                    face_track = calibration['face_track_length']
+                    if 'min' in face_track:
+                        configuration["trackFaceMinLengthSec"] = face_track['min']
+                    if 'max' in face_track:
+                        configuration["trackFaceMaxLengthSec"] = face_track['max']
+                
+                if 'calibration_tool' in calibration:
+                    cal_tool = calibration['calibration_tool']
+                    if 'padding' in cal_tool:
+                        padding = cal_tool['padding']
+                        configuration["cameraPadding"] = {
+                            "top": str(padding.get('top', 0)),
+                            "left": str(padding.get('left', 0)),
+                            "right": str(padding.get('right', 0)),
+                            "bottom": str(padding.get('bottom', 0))
+                        }
+                    
+                    if 'detection_min_size' in cal_tool:
+                        configuration["detectionMinFaceSize"] = cal_tool['detection_min_size']
+                        configuration["detectionMinBodySize"] = cal_tool['detection_min_size']
+            
+            # Apply security access settings if provided
+            additional_settings = {
+                "livenessEnabled": False,
+                "maskClassifier": {
+                    "access": False,
+                    "defaultMaskAlertLevel": "Visible",
+                    "enable": False,
+                    "notification": True,
+                    "shouldMaskOverrideHigherAlertLevel": False,
+                    "threshold": 0.7
+                }
+            }
+            
+            if security_access:
+                if 'liveness' in security_access:
+                    additional_settings["livenessEnabled"] = security_access['liveness']
+                
+                if 'liveness_threshold' in security_access:
+                    configuration["livenessThreshold"] = security_access['liveness_threshold']
+            
+            # Build location array [longitude, latitude]
+            # Default location: lat: 51.50773019946536, long: -0.1279208857166907
+            DEFAULT_LAT = 51.50773019946536
+            DEFAULT_LONG = -0.1279208857166907
+            
+            location_array = None
+            if location:
+                if isinstance(location, dict):
+                    location_name = location.get('name', '').lower()
+                    # If location name is "default" or coordinates are missing, use defaults
+                    if location_name == 'default' or (not location.get('long') and not location.get('lat')):
+                        location_array = [DEFAULT_LONG, DEFAULT_LAT]
+                    else:
+                        long_val = location.get('long', DEFAULT_LONG)
+                        lat_val = location.get('lat', DEFAULT_LAT)
+                        location_array = [float(long_val), float(lat_val)]
+                elif isinstance(location, list):
+                    location_array = [float(location[0]), float(location[1])]
+            else:
+                # No location provided, use default
+                location_array = [DEFAULT_LONG, DEFAULT_LAT]
+            
+            # Build camera input
+            camera_input = {
+                "isEnabled": True,
+                "title": name,
+                "cameraGroupId": camera_group_id,
+                "pipe": pipe if pipe else "",
+                "description": "",
+                "threshold": float(threshold),
+                "alternativeThreshold": None,
+                "isAlternativeThresholdEnabled": False,
+                "timeProfileId": None,
+                "videoUrl": video_url,
+                "configuration": configuration,
+                "additionalSettings": additional_settings,
+                "location": location_array,  # Always set location (default if not provided)
+                "timezone": "",
+                "streamType": 0,
+                "isLoadBalancingEnabled": True
+            }
+            
+            # GraphQL mutation
+            mutation = """
+            mutation createCamera($cameraInput: CameraObjectInput!) {
+              createCamera(cameraInput: $cameraInput) {
+                id
+                title
+                cameraGroup {
+                  id
+                  title
+                }
+                videoUrl
+                threshold
+                location
+                isEnabled
+              }
+            }
+            """
+            
+            payload = {
+                "operationName": "createCamera",
+                "variables": {
+                    "cameraInput": camera_input
+                },
+                "query": mutation
+            }
+            
+            response = self.session.post(
+                graphql_url,
+                headers=self.headers,
+                json=payload
+            )
+            response.raise_for_status()
+            
+            result = response.json()
+            if 'errors' in result:
+                logger.error(f"GraphQL errors for createCamera: {result['errors']}")
+                raise Exception(f"GraphQL error: {result['errors']}")
+            
+            camera_data = result.get('data', {}).get('createCamera', {})
+            logger.info(f"Created camera: {name} (id: {camera_data.get('id')})")
+            return camera_data
+        except requests.exceptions.RequestException as e:
+            if hasattr(e, 'response') and e.response is not None:
+                logger.error(f"Failed to create camera '{name}': {e}")
+                logger.error(f"Response status: {e.response.status_code}")
+                logger.error(f"Response body: {e.response.text}")
+            else:
+                logger.error(f"Failed to create camera '{name}': {e}")
+            raise
+    
     def _update_white_label(self, white_label_updates):
         """
         Update white label settings via GraphQL mutation.

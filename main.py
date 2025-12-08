@@ -166,12 +166,138 @@ class OnWatchAutomation:
             raise
     
     async def configure_devices(self):
-        """Configure devices/cameras - API not yet available."""
+        """Configure devices/cameras via GraphQL API."""
         devices = self.config.get('devices', [])
         if not devices:
             logger.info("No devices to configure")
             return
-        logger.warning(f"Devices configuration requires API endpoint - not yet implemented ({len(devices)} devices skipped)")
+        
+        logger.info("Configuring devices/cameras...")
+        
+        # Initialize API client if needed
+        if not self.client_api:
+            self.initialize_api_client()
+        
+        # Get or create camera groups
+        camera_group_map = {}  # name -> id
+        try:
+            camera_groups = self.client_api.get_camera_groups()
+            if isinstance(camera_groups, list):
+                for cg in camera_groups:
+                    if isinstance(cg, dict):
+                        title = cg.get('title', '')
+                        cg_id = cg.get('id')
+                        if title and cg_id:
+                            camera_group_map[title.lower()] = cg_id
+            logger.info(f"Found {len(camera_group_map)} existing camera groups")
+        except Exception as e:
+            logger.warning(f"Could not get camera groups: {e}")
+        
+        # Get device groups from config to map to camera groups
+        device_groups_config = self.config.get('groups', {}).get('device_groups', [])
+        default_camera_group_id = None
+        
+        # Try to create camera groups from device groups config if they don't exist
+        for device_group in device_groups_config:
+            dg_name = device_group.get('name', '').strip()
+            if dg_name and dg_name.lower() not in camera_group_map:
+                try:
+                    dg_description = device_group.get('description', '')
+                    cg_response = self.client_api.create_camera_group(dg_name, dg_description)
+                    if isinstance(cg_response, dict):
+                        cg_id = cg_response.get('id')
+                        camera_group_map[dg_name.lower()] = cg_id
+                        logger.info(f"Created camera group: {dg_name}")
+                        if not default_camera_group_id:
+                            default_camera_group_id = cg_id
+                except Exception as e:
+                    logger.warning(f"Could not create camera group '{dg_name}': {e}")
+            elif dg_name:
+                # Use existing camera group
+                if not default_camera_group_id:
+                    default_camera_group_id = camera_group_map.get(dg_name.lower())
+        
+        # If no camera groups, create a default one
+        if not camera_group_map and not default_camera_group_id:
+            try:
+                logger.info("No camera groups found, creating default camera group...")
+                cg_response = self.client_api.create_camera_group("Default Camera Group", "Default camera group")
+                if isinstance(cg_response, dict):
+                    default_camera_group_id = cg_response.get('id')
+                    camera_group_map["default camera group"] = default_camera_group_id
+            except Exception as e:
+                logger.warning(f"Could not create default camera group: {e}")
+        
+        # Get existing cameras to check for duplicates
+        existing_camera_names = set()
+        try:
+            existing_cameras = self.client_api.get_cameras()
+            if isinstance(existing_cameras, list):
+                for cam in existing_cameras:
+                    if isinstance(cam, dict):
+                        title = cam.get('title', '').strip()
+                        if title:
+                            existing_camera_names.add(title.lower())
+            logger.info(f"Found {len(existing_camera_names)} existing cameras")
+        except Exception as e:
+            logger.warning(f"Could not fetch existing cameras: {e}")
+            existing_camera_names = set()
+        
+        # Create each camera
+        logger.info(f"Creating {len(devices)} cameras...")
+        created_count = 0
+        skipped_count = 0
+        
+        for device_config in devices:
+            try:
+                name = device_config.get('name', '').strip()
+                if not name:
+                    logger.warning(f"Device missing name: {device_config}")
+                    skipped_count += 1
+                    continue
+                
+                # Check for duplicates
+                if name.lower() in existing_camera_names:
+                    logger.warning(f"Camera '{name}' already exists, skipping")
+                    skipped_count += 1
+                    continue
+                
+                video_url = device_config.get('video_url', '').strip()
+                if not video_url:
+                    logger.warning(f"Device '{name}' missing video_url, skipping")
+                    skipped_count += 1
+                    continue
+                
+                # Get camera group ID (use default if not specified)
+                camera_group_id = default_camera_group_id
+                # TODO: Add camera_group field to config if needed
+                
+                details = device_config.get('details', {})
+                threshold = details.get('threshold', 0.5)
+                location = details.get('location', {})
+                
+                calibration = device_config.get('calibration', {})
+                security_access = device_config.get('security_access', {})
+                
+                # Create camera via GraphQL
+                self.client_api.create_camera(
+                    name=name,
+                    video_url=video_url,
+                    camera_group_id=camera_group_id,
+                    threshold=threshold,
+                    location=location,
+                    calibration=calibration,
+                    security_access=security_access
+                )
+                logger.info(f"✓ Created camera: {name}")
+                created_count += 1
+                existing_camera_names.add(name.lower())  # Track created camera
+                
+            except Exception as e:
+                logger.error(f"Failed to create camera '{device_config.get('name', 'unknown')}': {e}")
+                skipped_count += 1
+        
+        logger.info(f"Devices configuration complete: {created_count} created, {skipped_count} skipped")
     
     def populate_watch_list(self):
         """Populate watch list with subjects via API."""

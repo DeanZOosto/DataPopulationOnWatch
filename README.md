@@ -12,9 +12,9 @@ Automated data population script for OnWatch on-premise software. This tool auto
 - **Watch List**: Add subjects with multiple images via API
 - **Groups Configuration** (Step 4): Subject groups creation via POST API
 - **Accounts Configuration** (Step 5): User creation via POST API with role and user group mapping
+- **Devices/Cameras Configuration** (Step 7): Camera creation via GraphQL mutation with full configuration support
 
 ### 🚧 Not Yet Implemented (Requires API Endpoints)
-- **Devices/Cameras Configuration** (Step 7): Waiting for API endpoint
 - **Inquiries Configuration** (Step 8): Waiting for API endpoint
 - **Mass Import Upload** (Step 9): Waiting for API endpoint
 - **File Uploads** (Step 11): Waiting for API endpoint
@@ -107,8 +107,10 @@ The automation uses **API-only approach**:
    - System settings (PATCH `/bt/api/settings`) (Step 3)
    - Acknowledge actions (Step 3)
    - Logo uploads (Step 3)
+   - Camera groups (Step 7)
 2. **GraphQL API**: 
    - KV parameters (mutation `updateSingleSetting`) (Step 2)
+   - Camera creation (mutation `createCamera`) (Step 7)
 3. **Rancher Automation**: 
    - For setting Kubernetes pod environment variables (Step 10 - when implemented)
 
@@ -188,9 +190,9 @@ For issues or questions:
 - **Groups (Step 4)**: Subject groups creation via POST API (works on clean system)
 - **Accounts (Step 5)**: User creation via POST API with role/user group mapping
 - **Watch List (Step 6)**: REST API with multiple images per subject
+- **Devices (Step 7)**: Camera creation via GraphQL with full configuration (threshold, location, calibration, security access)
 
 ### 🚧 Steps Waiting for API Endpoints
-- **Devices (Step 7)**: Will log warning and skip
 - **Inquiries (Step 8)**: Will log warning and skip
 - **Mass Import (Step 9)**: Will log warning and skip
 - **File Uploads (Step 11)**: Will log warning and skip
@@ -210,5 +212,5 @@ For issues or questions:
 - Dry-run mode to preview changes
 - Rollback functionality
 - More robust error handling and retry logic
-- API endpoints for Groups, Accounts, Devices, Inquiries, Mass Import
+- API endpoints for Inquiries and Mass Import
 
