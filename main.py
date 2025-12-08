@@ -1293,7 +1293,7 @@ def main():
         else:
             logger.error(f"Invalid step number: {args.step}. Must be 1-11.")
     else:
-    asyncio.run(automation.run())
+        asyncio.run(automation.run())
 
 
 if __name__ == "__main__":
