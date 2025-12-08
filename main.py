@@ -549,8 +549,8 @@ class OnWatchAutomation:
                                     if os.path.exists(additional_img_path):
                                         try:
                                             self.client_api.add_image_to_subject(subject_id, additional_img_path)
-                                            logger.info(f"✓ Added additional image to {name}: {additional_img_path}")
-            except Exception as e:
+                                            logger.info(f"✓ Added additional image to {name}: {os.path.basename(additional_img_path)}")
+                                        except Exception as e:
                                             error_detail = str(e)
                                             logger.error(f"❌ Failed to add additional image '{additional_img_path}' to subject '{name}': {error_detail}")
                                             logger.warning(f"⚠️  Subject '{name}' was created but additional image was not added. You may need to add it manually in the UI.")
@@ -1430,7 +1430,7 @@ class OnWatchAutomation:
             # Step 1: Initialize API client
             logger.info("\n[Step 1/11] Initializing API client...")
             try:
-            self.initialize_api_client()
+                self.initialize_api_client()
                 self.summary.record_step(1, "Initialize API Client", "success", "API client initialized and logged in")
             except Exception as e:
                 error_msg = f"Failed to initialize API client: {str(e)}"
@@ -1442,7 +1442,7 @@ class OnWatchAutomation:
             # Step 2: Set KV parameters
             logger.info("\n[Step 2/11] Setting KV parameters...")
             try:
-            await self.set_kv_parameters()
+                await self.set_kv_parameters()
                 self.summary.record_step(2, "Set KV Parameters", "success")
             except Exception as e:
                 error_msg = f"Failed to set KV parameters: {str(e)}"
@@ -1453,7 +1453,7 @@ class OnWatchAutomation:
             # Step 3: Configure system settings
             logger.info("\n[Step 3/11] Configuring system settings...")
             try:
-            await self.configure_system_settings()
+                await self.configure_system_settings()
                 self.summary.record_step(3, "Configure System Settings", "success")
             except Exception as e:
                 error_msg = f"Failed to configure system settings: {str(e)}"
@@ -1486,8 +1486,14 @@ class OnWatchAutomation:
             # Step 6: Populate watch list
             logger.info("\n[Step 6/11] Populating watch list...")
             try:
-            self.populate_watch_list()
-                self.summary.record_step(6, "Populate Watch List", "success")
+                self.populate_watch_list()
+                # Check if there were any failures (tracked in populate_watch_list)
+                # If warnings exist for subjects, mark as partial
+                subject_warnings = [w for w in self.summary.warnings if "Subject" in w and "was not added" in w]
+                if subject_warnings:
+                    self.summary.record_step(6, "Populate Watch List", "partial", f"Some subjects failed - see warnings", manual_action=True)
+                else:
+                    self.summary.record_step(6, "Populate Watch List", "success")
             except Exception as e:
                 error_msg = f"Failed to populate watch list: {str(e)}"
                 logger.error(f"❌ {error_msg}")
@@ -1532,7 +1538,7 @@ class OnWatchAutomation:
             try:
                 self.configure_rancher()
                 self.summary.record_step(10, "Configure Rancher", "success")
-        except Exception as e:
+            except Exception as e:
                 error_msg = f"Failed to configure Rancher: {str(e)}"
                 logger.error(f"❌ {error_msg}")
                 logger.error("⚠️  MANUAL ACTION REQUIRED: Please configure Rancher environment variables manually")
@@ -1606,7 +1612,7 @@ def main():
         else:
             logger.error(f"Invalid step number: {args.step}. Must be 1-11.")
     else:
-    asyncio.run(automation.run())
+        asyncio.run(automation.run())
 
 
 if __name__ == "__main__":
