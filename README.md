@@ -10,9 +10,9 @@ Automated data population script for OnWatch on-premise software. This tool auto
 - **Acknowledge Actions**: Enable/disable and create acknowledge actions
 - **Logo Uploads**: Company, sidebar, and favicon logos (two-step upload process)
 - **Watch List**: Add subjects with multiple images via API
+- **Groups Configuration** (Step 4): Subject groups creation via POST API
 
 ### 🚧 Not Yet Implemented (Requires API Endpoints)
-- **Groups Configuration** (Step 4): Waiting for API endpoint
 - **Accounts Configuration** (Step 5): Waiting for API endpoint
 - **Devices/Cameras Configuration** (Step 7): Waiting for API endpoint
 - **Inquiries Configuration** (Step 8): Waiting for API endpoint
@@ -185,10 +185,10 @@ For issues or questions:
 ### ✅ Working Features (API-Based)
 - **KV Parameters (Step 2)**: GraphQL API mutation
 - **System Settings (Step 3)**: REST API with acknowledge actions and logo uploads
+- **Groups (Step 4)**: Subject groups creation via POST API (works on clean system)
 - **Watch List (Step 6)**: REST API with multiple images per subject
 
 ### 🚧 Steps Waiting for API Endpoints
-- **Groups (Step 4)**: Will log warning and skip
 - **Accounts (Step 5)**: Will log warning and skip
 - **Devices (Step 7)**: Will log warning and skip
 - **Inquiries (Step 8)**: Will log warning and skip
