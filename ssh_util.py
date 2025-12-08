@@ -262,9 +262,10 @@ class SSHUtil:
                     ssh.close()
                     return False
             
-            # Step 3: Wait for script to show available files and prompt for file input
+            # Step 5: Wait for script to show available files and prompt for file input
             logger.info("Waiting for translation-util script to start and show file prompt...")
             prompt_found = False
+            output = ""  # Reset output buffer for script output
             
             # Continue reading output until we see the file input prompt
             for attempt in range(20):
@@ -272,7 +273,7 @@ class SSHUtil:
                 chunk = shell.recv(4096).decode('utf-8', errors='ignore')
                 if chunk:
                     output += chunk
-                    logger.debug(f"Reading output (attempt {attempt+1}): {chunk[:200]}")
+                    logger.debug(f"Reading script output (attempt {attempt+1}): {chunk[:200]}")
                 
                 # Look for the specific prompt - user said "provide the file"
                 # Check for various possible prompts
@@ -284,7 +285,7 @@ class SSHUtil:
                     "Enter file"
                 ]):
                     logger.info("File input prompt detected!")
-                    logger.info(f"Full output received:\n{output}")
+                    logger.info(f"Full script output:\n{output}")
                     prompt_found = True
                     break
                 
@@ -300,7 +301,7 @@ class SSHUtil:
             if not prompt_found:
                 logger.warning("File input prompt not found, but proceeding anyway...")
             
-            # Step 4: Provide the entire file path from /tmp/ to .json.json
+            # Step 6: Provide the entire file path from /tmp/ to .json.json
             logger.info(f"Providing full file path: {remote_tmp_path}")
             shell.send(f"{remote_tmp_path}\n")
             time.sleep(3)  # Wait for processing
@@ -327,13 +328,13 @@ class SSHUtil:
             logger.info("✓ Translation file uploaded successfully")
             return True
             
-        except paramiko.AuthenticationException:
-            logger.error("SSH authentication failed")
+        except paramiko.AuthenticationException as e:
+            logger.error(f"SSH authentication failed: {e}")
             return False
         except paramiko.SSHException as e:
             logger.error(f"SSH error: {e}")
             return False
         except Exception as e:
-            logger.error(f"Error during translation upload: {e}")
+            logger.error(f"Error during translation upload: {e}", exc_info=True)
             return False
 
