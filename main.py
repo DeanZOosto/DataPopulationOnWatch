@@ -752,9 +752,10 @@ class OnWatchAutomation:
             
             for ug_config in user_groups_config:
                 try:
-                    title = ug_config.get('title', '').strip()
+                    # Support both 'title' and 'name' fields for backward compatibility
+                    title = (ug_config.get('title', '') or ug_config.get('name', '')).strip()
                     if not title:
-                        logger.warning(f"User group missing title: {ug_config}")
+                        logger.warning(f"User group missing title/name: {ug_config}")
                         continue
                     
                     # Skip if already exists
@@ -1361,7 +1362,7 @@ def main():
         else:
             logger.error(f"Invalid step number: {args.step}. Must be 1-11.")
     else:
-    asyncio.run(automation.run())
+        asyncio.run(automation.run())
 
 
 if __name__ == "__main__":
