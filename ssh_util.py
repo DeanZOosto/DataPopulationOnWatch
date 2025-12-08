@@ -5,6 +5,7 @@ import os
 import logging
 import time
 import paramiko
+import subprocess
 
 logger = logging.getLogger(__name__)
 
@@ -228,31 +229,29 @@ class SSHUtil:
             
             # Wait for sudo password prompt and provide password
             output = ""
-            max_attempts = 10
-            for attempt in range(max_attempts):
+            sudo_password_sent = False
+            script_started = False
+            
+            # First, handle sudo password prompt
+            for attempt in range(10):
                 time.sleep(0.5)
                 chunk = shell.recv(4096).decode('utf-8', errors='ignore')
                 output += chunk
                 
                 # Check for sudo password prompt
-                if "[sudo]" in output.lower() and "password" in output.lower():
+                if "[sudo]" in output.lower() and "password" in output.lower() and not sudo_password_sent:
                     logger.info("Sudo password prompt detected, providing password...")
                     if sudo_password:
                         shell.send(f"{sudo_password}\n")
                         time.sleep(1)
-                        # Clear output buffer and wait for script to start
-                        output = ""
-                        break
+                        sudo_password_sent = True
+                        output = ""  # Clear buffer after sending password
+                        continue
                     else:
                         logger.error("Sudo password required but not provided")
                         shell.close()
                         ssh.close()
                         return False
-                
-                # Check if script has started (no password prompt, script is running)
-                if "Please Enter Translation File To Upload" in output or "Current Translation Files Available" in output:
-                    logger.info("Translation-util script started successfully")
-                    break
                 
                 # If we see "Sorry, try again", password was wrong
                 if "Sorry, try again" in output:
@@ -260,25 +259,58 @@ class SSHUtil:
                     shell.close()
                     ssh.close()
                     return False
+                
+                # Check if script has started
+                if "Current Translation Files Available" in output or "Please Enter Translation File To Upload" in output:
+                    logger.info("Translation-util script started successfully")
+                    script_started = True
+                    break
             
-            # Wait a bit more for script to fully initialize
-            time.sleep(2)
+            # If we sent password but haven't seen script start, wait more and check again
+            if sudo_password_sent and not script_started:
+                logger.info("Waiting for script to start after sudo authentication...")
+                time.sleep(2)
+                for attempt in range(10):
+                    time.sleep(0.5)
+                    chunk = shell.recv(4096).decode('utf-8', errors='ignore')
+                    output += chunk
+                    
+                    if "Current Translation Files Available" in output or "Please Enter Translation File To Upload" in output:
+                        logger.info("Translation-util script started successfully")
+                        script_started = True
+                        break
             
-            # Read any additional output
-            additional_output = shell.recv(4096).decode('utf-8', errors='ignore')
-            output += additional_output
-            logger.info(f"Script output:\n{output}")
+            # Log what we've received so far
+            if output:
+                logger.info(f"Script output so far:\n{output}")
             
-            # Now provide the file path when we see the prompt
-            if "Please Enter Translation File To Upload" in output or "Enter" in output.lower():
-                logger.info(f"Providing file path: {remote_tmp_path}")
-                shell.send(f"{remote_tmp_path}\n")
-                time.sleep(3)  # Wait for processing
-            else:
-                # Try providing the path anyway (script might accept it directly)
-                logger.info(f"Providing file path: {remote_tmp_path}")
-                shell.send(f"{remote_tmp_path}\n")
-                time.sleep(3)
+            # Now wait for the file input prompt
+            if not script_started:
+                logger.warning("Script may not have started properly, but continuing...")
+            
+            # Wait for the specific prompt
+            logger.info("Waiting for file input prompt...")
+            prompt_found = False
+            for attempt in range(15):
+                time.sleep(0.5)
+                chunk = shell.recv(4096).decode('utf-8', errors='ignore')
+                if chunk:
+                    output += chunk
+                    logger.debug(f"Received: {chunk[:100]}")
+                
+                # Look for the specific prompt
+                if "Please Enter Translation File To Upload" in output or "Please Enter" in output:
+                    logger.info("File input prompt detected")
+                    prompt_found = True
+                    break
+            
+            if not prompt_found and output:
+                logger.warning(f"Prompt not found, but output received:\n{output}")
+            
+            # Now provide the file path
+            logger.info(f"Providing file path: {remote_tmp_path}")
+            shell.send(f"{remote_tmp_path}\n")
+            time.sleep(3)  # Wait for processing
             
             # Read final output
             final_output = shell.recv(4096).decode('utf-8', errors='ignore')
