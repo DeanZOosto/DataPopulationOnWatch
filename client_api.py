@@ -219,19 +219,32 @@ class ClientApi:
             # Get existing images
             existing_images = current_subject.get("images", [])
             
-            # Add new image (not primary)
-            # Only include fields that are present in the data
+            # Build new image in the format expected by API
+            # Based on user's example: includes backup, attributes, etc.
             new_image = {
-                "objectType": data.get("objectType"),
-                "isPrimary": False,  # Additional images are not primary
-                "featuresQuality": data.get("featuresQuality", 0),
                 "url": data.get("url"),
-                "features": data.get("features", [])
+                "featuresQuality": data.get("featuresQuality", 0),
+                "features": data.get("features", []),
+                "isPrimary": False,  # Additional images are not primary
+                "featuresId": data.get("featuresId", ""),
+                "objectType": data.get("objectType", 1)
             }
             
-            # Only add landmarkScore if it exists
+            # Add backup field if present in extract response
+            if "backup" in data:
+                new_image["backup"] = data["backup"]
+            
+            # Add attributes if present
+            if "attributes" in data:
+                new_image["attributes"] = data["attributes"]
+            
+            # Add landmarkScore if present
             if "landmarkScore" in data:
                 new_image["landmarkScore"] = data["landmarkScore"]
+            
+            # Add feNetwork if present
+            if "feNetwork" in data:
+                new_image["feNetwork"] = data["feNetwork"]
             
             existing_images.append(new_image)
             
@@ -484,6 +497,32 @@ class ClientApi:
         except requests.exceptions.RequestException as e:
             logger.error(f"Failed to get roles: {e}")
             raise
+    
+    def create_user_group(self, title, subject_groups=None, camera_groups=None):
+        """
+        Create a user group.
+        
+        Args:
+            title: User group name/title
+            subject_groups: List of subject group IDs (optional)
+            camera_groups: List of camera group IDs (optional)
+        
+        Returns:
+            Response object
+        """
+        payload = {
+            "title": title,
+            "cameraGroups": camera_groups or [],
+            "subjectGroups": subject_groups or []
+        }
+        
+        response = self.session.post(
+            f"{self.url}/user-groups",
+            headers=self.headers,
+            json=payload
+        )
+        response.raise_for_status()
+        return response
     
     def get_user_groups(self):
         """

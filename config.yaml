@@ -212,10 +212,12 @@ accounts:
       password: null  # Keep existing password
   
   user_groups:
-    - name: "testUser group"
-      users_count: 0
-    - name: "Full Data Group"
-      users_count: 2
+    - title: "testUser group"
+      subject_groups: []  # List of subject group names to assign
+      camera_groups: []  # List of camera group names to assign (not yet implemented)
+    - title: "Full Data Group"
+      subject_groups: []  # List of subject group names to assign
+      camera_groups: []  # List of camera group names to assign (not yet implemented)
 
 # Inquiries
 inquiries:

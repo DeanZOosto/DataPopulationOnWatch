@@ -709,11 +709,86 @@ class OnWatchAutomation:
                 except Exception as e:
                     logger.error(f"Failed to create user '{user_config.get('username', 'unknown')}': {e}")
         
-        # User groups - TODO: implement creation if endpoint is available
+        # User groups - create user groups
         user_groups_config = accounts.get('user_groups', [])
         if user_groups_config:
-            logger.debug(f"User groups creation not yet implemented ({len(user_groups_config)} groups skipped)")
-            logger.info("User groups will be implemented with API endpoint details")
+            logger.info(f"Creating {len(user_groups_config)} user groups...")
+            
+            # Get existing user groups to check for duplicates
+            try:
+                existing_user_groups = self.client_api.get_user_groups()
+                existing_titles = set()
+                if isinstance(existing_user_groups, list):
+                    for ug in existing_user_groups:
+                        if isinstance(ug, dict):
+                            title = ug.get('title', '')
+                            if title:
+                                existing_titles.add(title.lower())
+                logger.info(f"Found {len(existing_titles)} existing user groups")
+            except Exception as e:
+                logger.warning(f"Could not fetch existing user groups: {e}")
+                existing_titles = set()
+            
+            # Get subject groups for mapping
+            subject_group_map = {}  # name -> id
+            try:
+                groups = self.client_api.get_groups()
+                if isinstance(groups, list):
+                    for g in groups:
+                        if isinstance(g, dict):
+                            name = g.get('name', '') or g.get('title', '')
+                            gid = g.get('id')
+                            if name and gid:
+                                subject_group_map[name.lower()] = gid
+                elif isinstance(groups, dict) and 'items' in groups:
+                    for g in groups.get('items', []):
+                        if isinstance(g, dict):
+                            name = g.get('name', '') or g.get('title', '')
+                            gid = g.get('id')
+                            if name and gid:
+                                subject_group_map[name.lower()] = gid
+            except Exception as e:
+                logger.warning(f"Could not get subject groups for mapping: {e}")
+            
+            for ug_config in user_groups_config:
+                try:
+                    title = ug_config.get('title', '').strip()
+                    if not title:
+                        logger.warning(f"User group missing title: {ug_config}")
+                        continue
+                    
+                    # Skip if already exists
+                    if title.lower() in existing_titles:
+                        logger.info(f"User group '{title}' already exists, skipping")
+                        continue
+                    
+                    # Map subject group names to IDs
+                    subject_group_names = ug_config.get('subject_groups', [])
+                    subject_group_ids = []
+                    for sg_name in subject_group_names:
+                        sg_name_lower = sg_name.lower()
+                        if sg_name_lower in subject_group_map:
+                            subject_group_ids.append(subject_group_map[sg_name_lower])
+                        else:
+                            logger.warning(f"Subject group '{sg_name}' not found for user group '{title}'")
+                    
+                    # Map camera group names to IDs (if provided)
+                    camera_group_names = ug_config.get('camera_groups', [])
+                    camera_group_ids = []
+                    # TODO: Implement camera group mapping when endpoint is available
+                    if camera_group_names:
+                        logger.debug(f"Camera groups mapping not yet implemented for user group '{title}'")
+                    
+                    # Create user group
+                    self.client_api.create_user_group(
+                        title=title,
+                        subject_groups=subject_group_ids,
+                        camera_groups=camera_group_ids
+                    )
+                    logger.info(f"✓ Created user group: {title}")
+                    
+                except Exception as e:
+                    logger.error(f"Failed to create user group '{ug_config.get('title', 'unknown')}': {e}")
     
     async def configure_inquiries(self):
         """Configure inquiries via API."""
@@ -1286,7 +1361,7 @@ def main():
         else:
             logger.error(f"Invalid step number: {args.step}. Must be 1-11.")
     else:
-        asyncio.run(automation.run())
+    asyncio.run(automation.run())
 
 
 if __name__ == "__main__":
