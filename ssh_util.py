@@ -216,20 +216,15 @@ class SSHUtil:
             time.sleep(1)
             shell.recv(1024)
             
-            # Change to script directory
-            logger.info(f"Changing to directory: {script_dir}")
-            shell.send(f"cd {script_dir}\n")
-            time.sleep(1)
-            shell.recv(1024)
-            
-            # Step 1: Run translation-util upload with sudo
-            logger.info(f"Running: sudo {script_name} upload")
-            shell.send(f"sudo {script_name} upload\n")
+            # Step 1: Become root via sudo su -
+            logger.info("Becoming root via 'sudo su -'...")
+            shell.send("sudo su -\n")
             time.sleep(1)
             
-            # Step 2: Handle sudo password prompt
+            # Step 2: Handle sudo password prompt for 'sudo su -'
             output = ""
             sudo_password_sent = False
+            root_prompt_received = False
             
             logger.info("Waiting for sudo password prompt...")
             for attempt in range(15):
@@ -247,7 +242,7 @@ class SSHUtil:
                         time.sleep(1)
                         sudo_password_sent = True
                         output = ""  # Clear buffer after sending password
-                        logger.info("Sudo password sent, waiting for script output...")
+                        logger.info("Sudo password sent, waiting for root prompt...")
                         continue
                     else:
                         logger.error("Sudo password required but not provided")
@@ -261,6 +256,27 @@ class SSHUtil:
                     shell.close()
                     ssh.close()
                     return False
+                
+                # Check if we're now root (root prompt usually has '#' or 'root@')
+                if "#" in output or "root@" in output.lower() or output.strip().endswith("#"):
+                    logger.info("Successfully became root")
+                    root_prompt_received = True
+                    output = ""  # Clear buffer
+                    break
+            
+            if not root_prompt_received:
+                logger.warning("Root prompt not clearly detected, but continuing...")
+            
+            # Step 3: Change to script directory (now as root)
+            logger.info(f"Changing to directory: {script_dir}")
+            shell.send(f"cd {script_dir}\n")
+            time.sleep(1)
+            shell.recv(1024)  # Clear any output
+            
+            # Step 4: Run translation-util upload (no sudo needed, we're already root)
+            logger.info(f"Running: {script_name} upload (as root)")
+            shell.send(f"{script_name} upload\n")
+            time.sleep(1)
             
             # Step 5: Wait for script to show available files and prompt for file input
             logger.info("Waiting for translation-util script to start and show file prompt...")
