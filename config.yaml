@@ -11,8 +11,8 @@ onwatch:
 ssh:
   ip_address: "10.1.71.14"  # Usually same as onwatch IP
   username: "user"  # SSH user (will sudo to root for translation-util)
-  password: ""  # SSH password (leave empty if using SSH keys)
-  sudo_password: ""  # Sudo password (if different from SSH password, leave empty to use SSH password)
+  password: "user1!"  # SSH password (default for user "user")
+  sudo_password: "user1!"  # Sudo password (if different from SSH password, leave empty to use SSH password)
   # Path to translation-util script on the device
   translation_util_path: "/opt/ansible-installer-1.4.0-8/support-scripts/translation-util"
 

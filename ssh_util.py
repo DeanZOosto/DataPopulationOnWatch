@@ -217,29 +217,55 @@ class SSHUtil:
             shell.recv(1024)
             
             # Run translation-util upload with sudo
-            # First, if password is needed for sudo, provide it
-            if sudo_password:
-                logger.info("Providing sudo password...")
-                shell.send(f"sudo {script_name} upload\n")
-                time.sleep(1)
-                # Check if sudo password prompt appears
-                output = shell.recv(4096).decode('utf-8', errors='ignore')
-                if "password" in output.lower() or "[sudo]" in output:
-                    shell.send(f"{sudo_password}\n")
-                    time.sleep(1)
-            else:
-                logger.info(f"Running {script_name} upload (assuming passwordless sudo)...")
-                shell.send(f"sudo {script_name} upload\n")
+            logger.info(f"Running sudo {script_name} upload...")
+            shell.send(f"sudo {script_name} upload\n")
+            time.sleep(1)
             
+            # Wait for sudo password prompt and provide password
+            output = ""
+            max_attempts = 10
+            for attempt in range(max_attempts):
+                time.sleep(0.5)
+                chunk = shell.recv(4096).decode('utf-8', errors='ignore')
+                output += chunk
+                
+                # Check for sudo password prompt
+                if "[sudo]" in output.lower() and "password" in output.lower():
+                    logger.info("Sudo password prompt detected, providing password...")
+                    if sudo_password:
+                        shell.send(f"{sudo_password}\n")
+                        time.sleep(1)
+                        # Clear output buffer and wait for script to start
+                        output = ""
+                        break
+                    else:
+                        logger.error("Sudo password required but not provided")
+                        shell.close()
+                        ssh.close()
+                        return False
+                
+                # Check if script has started (no password prompt, script is running)
+                if "Please Enter Translation File To Upload" in output or "Current Translation Files Available" in output:
+                    logger.info("Translation-util script started successfully")
+                    break
+                
+                # If we see "Sorry, try again", password was wrong
+                if "Sorry, try again" in output:
+                    logger.error("Sudo password was incorrect")
+                    shell.close()
+                    ssh.close()
+                    return False
+            
+            # Wait a bit more for script to fully initialize
             time.sleep(2)
             
-            # Read output (should show available files and prompt)
-            output = shell.recv(4096).decode('utf-8', errors='ignore')
+            # Read any additional output
+            additional_output = shell.recv(4096).decode('utf-8', errors='ignore')
+            output += additional_output
             logger.info(f"Script output:\n{output}")
             
-            # Check if we see the prompt for file input
-            if "Please Enter Translation File To Upload" in output or "Enter" in output:
-                # Provide the file path when prompted
+            # Now provide the file path when we see the prompt
+            if "Please Enter Translation File To Upload" in output or "Enter" in output.lower():
                 logger.info(f"Providing file path: {remote_tmp_path}")
                 shell.send(f"{remote_tmp_path}\n")
                 time.sleep(3)  # Wait for processing
