@@ -1231,11 +1231,17 @@ class OnWatchAutomation:
         # Step 2: Upload file
         logger.info(f"Uploading mass import file: {filename}")
         try:
-            self.client_api.upload_mass_import_file(full_file_path, upload_id)
-            logger.info(f"✓ Uploaded mass import file: {filename}")
-            logger.info(f"✓ Mass import '{mass_import_name}' upload started successfully")
-            logger.info("Processing will continue in the background. Check the UI for status updates.")
-            logger.info("Note: You may need to manually resolve issues in the mass import report after processing completes.")
+            from client_api import MassImportAlreadyExists
+            try:
+                self.client_api.upload_mass_import_file(full_file_path, upload_id)
+                logger.info(f"✓ Uploaded mass import file: {filename}")
+                logger.info(f"✓ Mass import '{mass_import_name}' upload started successfully")
+                logger.info("Processing will continue in the background. Check the UI for status updates.")
+                logger.info("Note: You may need to manually resolve issues in the mass import report after processing completes.")
+            except MassImportAlreadyExists as e:
+                logger.info(f"⏭️  Mass import '{mass_import_name}' already exists, skipping")
+                self.summary.add_skipped("Mass Import", mass_import_name, "already exists")
+                return
         except Exception as e:
             logger.error(f"Failed to upload mass import file: {e}")
             return
