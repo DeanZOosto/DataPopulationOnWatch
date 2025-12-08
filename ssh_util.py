@@ -31,7 +31,7 @@ class SSHUtil:
     
     def scp_file(self, local_path, remote_path):
         """
-        Copy file to remote device via SCP.
+        Copy file to remote device via SFTP (using paramiko).
         
         Args:
             local_path: Local file path
@@ -46,39 +46,46 @@ class SSHUtil:
         
         logger.info(f"Copying {local_path} to {self.username}@{self.ip_address}:{remote_path}")
         
-        # Build SCP command
-        scp_cmd = ['scp']
-        
-        # Add SSH key if provided
-        if self.ssh_key_path and os.path.exists(self.ssh_key_path):
-            scp_cmd.extend(['-i', self.ssh_key_path])
-        
-        # Disable host key checking (for automation)
-        scp_cmd.extend(['-o', 'StrictHostKeyChecking=no', '-o', 'UserKnownHostsFile=/dev/null'])
-        
-        # Add source and destination
-        scp_cmd.append(local_path)
-        scp_cmd.append(f"{self.username}@{self.ip_address}:{remote_path}")
-        
         try:
-            result = subprocess.run(
-                scp_cmd,
-                capture_output=True,
-                text=True,
-                timeout=60
-            )
+            # Use paramiko for SFTP (same credentials as SSH)
+            ssh = paramiko.SSHClient()
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             
-            if result.returncode == 0:
-                logger.info(f"✓ Successfully copied file to {remote_path}")
-                return True
+            # Connect to SSH (same way as in upload_translation_file)
+            if self.ssh_key_path and os.path.exists(self.ssh_key_path):
+                ssh.connect(
+                    self.ip_address,
+                    username=self.username,
+                    key_filename=self.ssh_key_path,
+                    timeout=30
+                )
             else:
-                logger.error(f"SCP failed: {result.stderr}")
-                return False
-        except subprocess.TimeoutExpired:
-            logger.error("SCP operation timed out")
+                if not self.password:
+                    raise ValueError("SSH password is required for SFTP")
+                ssh.connect(
+                    self.ip_address,
+                    username=self.username,
+                    password=self.password,
+                    timeout=30
+                )
+            
+            # Use SFTP to copy file
+            sftp = ssh.open_sftp()
+            sftp.put(local_path, remote_path)
+            sftp.close()
+            ssh.close()
+            
+            logger.info(f"✓ Successfully copied file to {remote_path}")
+            return True
+            
+        except paramiko.AuthenticationException:
+            logger.error("SFTP authentication failed")
+            return False
+        except paramiko.SSHException as e:
+            logger.error(f"SFTP error: {e}")
             return False
         except Exception as e:
-            logger.error(f"SCP error: {e}")
+            logger.error(f"SFTP error: {e}")
             return False
     
     def run_ssh_command(self, command, use_sudo=False, password=None):
