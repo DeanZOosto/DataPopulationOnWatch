@@ -195,7 +195,7 @@ class OnWatchAutomation:
             try:
                 self.client_api.set_kv_parameter(key, value)
                 logger.info(f"✓ Set KV parameter: {key} = {value}")
-        except Exception as e:
+            except Exception as e:
                 logger.error(f"Failed to set KV parameter {key}: {e}")
                 raise
     
