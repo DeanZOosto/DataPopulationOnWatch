@@ -8,6 +8,7 @@ import yaml
 import os
 import sys
 import logging
+import time
 from pathlib import Path
 from client_api import ClientApi
 from rancher_automation import RancherAutomation
@@ -318,6 +319,9 @@ class OnWatchAutomation:
         if not self.client_api:
             self.initialize_api_client()
         
+        # Get project root directory (where main.py is located) for resolving relative image paths
+        project_root = os.path.dirname(os.path.abspath(__file__))
+        
         # Get groups mapping (name -> id)
         group_map = {}
         default_group_id = None
@@ -390,6 +394,10 @@ class OnWatchAutomation:
                     logger.warning(f"No image path specified for subject: {name}")
                     continue
                 
+                # Resolve relative paths to absolute paths (relative to project root)
+                if not os.path.isabs(image_path):
+                    image_path = os.path.join(project_root, image_path)
+                
                 # Check if file exists
                 if not os.path.exists(image_path):
                     logger.warning(f"Image file not found: {image_path}")
@@ -409,14 +417,21 @@ class OnWatchAutomation:
                             for additional_img_info in images[1:]:
                                 additional_img_path = additional_img_info.get('path') if isinstance(additional_img_info, dict) else additional_img_info
                                 
-                                if additional_img_path and os.path.exists(additional_img_path):
-                                    try:
-                                        self.client_api.add_image_to_subject(subject_id, additional_img_path)
-                                        logger.info(f"Added additional image to {name}: {additional_img_path}")
-                                    except Exception as e:
-                                        logger.warning(f"Could not add additional image {additional_img_path} to {name}: {e}")
+                                if additional_img_path:
+                                    # Resolve relative paths to absolute paths (relative to project root)
+                                    if not os.path.isabs(additional_img_path):
+                                        additional_img_path = os.path.join(project_root, additional_img_path)
+                                    
+                                    if os.path.exists(additional_img_path):
+                                        try:
+                                            self.client_api.add_image_to_subject(subject_id, additional_img_path)
+                                            logger.info(f"Added additional image to {name}: {additional_img_path}")
+                                        except Exception as e:
+                                            logger.warning(f"Could not add additional image {additional_img_path} to {name}: {e}")
+                                    else:
+                                        logger.warning(f"Additional image file not found: {additional_img_path}")
                                 else:
-                                    logger.warning(f"Additional image file not found: {additional_img_path}")
+                                    logger.warning(f"Additional image path is empty for {name}")
                         else:
                             logger.warning(f"Could not get subject ID to add additional images for {name}")
                     except Exception as e:
@@ -707,21 +722,299 @@ class OnWatchAutomation:
             logger.warning("User groups may need to be created manually or via different endpoint")
     
     async def configure_inquiries(self):
-        """Configure inquiries - API not yet available."""
+        """Configure inquiries via API."""
         inquiries = self.config.get('inquiries', [])
         if not inquiries:
             logger.info("No inquiries to configure")
             return
-        logger.warning(f"Inquiries configuration requires API endpoint - not yet implemented ({len(inquiries)} inquiries skipped)")
+        
+        logger.info(f"Configuring {len(inquiries)} inquiry cases...")
+        
+        # Initialize API client if needed
+        if not self.client_api:
+            self.initialize_api_client()
+        
+        # Get project root directory (where main.py is located)
+        project_root = os.path.dirname(os.path.abspath(__file__))
+        
+        for inquiry_config in inquiries:
+            try:
+                inquiry_name = inquiry_config.get('name', '').strip()
+                if not inquiry_name:
+                    logger.warning(f"Inquiry missing name: {inquiry_config}")
+                    continue
+                
+                files_config = inquiry_config.get('files', [])
+                if not files_config:
+                    logger.warning(f"Inquiry '{inquiry_name}' has no files, skipping")
+                    continue
+                
+                priority = inquiry_config.get('priority', 'Medium')
+                
+                # Create inquiry case
+                logger.info(f"Creating inquiry case: {inquiry_name}")
+                case_result = self.client_api.create_inquiry_case(inquiry_name)
+                case_id = case_result.get('id')
+                if not case_id:
+                    logger.error(f"Failed to get case ID for '{inquiry_name}'")
+                    continue
+                
+                # Update priority if specified
+                if priority:
+                    try:
+                        self.client_api.update_inquiry_case(case_id, priority=priority)
+                        logger.info(f"Set inquiry priority to: {priority}")
+                    except Exception as e:
+                        logger.warning(f"Could not set priority for inquiry '{inquiry_name}': {e}")
+                
+                # Process each file
+                logger.info(f"Adding {len(files_config)} files to inquiry case...")
+                file_ids_map = {}  # filename -> file_id (uploadId)
+                
+                for file_config in files_config:
+                    try:
+                        file_path = file_config.get('path', '').strip()
+                        if not file_path:
+                            logger.warning(f"File entry missing path: {file_config}")
+                            continue
+                        
+                        settings = file_config.get('settings', '').strip()
+                        filename = os.path.basename(file_path)
+                        
+                        # Resolve file path - always relative to project root
+                        # Supports paths like: "videos/Neo.mp4", "Neo.mp4", or absolute paths
+                        full_file_path = None
+                        if os.path.isabs(file_path):
+                            # Absolute path provided
+                            full_file_path = file_path
+                        else:
+                            # Relative path - resolve from project root
+                            # Try the path as-is first (e.g., "videos/Neo.mp4")
+                            relative_path = os.path.join(project_root, file_path)
+                            if os.path.exists(relative_path):
+                                full_file_path = relative_path
+                            else:
+                                # Try in videos directory (e.g., just "Neo.mp4" -> "videos/Neo.mp4")
+                                videos_path = os.path.join(project_root, 'videos', filename)
+                                if os.path.exists(videos_path):
+                                    full_file_path = videos_path
+                                else:
+                                    logger.warning(f"File not found: {file_path} (tried: {relative_path}, {videos_path})")
+                                    continue
+                        
+                        if not os.path.exists(full_file_path):
+                            logger.warning(f"File does not exist: {full_file_path}")
+                            continue
+                        
+                        # Step 1: Prepare forensic upload
+                        logger.info(f"Preparing upload for: {filename}")
+                        prepare_result = self.client_api.prepare_forensic_upload(filename, with_analysis=True)
+                        upload_id = prepare_result.get('id') or prepare_result.get('uploadId')
+                        if not upload_id:
+                            logger.error(f"Failed to get upload ID for '{filename}'")
+                            continue
+                        
+                        # Step 2: Upload file
+                        logger.info(f"Uploading file: {filename}")
+                        self.client_api.upload_forensic_file(full_file_path, upload_id)
+                        
+                        # Step 3: Add file to case
+                        # Use default threshold (0.5) unless it's Neo.webm with custom settings
+                        threshold = 0.5
+                        if filename.lower() == 'neo.webm' and settings.lower() == 'custom':
+                            threshold = 0.37  # Will be updated via GraphQL later
+                        
+                        logger.info(f"Adding file to case: {filename}")
+                        add_result = self.client_api.add_file_to_inquiry_case(
+                            case_id, upload_id, filename, threshold=threshold
+                        )
+                        
+                        # Store upload_id for potential configuration update
+                        file_ids_map[filename] = upload_id
+                        
+                        logger.info(f"✓ Added file to inquiry: {filename}")
+                        
+                        # Store Neo.webm upload_id for configuration after all files are added
+                        if filename.lower() == 'neo.webm' and settings.lower() == 'custom':
+                            file_ids_map['neo_webm_configure'] = upload_id
+                        
+                    except Exception as e:
+                        logger.error(f"Failed to process file '{file_config.get('path', 'unknown')}': {e}")
+                        continue
+                
+                # Configure Neo.webm ROI and threshold, then restart analysis
+                if 'neo_webm_configure' in file_ids_map:
+                    neo_webm_upload_id = file_ids_map['neo_webm_configure']
+                    logger.info("Configuring Neo.webm ROI and threshold...")
+                    
+                    # Wait a moment for files to be registered
+                    time.sleep(2)
+                    
+                    try:
+                        # Get the file from the case to get its actual ID
+                        case_files = self.client_api.get_inquiry_case_files(case_id)
+                        neo_webm_file_id = None
+                        neo_webm_status = None
+                        
+                        for case_file in case_files:
+                            if case_file.get('fileName', '').lower() == 'neo.webm':
+                                # Use cameraId for GraphQL mutations (updateFileMediaData and startAnalyzeFilesCase)
+                                neo_webm_file_id = case_file.get('cameraId', '')
+                                neo_webm_status = case_file.get('status', '')
+                                logger.info(f"Neo.webm cameraId: {neo_webm_file_id}, status: {neo_webm_status}")
+                                break
+                        
+                        if neo_webm_file_id:
+                            # Update ROI and threshold configuration
+                            try:
+                                self.client_api.update_file_media_data(
+                                    file_id=neo_webm_file_id,
+                                    threshold=0.37,
+                                    camera_padding={
+                                        'top': 15,
+                                        'right': 15,
+                                        'bottom': 22,
+                                        'left': 0
+                                    }
+                                )
+                                logger.info(f"✓ Updated Neo.webm configuration (ROI: top=15, right=15, bottom=22, left=0, threshold=0.37)")
+                                
+                                # Restart analysis with new configuration
+                                logger.info("Restarting analysis for Neo.webm with new configuration...")
+                                try:
+                                    self.client_api.start_analyze_files_case(case_id, [neo_webm_file_id])
+                                    logger.info("✓ Restarted analysis for Neo.webm")
+                                except Exception as analyze_error:
+                                    logger.warning(f"Could not restart analysis: {analyze_error}")
+                                    logger.warning("Analysis may need to be started manually in the UI")
+                            except Exception as update_error:
+                                logger.error(f"Failed to update Neo.webm configuration: {update_error}")
+                                logger.warning("You may need to manually update the ROI configuration in the UI")
+                        else:
+                            logger.warning("Could not find Neo.webm file in case to configure")
+                    except Exception as e:
+                        logger.warning(f"Could not configure Neo.webm: {e}")
+                
+                logger.info(f"✓ Completed inquiry case: {inquiry_name}")
+                
+            except Exception as e:
+                logger.error(f"Failed to configure inquiry '{inquiry_config.get('name', 'unknown')}': {e}")
+                continue
+        
+        logger.info("Inquiries configuration complete")
     
     async def configure_mass_import(self):
-        """Upload mass import - API not yet available."""
+        """Upload mass import file and wait for completion."""
         mass_import = self.config.get('mass_import', {})
         file_path = mass_import.get('file_path')
         if not file_path:
             logger.info("No mass import file specified")
             return
-        logger.warning(f"Mass import upload requires API endpoint - not yet implemented (file: {file_path})")
+        
+        logger.info("Configuring mass import...")
+        
+        # Initialize API client if needed
+        if not self.client_api:
+            self.initialize_api_client()
+        
+        # Get project root directory
+        project_root = os.path.dirname(os.path.abspath(__file__))
+        
+        # Resolve file path
+        if os.path.isabs(file_path):
+            full_file_path = file_path
+        else:
+            full_file_path = os.path.join(project_root, file_path)
+        
+        if not os.path.exists(full_file_path):
+            logger.error(f"Mass import file not found: {full_file_path}")
+            return
+        
+        filename = os.path.basename(full_file_path)
+        # Get name from config, or fallback to filename without extension
+        mass_import_name = mass_import.get('name') or os.path.splitext(filename)[0]
+        
+        # Get Cardholders group ID
+        try:
+            groups = self.client_api.get_groups(limit=100)  # Get more groups to ensure we find it
+            cardholders_group_id = None
+            
+            # Normalize groups to a list
+            if isinstance(groups, dict) and 'items' in groups:
+                groups_list = groups['items']
+            elif isinstance(groups, list):
+                groups_list = groups
+            else:
+                groups_list = []
+            
+            # Log all groups for debugging (use INFO level so it's visible)
+            logger.info(f"Searching for Cardholders group among {len(groups_list)} groups...")
+            for group in groups_list:
+                if isinstance(group, dict):
+                    # Try both 'name' and 'title' fields (API might use either)
+                    group_name = group.get('name', '') or group.get('title', '')
+                    group_name = group_name.strip() if group_name else ''
+                    group_id = group.get('id', '')
+                    
+                    if group_name:
+                        logger.info(f"  - Found group: '{group_name}' (id: {group_id})")
+                    
+                    # Fuzzy match for "Cardholders" (case-insensitive, handle plural/singular)
+                    if group_name and group_name.lower() in ['cardholders', 'cardholder']:
+                        cardholders_group_id = group_id
+                        logger.info(f"✓ Matched Cardholders group: '{group_name}' (id: {cardholders_group_id})")
+                        break
+            
+            if not cardholders_group_id:
+                logger.error("Cardholders group not found in the system. Please ensure the group exists before uploading mass import.")
+                logger.error("Mass import requires a subject group to attach the import to.")
+                logger.error("Tip: Run Step 4 (Groups Configuration) first to create the Cardholders group.")
+                return
+            
+        except Exception as e:
+            logger.error(f"Failed to get groups: {e}")
+            logger.error("Cannot proceed with mass import without group information")
+            return
+        
+        # Step 0: Check quota (optional, but good practice)
+        try:
+            self.client_api.check_subjects_quota()
+        except Exception as e:
+            logger.debug(f"Quota check skipped: {e}")
+        
+        # Step 1: Prepare mass import upload
+        logger.info(f"Preparing mass import upload: {mass_import_name}")
+        try:
+            prepare_result = self.client_api.prepare_mass_import_upload(
+                name=mass_import_name,
+                subject_group_ids=[cardholders_group_id],
+                is_search_backwards=False,
+                duplication_threshold=0.61
+            )
+            upload_id = prepare_result.get('id') or prepare_result.get('uploadId')
+            if not upload_id:
+                logger.error("Failed to get upload ID from prepare response")
+                return
+            
+            mass_import_id = upload_id  # The upload ID is also the mass import ID
+            
+        except Exception as e:
+            logger.error(f"Failed to prepare mass import upload: {e}")
+            return
+        
+        # Step 2: Upload file
+        logger.info(f"Uploading mass import file: {filename}")
+        try:
+            self.client_api.upload_mass_import_file(full_file_path, upload_id)
+            logger.info(f"✓ Uploaded mass import file: {filename}")
+            logger.info(f"✓ Mass import '{mass_import_name}' upload started successfully")
+            logger.info("Processing will continue in the background. Check the UI for status updates.")
+            logger.info("Note: You may need to manually resolve issues in the mass import report after processing completes.")
+        except Exception as e:
+            logger.error(f"Failed to upload mass import file: {e}")
+            return
+        
+        logger.info("Mass import configuration complete")
     
     async def configure_rancher(self):
         """Configure Rancher environment variables."""

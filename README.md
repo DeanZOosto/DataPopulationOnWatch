@@ -13,9 +13,10 @@ Automated data population script for OnWatch on-premise software. This tool auto
 - **Groups Configuration** (Step 4): Subject groups creation via POST API
 - **Accounts Configuration** (Step 5): User creation via POST API with role and user group mapping
 - **Devices/Cameras Configuration** (Step 7): Camera creation via GraphQL mutation with full configuration support
+- **Inquiries Configuration** (Step 8): Inquiry case creation with file uploads and custom file configuration (ROI, threshold)
+- **Mass Import** (Step 9): Mass import file upload (processing continues in background; issues may need manual resolution)
 
 ### 🚧 Not Yet Implemented (Requires API Endpoints)
-- **Inquiries Configuration** (Step 8): Waiting for API endpoint
 - **Mass Import Upload** (Step 9): Waiting for API endpoint
 - **File Uploads** (Step 11): Waiting for API endpoint
 
@@ -108,9 +109,13 @@ The automation uses **API-only approach**:
    - Acknowledge actions (Step 3)
    - Logo uploads (Step 3)
    - Camera groups (Step 7)
+   - Inquiry case creation and file uploads (Step 8)
+   - Mass import file uploads (Step 9)
 2. **GraphQL API**: 
    - KV parameters (mutation `updateSingleSetting`) (Step 2)
    - Camera creation (mutation `createCamera`) (Step 7)
+   - File media data updates (mutation `updateFileMediaData`) (Step 8)
+   - Mass import status queries (query `getMassImportLists`) (Step 9)
 3. **Rancher Automation**: 
    - For setting Kubernetes pod environment variables (Step 10 - when implemented)
 
@@ -165,6 +170,7 @@ python3 main.py 2>&1 | tee automation.log
 - The script disables SSL verification for self-signed certificates
 - All automation is done via API calls (REST and GraphQL)
 - Steps without API endpoints will log warnings and skip configuration
+- **Mass Import**: After uploading, processing continues in the background. You may need to manually resolve issues in the mass import report via the UI after processing completes.
 
 ## Support
 
@@ -191,10 +197,10 @@ For issues or questions:
 - **Accounts (Step 5)**: User creation via POST API with role/user group mapping
 - **Watch List (Step 6)**: REST API with multiple images per subject
 - **Devices (Step 7)**: Camera creation via GraphQL with full configuration (threshold, location, calibration, security access)
+- **Inquiries (Step 8)**: Inquiry case creation with file uploads, priority setting, and custom file configuration (ROI, threshold)
+- **Mass Import (Step 9)**: Mass import file upload (processing continues in background; check UI for status and manually resolve any issues if needed)
 
 ### 🚧 Steps Waiting for API Endpoints
-- **Inquiries (Step 8)**: Will log warning and skip
-- **Mass Import (Step 9)**: Will log warning and skip
 - **File Uploads (Step 11)**: Will log warning and skip
 
 **Note**: These steps will be implemented once API endpoints are available.

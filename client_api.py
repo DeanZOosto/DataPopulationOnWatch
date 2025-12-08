@@ -8,6 +8,7 @@ import urllib3
 import logging
 import mimetypes
 import os
+from datetime import datetime, timedelta
 
 # Disable SSL warnings for self-signed certificates
 urllib3.disable_warnings(InsecureRequestWarning)
@@ -1202,6 +1203,705 @@ class ClientApi:
                 logger.error(f"Failed to create camera '{name}': {e}")
             raise
     
+    def create_inquiry_case(self, case_name):
+        """
+        Create an inquiry case.
+        
+        Args:
+            case_name: Name of the inquiry case
+        
+        Returns:
+            Created inquiry case data with 'id'
+        """
+        try:
+            payload = {"name": case_name}
+            response = self.session.post(
+                f"{self.url}/inquiry",
+                headers=self.headers,
+                json=payload
+            )
+            response.raise_for_status()
+            result = response.json()
+            inquiry_id = result.get("id")
+            if not inquiry_id:
+                raise ValueError(f"No 'id' returned in response: {result}")
+            logger.info(f"Created inquiry case: {case_name} (id: {inquiry_id})")
+            return result
+        except requests.exceptions.RequestException as e:
+            if hasattr(e, 'response') and e.response is not None:
+                logger.error(f"Failed to create inquiry case '{case_name}': {e}")
+                logger.error(f"Response status: {e.response.status_code}")
+                logger.error(f"Response body: {e.response.text}")
+            else:
+                logger.error(f"Failed to create inquiry case '{case_name}': {e}")
+            raise
+    
+    def update_inquiry_case(self, inquiry_id, name=None, priority=None):
+        """
+        Update an inquiry case.
+        
+        Args:
+            inquiry_id: Inquiry case ID
+            name: New name (optional)
+            priority: Priority level (optional, e.g., "Medium", "High", "Low", or numeric 1-1000)
+        """
+        try:
+            data_to_update = {}
+            if name is not None:
+                data_to_update["name"] = name
+            if priority is not None:
+                # Map priority strings to numbers (API expects 1-1000)
+                priority_map = {
+                    "low": 1,
+                    "medium": 500,
+                    "high": 1000
+                }
+                if isinstance(priority, str):
+                    priority_lower = priority.lower()
+                    if priority_lower in priority_map:
+                        data_to_update["priority"] = priority_map[priority_lower]
+                    else:
+                        logger.warning(f"Unknown priority string '{priority}', using default 500")
+                        data_to_update["priority"] = 500
+                elif isinstance(priority, (int, float)):
+                    # Ensure it's in valid range
+                    priority_num = max(1, min(1000, int(priority)))
+                    data_to_update["priority"] = priority_num
+                else:
+                    logger.warning(f"Invalid priority type '{type(priority)}', using default 500")
+                    data_to_update["priority"] = 500
+            
+            if not data_to_update:
+                logger.warning("No fields to update in inquiry case")
+                return
+            
+            payload = {"dataToUpdate": data_to_update}
+            response = self.session.patch(
+                f"{self.url}/inquiry/{inquiry_id}",
+                headers=self.headers,
+                json=payload
+            )
+            response.raise_for_status()
+            logger.info(f"Updated inquiry case: {inquiry_id}")
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            if hasattr(e, 'response') and e.response is not None:
+                logger.error(f"Failed to update inquiry case '{inquiry_id}': {e}")
+                logger.error(f"Response status: {e.response.status_code}")
+                logger.error(f"Response body: {e.response.text}")
+            else:
+                logger.error(f"Failed to update inquiry case '{inquiry_id}': {e}")
+            raise
+    
+    def prepare_forensic_upload(self, file_name, with_analysis=True):
+        """
+        Prepare forensic file upload.
+        
+        Args:
+            file_name: Name of the file to upload
+            with_analysis: Whether to perform analysis (default: True)
+        
+        Returns:
+            Response with upload ID
+        """
+        try:
+            payload = {
+                "name": file_name,
+                "withAnalysis": with_analysis
+            }
+            response = self.session.post(
+                f"{self.url}/upload/prepare/forensic",
+                headers=self.headers,
+                json=payload
+            )
+            response.raise_for_status()
+            result = response.json()
+            upload_id = result.get("id") or result.get("uploadId")
+            if not upload_id:
+                raise ValueError(f"No upload ID in response: {result}")
+            logger.info(f"Prepared forensic upload: {file_name} (upload_id: {upload_id})")
+            return result
+        except requests.exceptions.RequestException as e:
+            if hasattr(e, 'response') and e.response is not None:
+                logger.error(f"Failed to prepare forensic upload '{file_name}': {e}")
+                logger.error(f"Response status: {e.response.status_code}")
+                logger.error(f"Response body: {e.response.text}")
+            else:
+                logger.error(f"Failed to prepare forensic upload '{file_name}': {e}")
+            raise
+    
+    def upload_forensic_file(self, file_path, upload_id):
+        """
+        Upload forensic file to the prepared upload ID.
+        
+        Args:
+            file_path: Path to the file to upload
+            upload_id: Upload ID from prepare_forensic_upload
+        
+        Returns:
+            Upload response
+        """
+        try:
+            filename = os.path.basename(file_path)
+            file_extension = filename.split(".")[-1].lower() if "." in filename else ""
+            
+            # Determine file type
+            image_extensions = ("jpg", "jpeg", "png", "bmp", "jfif", "tiff")
+            filetype = "image" if file_extension in image_extensions else "video"
+            
+            # Get MIME type
+            content_type = mimetypes.guess_type(filename)[0] or f"{filetype}/{file_extension}"
+            
+            # Read file content
+            with open(file_path, 'rb') as f:
+                file_content = f.read()
+            
+            files = {
+                'file': (filename, file_content, content_type)
+            }
+            
+            response = self.session.post(
+                f"{self.url}/upload/file/{upload_id}?type={filetype}",
+                headers=self.headers,
+                files=files
+            )
+            response.raise_for_status()
+            logger.info(f"Uploaded forensic file: {filename} (type: {filetype})")
+            # Upload endpoint may return empty response - that's OK, upload succeeded
+            # If response is empty or not JSON, that's fine - the upload succeeded (status 200)
+            try:
+                response_text = response.text.strip()
+                if response_text:
+                    try:
+                        return response.json()
+                    except (ValueError, TypeError) as json_error:
+                        # Response is not valid JSON, but upload succeeded
+                        logger.debug(f"Upload response is not JSON (this is OK): {response_text[:100]}")
+                        return {"status": "success", "upload_id": upload_id}
+                else:
+                    # Empty response - upload succeeded
+                    return {"status": "success", "upload_id": upload_id}
+            except Exception as e:
+                # Any other error parsing response - but upload succeeded (status 200)
+                logger.debug(f"Could not parse upload response (this is OK): {e}")
+                return {"status": "success", "upload_id": upload_id}
+        except requests.exceptions.RequestException as e:
+            if hasattr(e, 'response') and e.response is not None:
+                logger.error(f"Failed to upload forensic file '{file_path}': {e}")
+                logger.error(f"Response status: {e.response.status_code}")
+                logger.error(f"Response body: {e.response.text}")
+            else:
+                logger.error(f"Failed to upload forensic file '{file_path}': {e}")
+            raise
+    
+    def add_file_to_inquiry_case(self, case_id, upload_id, filename, threshold=0.5):
+        """
+        Add uploaded file to inquiry case.
+        
+        Args:
+            case_id: Inquiry case ID
+            upload_id: Upload ID from prepare_forensic_upload
+            filename: Name of the file
+            threshold: Detection threshold (default: 0.5)
+        
+        Returns:
+            Response with file ID
+        """
+        try:
+            # Determine file type
+            file_extension = filename.split(".")[-1].lower() if "." in filename else ""
+            image_extensions = ("jpg", "jpeg", "png", "bmp", "jfif", "tiff")
+            logical_file_type = 2 if file_extension in image_extensions else 1
+            
+            mimetype = mimetypes.guess_type(filename)[0] or "application/octet-stream"
+            
+            # Get actual file size if file path is available
+            # Note: We don't have file path here, so we'll use 0 and let API calculate
+            file_size = 0
+            
+            payload = {
+                "files": [
+                    {
+                        "uploadId": upload_id,
+                        "filename": filename,
+                        "captureDate": "2021-10-03T09:18:19.629Z",  # Default date, can be updated
+                        "fileType": logical_file_type,
+                        "size": file_size,
+                        "mimeType": mimetype
+                    }
+                ],
+                "threshold": threshold,
+                "configuration": {
+                    "cameraMode": [1]
+                }
+            }
+            
+            response = self.session.post(
+                f"{self.url}/inquiry/{case_id}/add-files",
+                headers=self.headers,
+                json=payload
+            )
+            response.raise_for_status()
+            # Endpoint may return empty response - that's OK, file was added
+            try:
+                response_text = response.text.strip()
+                if response_text:
+                    try:
+                        result = response.json()
+                        logger.info(f"Added file to inquiry case: {filename}")
+                        return result
+                    except (ValueError, TypeError) as json_error:
+                        # Response is not valid JSON, but operation succeeded
+                        logger.debug(f"Add file response is not JSON (this is OK): {response_text[:100]}")
+                        return {"status": "success", "case_id": case_id, "upload_id": upload_id}
+                else:
+                    # Empty response - operation succeeded
+                    logger.info(f"Added file to inquiry case: {filename}")
+                    return {"status": "success", "case_id": case_id, "upload_id": upload_id}
+            except Exception as e:
+                # Any other error parsing response - but operation succeeded (status 200)
+                logger.debug(f"Could not parse add file response (this is OK): {e}")
+                logger.info(f"Added file to inquiry case: {filename}")
+                return {"status": "success", "case_id": case_id, "upload_id": upload_id}
+        except requests.exceptions.RequestException as e:
+            if hasattr(e, 'response') and e.response is not None:
+                logger.error(f"Failed to add file to inquiry case: {e}")
+                logger.error(f"Response status: {e.response.status_code}")
+                logger.error(f"Response body: {e.response.text}")
+            else:
+                logger.error(f"Failed to add file to inquiry case: {e}")
+            raise
+    
+    def get_inquiry_case_files(self, case_id):
+        """
+        Get files in an inquiry case via GraphQL.
+        
+        Args:
+            case_id: Inquiry case ID
+        
+        Returns:
+            List of files with their IDs
+        """
+        try:
+            graphql_url = f"{self.url}/graphql"
+            
+            query = """
+            query getCase($id: ID!) {
+              getCase(id: $id) {
+                id
+                files {
+                  uploadId
+                  caseId
+                  fileName
+                  fileType
+                  status
+                  analysisProgress
+                  cameraId
+                  storagePath
+                }
+              }
+            }
+            """
+            
+            payload = {
+                "operationName": "getCase",
+                "variables": {"id": case_id},
+                "query": query
+            }
+            
+            response = self.session.post(
+                graphql_url,
+                headers=self.headers,
+                json=payload
+            )
+            response.raise_for_status()
+            result = response.json()
+            if 'errors' in result:
+                logger.error(f"GraphQL errors for getCase: {result['errors']}")
+                raise Exception(f"GraphQL error: {result['errors']}")
+            
+            case_data = result.get('data', {}).get('getCase', {})
+            files = case_data.get('files', [])
+            return files
+        except requests.exceptions.RequestException as e:
+            if hasattr(e, 'response') and e.response is not None:
+                logger.error(f"Failed to get inquiry case files: {e}")
+                logger.error(f"Response status: {e.response.status_code}")
+                logger.error(f"Response body: {e.response.text}")
+            else:
+                logger.error(f"Failed to get inquiry case files: {e}")
+            raise
+    
+    def update_file_media_data(self, file_id, threshold=None, camera_padding=None, pipe=None):
+        """
+        Update file media data via GraphQL mutation.
+        Used to configure ROI (Region of Interest) and threshold for specific files.
+        
+        Args:
+            file_id: File ID (uploadId from get_inquiry_case_files)
+            threshold: Recognition sensitive threshold (optional)
+            camera_padding: Dict with {top, left, right, bottom} for ROI (optional)
+            pipe: Pipe name (optional, usually "cv-engine-0.cv-engine.default:9970")
+        
+        Returns:
+            Update response
+        """
+        try:
+            graphql_url = f"{self.url}/graphql"
+            
+            # Build dataToUpdate object - matching the UI payload structure
+            default_pipe = pipe if pipe else "cv-engine-0.cv-engine.default:9970"
+            
+            # Use current timestamp for captureDate (matching second UI example)
+            current_date = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+            
+            data_to_update = {
+                "fileType": 1,  # Video file
+                "captureDate": current_date,  # Current date (matching UI format)
+                "threshold": float(threshold) if threshold is not None else 0.5,
+                "pipe": default_pipe,
+                "configuration": {
+                    "frameSkip": {
+                        "percent": 0,
+                        "autoSkipEnabled": False
+                    },
+                    "cameraPadding": {
+                        "top": str(camera_padding.get('top', 0)) if camera_padding else "0",
+                        "left": str(camera_padding.get('left', 0)) if camera_padding else "0",
+                        "right": str(camera_padding.get('right', 0)) if camera_padding else "0",
+                        "bottom": str(camera_padding.get('bottom', 0)) if camera_padding else "0"
+                    },
+                    "webRTC": False,
+                    "preview": False,
+                    "ffmpegOptions": "",
+                    "frameRotation": -1,
+                    "livenessThreshold": 0.55,
+                    "enableFrameStorage": True,
+                    "trackBodyMaxLengthSec": 10,
+                    "trackBodyMinLengthSec": 0.2,
+                    "trackFaceMaxLengthSec": 10,
+                    "trackFaceMinLengthSec": 0.2,
+                    "trackerBodySeekTimeOutSec": 3,
+                    "trackerFaceSeekTimeOutSec": 3,
+                    "detectionMaxBodySize": -1,
+                    "detectionMaxFaceSize": -1,
+                    "detectionMinBodySize": 20,
+                    "detectionMinFaceSize": 48,
+                    "cameraMode": [1],
+                    "startSeconds": 0,
+                    "stopSeconds": 293,  # Can be null or a number - using 293 as default
+                    "pipe": default_pipe
+                }
+            }
+            
+            mutation = """
+            mutation updateFileMediaData($id: ID!, $dataToUpdate: UpdateFileMediaData!) {
+              updateFileMediaData(id: $id, dataToUpdate: $dataToUpdate) {
+                code
+              }
+            }
+            """
+            
+            payload = {
+                "operationName": "updateFileMediaData",
+                "variables": {
+                    "id": file_id,
+                    "dataToUpdate": data_to_update
+                },
+                "query": mutation
+            }
+            
+            response = self.session.post(
+                graphql_url,
+                headers=self.headers,
+                json=payload
+            )
+            response.raise_for_status()
+            
+            result = response.json()
+            if 'errors' in result:
+                logger.error(f"GraphQL errors for updateFileMediaData: {result['errors']}")
+                raise Exception(f"GraphQL error: {result['errors']}")
+            
+            logger.info(f"Updated file media data: {file_id}")
+            return result
+        except requests.exceptions.RequestException as e:
+            if hasattr(e, 'response') and e.response is not None:
+                logger.error(f"Failed to update file media data '{file_id}': {e}")
+                logger.error(f"Response status: {e.response.status_code}")
+                logger.error(f"Response body: {e.response.text}")
+            else:
+                logger.error(f"Failed to update file media data '{file_id}': {e}")
+            raise
+    
+    def start_analyze_files_case(self, case_id, file_ids):
+        """
+        Start or restart analysis for files in an inquiry case.
+        
+        Args:
+            case_id: Inquiry case ID
+            file_ids: List of file IDs (cameraId/uploadId) to analyze
+        
+        Returns:
+            Analysis start response
+        """
+        try:
+            graphql_url = f"{self.url}/graphql"
+            
+            # Build entitiesData array
+            entities_data = []
+            for file_id in file_ids:
+                entities_data.append({
+                    "cameraId": file_id,
+                    "fileType": 1  # Video file
+                })
+            
+            mutation = """
+            mutation startAnalyzeFilesCase($id: ID!, $entitiesData: [CamerasDataUpdate!]) {
+              startAnalyzeFilesCase(id: $id, entitiesData: $entitiesData) {
+                updateFailedFilesIds
+                updatedFiles {
+                  status
+                  cameraId
+                  analysisProgress
+                }
+              }
+            }
+            """
+            
+            payload = {
+                "operationName": "startAnalyzeFilesCase",
+                "variables": {
+                    "id": case_id,
+                    "entitiesData": entities_data
+                },
+                "query": mutation
+            }
+            
+            response = self.session.post(
+                graphql_url,
+                headers=self.headers,
+                json=payload
+            )
+            response.raise_for_status()
+            
+            result = response.json()
+            if 'errors' in result:
+                logger.error(f"GraphQL errors for startAnalyzeFilesCase: {result['errors']}")
+                raise Exception(f"GraphQL error: {result['errors']}")
+            
+            logger.info(f"Started analysis for {len(file_ids)} file(s) in case")
+            return result
+        except requests.exceptions.RequestException as e:
+            if hasattr(e, 'response') and e.response is not None:
+                logger.error(f"Failed to start analysis: {e}")
+                logger.error(f"Response status: {e.response.status_code}")
+                logger.error(f"Response body: {e.response.text}")
+            else:
+                logger.error(f"Failed to start analysis: {e}")
+            raise
+    
+    def check_subjects_quota(self):
+        """
+        Check subjects quota before uploading mass import.
+        
+        Returns:
+            Quota information
+        """
+        try:
+            response = self.session.get(
+                f"{self.url}/app-licensing/validation/quota/subjects",
+                headers=self.headers
+            )
+            response.raise_for_status()
+            result = response.json()
+            logger.debug(f"Subjects quota check: {result}")
+            return result
+        except requests.exceptions.RequestException as e:
+            logger.warning(f"Could not check subjects quota: {e}")
+            # Don't fail if quota check fails, just log warning
+            return None
+    
+    def prepare_mass_import_upload(self, name, subject_group_ids, is_search_backwards=False, duplication_threshold=0.61):
+        """
+        Prepare mass import upload.
+        
+        Args:
+            name: Name for the mass import
+            subject_group_ids: List of subject group IDs to attach the import to
+            is_search_backwards: Whether to search backwards (default: False)
+            duplication_threshold: Duplication threshold (default: 0.61)
+        
+        Returns:
+            Response with upload ID
+        """
+        try:
+            payload = {
+                "name": name,
+                "subjectGroups": subject_group_ids,
+                "isSearchBackwards": is_search_backwards,
+                "duplicationThreshold": duplication_threshold
+            }
+            response = self.session.post(
+                f"{self.url}/upload/prepare/mass-import",
+                headers=self.headers,
+                json=payload
+            )
+            response.raise_for_status()
+            result = response.json()
+            upload_id = result.get("id") or result.get("uploadId")
+            if not upload_id:
+                raise ValueError(f"No upload ID in response: {result}")
+            logger.info(f"Prepared mass import upload: {name} (upload_id: {upload_id})")
+            return result
+        except requests.exceptions.RequestException as e:
+            if hasattr(e, 'response') and e.response is not None:
+                logger.error(f"Failed to prepare mass import upload '{name}': {e}")
+                logger.error(f"Response status: {e.response.status_code}")
+                logger.error(f"Response body: {e.response.text}")
+            else:
+                logger.error(f"Failed to prepare mass import upload '{name}': {e}")
+            raise
+    
+    def upload_mass_import_file(self, file_path, upload_id):
+        """
+        Upload mass import tar file to the prepared upload ID.
+        
+        Args:
+            file_path: Path to the tar file to upload
+            upload_id: Upload ID from prepare_mass_import_upload
+        
+        Returns:
+            Upload response
+        """
+        try:
+            filename = os.path.basename(file_path)
+            file_extension = filename.split(".")[-1].lower() if "." in filename else ""
+            
+            # Determine file type from extension (tar, zip, etc.)
+            filetype = file_extension if file_extension else "tar"  # Default to tar if no extension
+            
+            # MIME type format: application/{filetype} (e.g., application/tar, application/zip)
+            content_type = f"application/{filetype}"
+            
+            # Read file content
+            with open(file_path, 'rb') as f:
+                file_content = f.read()
+            
+            files = {
+                'file': (filename, file_content, content_type)
+            }
+            
+            # Use /upload/extract/{upload_id} endpoint (not /upload/file/{upload_id})
+            response = self.session.post(
+                f"{self.url}/upload/extract/{upload_id}",
+                headers=self.headers,
+                files=files
+            )
+            response.raise_for_status()
+            logger.info(f"Uploaded mass import file: {filename}")
+            # Upload endpoint may return empty response - that's OK
+            try:
+                if response.text.strip():
+                    return response.json()
+                else:
+                    return {"status": "success", "upload_id": upload_id}
+            except ValueError:
+                return {"status": "success", "upload_id": upload_id}
+        except requests.exceptions.RequestException as e:
+            if hasattr(e, 'response') and e.response is not None:
+                logger.error(f"Failed to upload mass import file '{file_path}': {e}")
+                logger.error(f"Response status: {e.response.status_code}")
+                logger.error(f"Response body: {e.response.text}")
+            else:
+                logger.error(f"Failed to upload mass import file '{file_path}': {e}")
+            raise
+    
+    def get_mass_import_status(self, mass_import_id):
+        """
+        Get mass import status via GraphQL query.
+        
+        Args:
+            mass_import_id: Mass import ID (from prepare response)
+        
+        Returns:
+            Mass import data with status, progress, and metadata
+        """
+        try:
+            graphql_url = f"{self.url}/graphql"
+            
+            query = """
+            query getMassImportLists($offset: Int, $limit: Int, $sortOrder: String, $withJobFileMetrics: Boolean, $filters: [Filter]) {
+              getMassImportLists(
+                offset: $offset
+                limit: $limit
+                sortOrder: $sortOrder
+                withJobFileMetrics: $withJobFileMetrics
+                filters: $filters
+              ) {
+                items {
+                  id
+                  name
+                  status
+                  progress
+                  reportUrl
+                  metadata {
+                    isIssuesResolved
+                    initialIssueCount
+                    initialSubjectsCount
+                  }
+                }
+                total
+              }
+            }
+            """
+            
+            # Get current date range (last 30 days to current)
+            from_date = (datetime.utcnow() - timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+            to_date = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+            
+            payload = {
+                "operationName": "getMassImportLists",
+                "variables": {
+                    "offset": 0,
+                    "limit": 200,
+                    "sortOrder": "desc",
+                    "withJobFileMetrics": True,
+                    "filters": [
+                        {"field": "from", "value": from_date},
+                        {"field": "to", "value": to_date}
+                    ]
+                },
+                "query": query
+            }
+            
+            response = self.session.post(
+                graphql_url,
+                headers=self.headers,
+                json=payload
+            )
+            response.raise_for_status()
+            result = response.json()
+            if 'errors' in result:
+                logger.error(f"GraphQL errors for getMassImportLists: {result['errors']}")
+                raise Exception(f"GraphQL error: {result['errors']}")
+            
+            # Find the mass import by ID
+            items = result.get('data', {}).get('getMassImportLists', {}).get('items', [])
+            for item in items:
+                if item.get('id') == mass_import_id:
+                    return item
+            
+            return None
+        except requests.exceptions.RequestException as e:
+            if hasattr(e, 'response') and e.response is not None:
+                logger.error(f"Failed to get mass import status: {e}")
+                logger.error(f"Response status: {e.response.status_code}")
+                logger.error(f"Response body: {e.response.text}")
+            else:
+                logger.error(f"Failed to get mass import status: {e}")
+            raise
+    
     def _update_white_label(self, white_label_updates):
         """
         Update white label settings via GraphQL mutation.
@@ -1251,6 +1951,6 @@ class ClientApi:
                 raise Exception(f"GraphQL error: {result['errors']}")
             
             return result
-        except requests.exceptions.RequestException as e:
+        except Exception as e:
             logger.error(f"Failed to update white label settings: {e}")
             raise

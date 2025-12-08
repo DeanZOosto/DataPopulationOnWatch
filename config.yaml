@@ -209,21 +209,20 @@ accounts:
 inquiries:
   - name: "upgrade test"
     files:
-      - path: "Neo.mp4"
+      - path: "videos/Neo.mp4"
         settings: "DEFAULT VALUES"
-      - path: "Neo.webm"
-        settings: ""  # Empty/default
-      - path: "Screenshot 2025-12-04 at 12.47.16.png"
-        settings: "custom"  # To be set as in screenshot
-      - path: "regular_avi_1.avi"
+      - path: "videos/Neo.webm"
+        settings: "custom"  # Special config: ROI (Top:15, Right:15, Bottom:22, Left:0), Threshold: 0.37
+      - path: "videos/regular_avi_1.avi"
         settings: "DEFAULT VALUES"
-      - path: "regular_avi_2.avi"
+      - path: "videos/regular_avi_2.avi"
         settings: "DEFAULT VALUES"
     priority: "Medium"
 
 # Mass Import
 mass_import:
-  file_path: "/Users/deanzion/Work/Person Lists/mass-import-43.tar"
+  name: "mass import 43 subjects"
+  file_path: "mass-import/mass-import-43.tar"
 
 # Watch List - 5 subjects
 watch_list:
