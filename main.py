@@ -21,6 +21,121 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+class RunSummary:
+    """Track and report automation run summary."""
+    
+    def __init__(self):
+        self.steps = {}
+        self.errors = []
+        self.warnings = []
+        self.skipped = []
+        self.manual_actions_needed = []
+    
+    def record_step(self, step_num, step_name, status, message="", manual_action=False):
+        """
+        Record step execution result.
+        
+        Args:
+            step_num: Step number (1-11)
+            step_name: Step name
+            status: 'success', 'failed', 'skipped', 'partial'
+            message: Additional message
+            manual_action: Whether manual action is needed
+        """
+        self.steps[step_num] = {
+            'name': step_name,
+            'status': status,
+            'message': message,
+            'manual_action': manual_action
+        }
+        if status == 'failed':
+            self.errors.append(f"Step {step_num}: {step_name} - {message}")
+        if manual_action:
+            self.manual_actions_needed.append(f"Step {step_num}: {step_name} - {message}")
+    
+    def add_warning(self, message):
+        """Add a warning message."""
+        self.warnings.append(message)
+    
+    def add_skipped(self, item_type, item_name, reason=""):
+        """Record a skipped item."""
+        self.skipped.append(f"{item_type}: {item_name}" + (f" ({reason})" if reason else ""))
+    
+    def print_summary(self):
+        """Print a comprehensive summary of the run."""
+        logger.info("\n" + "=" * 80)
+        logger.info("AUTOMATION RUN SUMMARY")
+        logger.info("=" * 80)
+        
+        # Step-by-step status
+        logger.info("\n📋 Step Status:")
+        for step_num in sorted(self.steps.keys()):
+            step = self.steps[step_num]
+            status_icon = {
+                'success': '✅',
+                'failed': '❌',
+                'skipped': '⏭️',
+                'partial': '⚠️'
+            }.get(step['status'], '❓')
+            
+            logger.info(f"  {status_icon} Step {step_num}: {step['name']} - {step['status'].upper()}")
+            if step['message']:
+                logger.info(f"     {step['message']}")
+        
+        # Statistics
+        total_steps = len(self.steps)
+        successful = sum(1 for s in self.steps.values() if s['status'] == 'success')
+        failed = sum(1 for s in self.steps.values() if s['status'] == 'failed')
+        skipped_steps = sum(1 for s in self.steps.values() if s['status'] == 'skipped')
+        
+        logger.info(f"\n📊 Statistics:")
+        logger.info(f"  Total Steps: {total_steps}")
+        logger.info(f"  ✅ Successful: {successful}")
+        logger.info(f"  ❌ Failed: {failed}")
+        logger.info(f"  ⏭️  Skipped: {skipped_steps}")
+        
+        # Skipped items
+        if self.skipped:
+            logger.info(f"\n⏭️  Skipped Items ({len(self.skipped)}):")
+            for item in self.skipped[:20]:  # Show first 20
+                logger.info(f"  - {item}")
+            if len(self.skipped) > 20:
+                logger.info(f"  ... and {len(self.skipped) - 20} more")
+        
+        # Errors
+        if self.errors:
+            logger.error(f"\n❌ ERRORS ({len(self.errors)}):")
+            for error in self.errors:
+                logger.error(f"  • {error}")
+        
+        # Manual actions needed
+        if self.manual_actions_needed:
+            logger.warning(f"\n⚠️  MANUAL ACTION REQUIRED ({len(self.manual_actions_needed)}):")
+            for action in self.manual_actions_needed:
+                logger.warning(f"  ⚠️  {action}")
+            logger.warning("\n⚠️  Please review the items above and complete them manually in the UI.")
+        
+        # Warnings
+        if self.warnings:
+            logger.warning(f"\n⚠️  WARNINGS ({len(self.warnings)}):")
+            for warning in self.warnings[:10]:  # Show first 10
+                logger.warning(f"  • {warning}")
+            if len(self.warnings) > 10:
+                logger.warning(f"  ... and {len(self.warnings) - 10} more warnings")
+        
+        # Final status
+        logger.info("\n" + "=" * 80)
+        if failed == 0 and not self.manual_actions_needed:
+            logger.info("✅ AUTOMATION COMPLETED SUCCESSFULLY")
+        elif failed > 0:
+            logger.error(f"❌ AUTOMATION COMPLETED WITH {failed} FAILED STEP(S)")
+            logger.error("Please review the errors above and take manual action if needed.")
+        else:
+            logger.warning("⚠️  AUTOMATION COMPLETED WITH WARNINGS")
+            logger.warning("Please review the warnings and manual actions needed above.")
+        logger.info("=" * 80 + "\n")
+
+
 class OnWatchAutomation:
     """Main automation orchestrator."""
     
@@ -35,6 +150,8 @@ class OnWatchAutomation:
         self.config = self.load_config()
         self.client_api = None
         self.rancher_automation = None
+        self.summary = RunSummary()
+        self.summary = RunSummary()
     
     def load_config(self):
         """Load configuration from YAML file."""
@@ -260,7 +377,8 @@ class OnWatchAutomation:
                 
                 # Check for duplicates
                 if name.lower() in existing_camera_names:
-                    logger.warning(f"Camera '{name}' already exists, skipping")
+                    logger.info(f"⏭️  Camera '{name}' already exists, skipping")
+                    self.summary.add_skipped("Camera", name, "already exists")
                     skipped_count += 1
                     continue
                 
@@ -296,7 +414,11 @@ class OnWatchAutomation:
                 existing_camera_names.add(name.lower())  # Track created camera
                 
             except Exception as e:
-                logger.error(f"Failed to create camera '{device_config.get('name', 'unknown')}': {e}")
+                camera_name = device_config.get('name', 'unknown')
+                error_detail = str(e)
+                logger.error(f"❌ Failed to create camera '{camera_name}': {error_detail}")
+                logger.warning(f"⚠️  Camera '{camera_name}' was not created. You may need to create it manually in the UI.")
+                self.summary.add_warning(f"Camera '{camera_name}' was not created - manual action may be needed")
                 skipped_count += 1
         
         logger.info(f"Devices configuration complete: {created_count} created, {skipped_count} skipped")
@@ -426,9 +548,12 @@ class OnWatchAutomation:
                                     if os.path.exists(additional_img_path):
                                         try:
                                             self.client_api.add_image_to_subject(subject_id, additional_img_path)
-                                            logger.info(f"Added additional image to {name}: {additional_img_path}")
+                                            logger.info(f"✓ Added additional image to {name}: {additional_img_path}")
                                         except Exception as e:
-                                            logger.warning(f"Could not add additional image {additional_img_path} to {name}: {e}")
+                                            error_detail = str(e)
+                                            logger.error(f"❌ Failed to add additional image '{additional_img_path}' to subject '{name}': {error_detail}")
+                                            logger.warning(f"⚠️  Subject '{name}' was created but additional image was not added. You may need to add it manually in the UI.")
+                                            self.summary.add_warning(f"Subject '{name}': Additional image '{os.path.basename(additional_img_path)}' not added - manual action may be needed")
                                     else:
                                         logger.warning(f"Additional image file not found: {additional_img_path}")
                                 else:
@@ -440,7 +565,10 @@ class OnWatchAutomation:
                 
             except Exception as e:
                 subject_name = subject.get('name', 'unknown') if isinstance(subject, dict) else 'unknown'
-                logger.error(f"Error adding subject {subject_name}: {e}", exc_info=True)
+                error_detail = str(e)
+                logger.error(f"❌ Failed to add subject '{subject_name}': {error_detail}")
+                logger.error(f"⚠️  MANUAL ACTION REQUIRED: Please add subject '{subject_name}' manually in the UI")
+                self.summary.add_warning(f"Subject '{subject_name}' was not added - manual action required")
     
     async def configure_groups(self):
         """Configure groups and profiles via API."""
@@ -542,7 +670,11 @@ class OnWatchAutomation:
                     logger.info(f"✓ Created subject group: {name}")
                     
                 except Exception as e:
-                    logger.error(f"Failed to create subject group '{group_config.get('name', 'unknown')}': {e}")
+                    group_name = group_config.get('name', 'unknown')
+                    error_detail = str(e)
+                    logger.error(f"❌ Failed to create subject group '{group_name}': {error_detail}")
+                    logger.warning(f"⚠️  Subject group '{group_name}' was not created. You may need to create it manually in the UI.")
+                    self.summary.add_warning(f"Subject group '{group_name}' was not created - manual action may be needed")
         
         # Device groups - TODO: implement once endpoint is available
         device_groups = groups.get('device_groups', [])
@@ -627,7 +759,8 @@ class OnWatchAutomation:
                     
                     # Skip if user already exists
                     if username.lower() in existing_usernames:
-                        logger.info(f"User '{username}' already exists, skipping")
+                        logger.info(f"⏭️  User '{username}' already exists, skipping")
+                        self.summary.add_skipped("User", username, "already exists")
                         continue
                     
                     first_name = user_config.get('first_name', '').strip()
@@ -707,7 +840,11 @@ class OnWatchAutomation:
                     logger.info(f"✓ Created user: {username}")
                     
                 except Exception as e:
-                    logger.error(f"Failed to create user '{user_config.get('username', 'unknown')}': {e}")
+                    username = user_config.get('username', 'unknown')
+                    error_detail = str(e)
+                    logger.error(f"❌ Failed to create user '{username}': {error_detail}")
+                    logger.warning(f"⚠️  User '{username}' was not created. You may need to create it manually in the UI.")
+                    self.summary.add_warning(f"User '{username}' was not created - manual action may be needed")
         
         # User groups - create user groups
         user_groups_config = accounts.get('user_groups', [])
@@ -760,7 +897,8 @@ class OnWatchAutomation:
                     
                     # Skip if already exists
                     if title.lower() in existing_titles:
-                        logger.info(f"User group '{title}' already exists, skipping")
+                        logger.info(f"⏭️  User group '{title}' already exists, skipping")
+                        self.summary.add_skipped("User Group", title, "already exists")
                         continue
                     
                     # Map subject group names to IDs
@@ -789,7 +927,11 @@ class OnWatchAutomation:
                     logger.info(f"✓ Created user group: {title}")
                     
                 except Exception as e:
-                    logger.error(f"Failed to create user group '{ug_config.get('title', 'unknown')}': {e}")
+                    title = ug_config.get('title', 'unknown') or ug_config.get('name', 'unknown')
+                    error_detail = str(e)
+                    logger.error(f"❌ Failed to create user group '{title}': {error_detail}")
+                    logger.warning(f"⚠️  User group '{title}' was not created. You may need to create it manually in the UI.")
+                    self.summary.add_warning(f"User group '{title}' was not created - manual action may be needed")
     
     async def configure_inquiries(self):
         """Configure inquiries via API."""
@@ -968,7 +1110,11 @@ class OnWatchAutomation:
                 logger.info(f"✓ Completed inquiry case: {inquiry_name}")
                 
             except Exception as e:
-                logger.error(f"Failed to configure inquiry '{inquiry_config.get('name', 'unknown')}': {e}")
+                inquiry_name = inquiry_config.get('name', 'unknown')
+                error_detail = str(e)
+                logger.error(f"❌ Failed to configure inquiry '{inquiry_name}': {error_detail}")
+                logger.warning(f"⚠️  Inquiry '{inquiry_name}' was not configured. You may need to create it manually in the UI.")
+                self.summary.add_warning(f"Inquiry '{inquiry_name}' was not configured - manual action may be needed")
                 continue
         
         logger.info("Inquiries configuration complete")
@@ -1260,61 +1406,143 @@ class OnWatchAutomation:
     
     async def run(self):
         """Run the complete automation process."""
-        logger.info("=" * 60)
+        logger.info("=" * 80)
         logger.info("Starting OnWatch Data Population Automation")
-        logger.info("=" * 60)
+        logger.info("=" * 80)
         
         try:
             # Step 1: Initialize API client
             logger.info("\n[Step 1/11] Initializing API client...")
-            self.initialize_api_client()
+            try:
+                self.initialize_api_client()
+                self.summary.record_step(1, "Initialize API Client", "success", "API client initialized and logged in")
+            except Exception as e:
+                error_msg = f"Failed to initialize API client: {str(e)}"
+                logger.error(f"❌ {error_msg}")
+                logger.error("⚠️  MANUAL ACTION REQUIRED: Cannot proceed without API client. Please check credentials and network connectivity.")
+                self.summary.record_step(1, "Initialize API Client", "failed", error_msg, manual_action=True)
+                raise  # Cannot continue without API client
             
             # Step 2: Set KV parameters
             logger.info("\n[Step 2/11] Setting KV parameters...")
-            await self.set_kv_parameters()
+            try:
+                await self.set_kv_parameters()
+                self.summary.record_step(2, "Set KV Parameters", "success")
+            except Exception as e:
+                error_msg = f"Failed to set KV parameters: {str(e)}"
+                logger.error(f"❌ {error_msg}")
+                logger.error("⚠️  MANUAL ACTION REQUIRED: Please set KV parameters manually in the UI at /bt/settings/kv")
+                self.summary.record_step(2, "Set KV Parameters", "failed", error_msg, manual_action=True)
             
             # Step 3: Configure system settings
             logger.info("\n[Step 3/11] Configuring system settings...")
-            await self.configure_system_settings()
+            try:
+                await self.configure_system_settings()
+                self.summary.record_step(3, "Configure System Settings", "success")
+            except Exception as e:
+                error_msg = f"Failed to configure system settings: {str(e)}"
+                logger.error(f"❌ {error_msg}")
+                logger.error("⚠️  MANUAL ACTION REQUIRED: Please configure system settings manually in the UI")
+                self.summary.record_step(3, "Configure System Settings", "failed", error_msg, manual_action=True)
             
             # Step 4: Configure groups and profiles
             logger.info("\n[Step 4/11] Configuring groups and profiles...")
-            await self.configure_groups()
+            try:
+                await self.configure_groups()
+                self.summary.record_step(4, "Configure Groups", "success")
+            except Exception as e:
+                error_msg = f"Failed to configure groups: {str(e)}"
+                logger.error(f"❌ {error_msg}")
+                logger.error("⚠️  MANUAL ACTION REQUIRED: Please configure groups manually in the UI")
+                self.summary.record_step(4, "Configure Groups", "failed", error_msg, manual_action=True)
             
             # Step 5: Configure accounts
             logger.info("\n[Step 5/11] Configuring accounts...")
-            await self.configure_accounts()
+            try:
+                await self.configure_accounts()
+                self.summary.record_step(5, "Configure Accounts", "success")
+            except Exception as e:
+                error_msg = f"Failed to configure accounts: {str(e)}"
+                logger.error(f"❌ {error_msg}")
+                logger.error("⚠️  MANUAL ACTION REQUIRED: Please configure accounts manually in the UI")
+                self.summary.record_step(5, "Configure Accounts", "failed", error_msg, manual_action=True)
             
             # Step 6: Populate watch list
             logger.info("\n[Step 6/11] Populating watch list...")
-            self.populate_watch_list()
+            try:
+                self.populate_watch_list()
+                self.summary.record_step(6, "Populate Watch List", "success")
+            except Exception as e:
+                error_msg = f"Failed to populate watch list: {str(e)}"
+                logger.error(f"❌ {error_msg}")
+                logger.error("⚠️  MANUAL ACTION REQUIRED: Please add watch list subjects manually in the UI")
+                self.summary.record_step(6, "Populate Watch List", "failed", error_msg, manual_action=True)
             
             # Step 7: Configure devices
             logger.info("\n[Step 7/11] Configuring devices...")
-            await self.configure_devices()
+            try:
+                await self.configure_devices()
+                self.summary.record_step(7, "Configure Devices", "success")
+            except Exception as e:
+                error_msg = f"Failed to configure devices: {str(e)}"
+                logger.error(f"❌ {error_msg}")
+                logger.error("⚠️  MANUAL ACTION REQUIRED: Please configure devices manually in the UI")
+                self.summary.record_step(7, "Configure Devices", "failed", error_msg, manual_action=True)
             
             # Step 8: Configure inquiries
             logger.info("\n[Step 8/11] Configuring inquiries...")
-            await self.configure_inquiries()
+            try:
+                await self.configure_inquiries()
+                self.summary.record_step(8, "Configure Inquiries", "success")
+            except Exception as e:
+                error_msg = f"Failed to configure inquiries: {str(e)}"
+                logger.error(f"❌ {error_msg}")
+                logger.error("⚠️  MANUAL ACTION REQUIRED: Please configure inquiries manually in the UI")
+                self.summary.record_step(8, "Configure Inquiries", "failed", error_msg, manual_action=True)
             
             # Step 9: Upload mass import
             logger.info("\n[Step 9/11] Uploading mass import...")
-            await self.configure_mass_import()
+            try:
+                await self.configure_mass_import()
+                self.summary.record_step(9, "Upload Mass Import", "success", "File uploaded, processing continues in background")
+            except Exception as e:
+                error_msg = f"Failed to upload mass import: {str(e)}"
+                logger.error(f"❌ {error_msg}")
+                logger.error("⚠️  MANUAL ACTION REQUIRED: Please upload mass import file manually in the UI")
+                self.summary.record_step(9, "Upload Mass Import", "failed", error_msg, manual_action=True)
             
             # Step 10: Configure Rancher
             logger.info("\n[Step 10/11] Configuring Rancher...")
-            self.configure_rancher()
+            try:
+                self.configure_rancher()
+                self.summary.record_step(10, "Configure Rancher", "success")
+            except Exception as e:
+                error_msg = f"Failed to configure Rancher: {str(e)}"
+                logger.error(f"❌ {error_msg}")
+                logger.error("⚠️  MANUAL ACTION REQUIRED: Please configure Rancher environment variables manually")
+                self.summary.record_step(10, "Configure Rancher", "failed", error_msg, manual_action=True)
             
             # Step 11: Upload files
             logger.info("\n[Step 11/11] Uploading files...")
-            await self.upload_files()
-            
-            logger.info("\n" + "=" * 60)
-            logger.info("Automation completed successfully!")
-            logger.info("=" * 60)
+            try:
+                await self.upload_files()
+                self.summary.record_step(11, "Upload Files", "success")
+            except Exception as e:
+                error_msg = f"Failed to upload files: {str(e)}"
+                logger.error(f"❌ {error_msg}")
+                logger.error("⚠️  MANUAL ACTION REQUIRED: Please upload translation file manually via SSH")
+                self.summary.record_step(11, "Upload Files", "failed", error_msg, manual_action=True)
             
         except Exception as e:
-            logger.error(f"Automation failed: {e}", exc_info=True)
+            logger.error(f"\n❌ FATAL ERROR: Automation failed with exception: {e}", exc_info=True)
+            logger.error("Automation stopped due to fatal error")
+        
+        # Print summary
+        self.summary.print_summary()
+        
+        # Exit with appropriate code
+        failed_steps = sum(1 for s in self.summary.steps.values() if s['status'] == 'failed')
+        if failed_steps > 0:
             sys.exit(1)
 
 
