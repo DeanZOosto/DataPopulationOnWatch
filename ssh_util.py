@@ -222,21 +222,22 @@ class SSHUtil:
             time.sleep(1)
             shell.recv(1024)
             
-            # Run translation-util upload with sudo
-            logger.info(f"Running sudo {script_name} upload...")
+            # Step 1: Run translation-util upload with sudo
+            logger.info(f"Running: sudo {script_name} upload")
             shell.send(f"sudo {script_name} upload\n")
             time.sleep(1)
             
-            # Wait for sudo password prompt and provide password
+            # Step 2: Handle sudo password prompt
             output = ""
             sudo_password_sent = False
-            script_started = False
             
-            # First, handle sudo password prompt
-            for attempt in range(10):
+            logger.info("Waiting for sudo password prompt...")
+            for attempt in range(15):
                 time.sleep(0.5)
                 chunk = shell.recv(4096).decode('utf-8', errors='ignore')
-                output += chunk
+                if chunk:
+                    output += chunk
+                    logger.debug(f"Received (attempt {attempt+1}): {chunk[:200]}")
                 
                 # Check for sudo password prompt
                 if "[sudo]" in output.lower() and "password" in output.lower() and not sudo_password_sent:
@@ -246,6 +247,7 @@ class SSHUtil:
                         time.sleep(1)
                         sudo_password_sent = True
                         output = ""  # Clear buffer after sending password
+                        logger.info("Sudo password sent, waiting for script output...")
                         continue
                     else:
                         logger.error("Sudo password required but not provided")
@@ -259,56 +261,47 @@ class SSHUtil:
                     shell.close()
                     ssh.close()
                     return False
-                
-                # Check if script has started
-                if "Current Translation Files Available" in output or "Please Enter Translation File To Upload" in output:
-                    logger.info("Translation-util script started successfully")
-                    script_started = True
-                    break
             
-            # If we sent password but haven't seen script start, wait more and check again
-            if sudo_password_sent and not script_started:
-                logger.info("Waiting for script to start after sudo authentication...")
-                time.sleep(2)
-                for attempt in range(10):
-                    time.sleep(0.5)
-                    chunk = shell.recv(4096).decode('utf-8', errors='ignore')
-                    output += chunk
-                    
-                    if "Current Translation Files Available" in output or "Please Enter Translation File To Upload" in output:
-                        logger.info("Translation-util script started successfully")
-                        script_started = True
-                        break
-            
-            # Log what we've received so far
-            if output:
-                logger.info(f"Script output so far:\n{output}")
-            
-            # Now wait for the file input prompt
-            if not script_started:
-                logger.warning("Script may not have started properly, but continuing...")
-            
-            # Wait for the specific prompt
-            logger.info("Waiting for file input prompt...")
+            # Step 3: Wait for script to show available files and prompt for file input
+            logger.info("Waiting for translation-util script to start and show file prompt...")
             prompt_found = False
-            for attempt in range(15):
+            
+            # Continue reading output until we see the file input prompt
+            for attempt in range(20):
                 time.sleep(0.5)
                 chunk = shell.recv(4096).decode('utf-8', errors='ignore')
                 if chunk:
                     output += chunk
-                    logger.debug(f"Received: {chunk[:100]}")
+                    logger.debug(f"Reading output (attempt {attempt+1}): {chunk[:200]}")
                 
-                # Look for the specific prompt
-                if "Please Enter Translation File To Upload" in output or "Please Enter" in output:
-                    logger.info("File input prompt detected")
+                # Look for the specific prompt - user said "provide the file"
+                # Check for various possible prompts
+                if any(phrase in output for phrase in [
+                    "Please Enter Translation File To Upload",
+                    "Please Enter",
+                    "provide the file",
+                    "Enter Translation File",
+                    "Enter file"
+                ]):
+                    logger.info("File input prompt detected!")
+                    logger.info(f"Full output received:\n{output}")
                     prompt_found = True
                     break
+                
+                # Also check if script has started showing available files
+                if "Current Translation Files Available" in output or "Translation Files Available" in output:
+                    logger.info("Script is showing available files, waiting for input prompt...")
+                    # Continue waiting for the prompt
             
-            if not prompt_found and output:
-                logger.warning(f"Prompt not found, but output received:\n{output}")
+            # Log final output before sending file path
+            if output:
+                logger.info(f"Script output before sending file path:\n{output}")
             
-            # Now provide the file path
-            logger.info(f"Providing file path: {remote_tmp_path}")
+            if not prompt_found:
+                logger.warning("File input prompt not found, but proceeding anyway...")
+            
+            # Step 4: Provide the entire file path from /tmp/ to .json.json
+            logger.info(f"Providing full file path: {remote_tmp_path}")
             shell.send(f"{remote_tmp_path}\n")
             time.sleep(3)  # Wait for processing
             
