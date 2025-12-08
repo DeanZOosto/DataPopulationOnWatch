@@ -309,31 +309,67 @@ class OnWatchAutomation:
         if subject_groups:
             logger.info(f"Creating {len(subject_groups)} subject groups...")
             
+            # Helper function to check if two names are similar (handles plural/singular, case differences)
+            def names_match(name1, name2):
+                """Check if two group names are essentially the same (handles plural/singular variations)."""
+                n1 = name1.lower().strip()
+                n2 = name2.lower().strip()
+                
+                # Exact match (case-insensitive)
+                if n1 == n2:
+                    return True
+                
+                # Check if one is the other + 's' or vice versa (plural/singular)
+                if n1 + 's' == n2 or n2 + 's' == n1:
+                    return True
+                if n1 + 'es' == n2 or n2 + 'es' == n1:
+                    return True
+                if (n1.endswith('s') and n1[:-1] == n2) or (n2.endswith('s') and n2[:-1] == n1):
+                    return True
+                if (n1.endswith('es') and n1[:-2] == n2) or (n2.endswith('es') and n2[:-2] == n1):
+                    return True
+                
+                return False
+            
             # Get existing groups to check for duplicates
             try:
                 existing_groups = self.client_api.get_groups()
-                existing_group_names = set()
+                existing_group_list = []  # Keep full group objects for better matching
                 if isinstance(existing_groups, list):
-                    existing_group_names = {g.get('title', '') for g in existing_groups if isinstance(g, dict)}
+                    for g in existing_groups:
+                        if isinstance(g, dict):
+                            title = g.get('title', '').strip()
+                            if title:
+                                existing_group_list.append(title)
                 elif isinstance(existing_groups, dict) and 'items' in existing_groups:
-                    existing_group_names = {g.get('title', '') for g in existing_groups.get('items', []) if isinstance(g, dict)}
+                    for g in existing_groups.get('items', []):
+                        if isinstance(g, dict):
+                            title = g.get('title', '').strip()
+                            if title:
+                                existing_group_list.append(title)
                 
-                logger.info(f"Found {len(existing_group_names)} existing groups")
+                logger.info(f"Found {len(existing_group_list)} existing groups")
             except Exception as e:
                 logger.warning(f"Could not fetch existing groups: {e}")
-                existing_group_names = set()
+                existing_group_list = []
             
             # Create each subject group
             for group_config in subject_groups:
                 try:
-                    name = group_config.get('name')
+                    name = group_config.get('name', '').strip()
                     if not name:
                         logger.warning(f"Subject group missing name: {group_config}")
                         continue
                     
-                    # Skip if group already exists
-                    if name in existing_group_names:
-                        logger.info(f"Subject group '{name}' already exists, skipping")
+                    # Skip if group already exists (fuzzy matching for plural/singular variations)
+                    matching_existing = None
+                    for existing_name in existing_group_list:
+                        if names_match(name, existing_name):
+                            matching_existing = existing_name
+                            break
+                    
+                    if matching_existing:
+                        logger.info(f"Subject group '{name}' already exists as '{matching_existing}', skipping")
                         continue
                     
                     authorization = group_config.get('authorization', 'Always Unauthorized')
