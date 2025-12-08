@@ -191,11 +191,11 @@ class OnWatchAutomation:
         if not self.client_api:
             self.initialize_api_client()
         
-        for key, value in kv_params.items():
+            for key, value in kv_params.items():
             try:
                 self.client_api.set_kv_parameter(key, value)
                 logger.info(f"✓ Set KV parameter: {key} = {value}")
-            except Exception as e:
+        except Exception as e:
                 logger.error(f"Failed to set KV parameter {key}: {e}")
                 raise
     
@@ -268,9 +268,9 @@ class OnWatchAutomation:
             else:
                 logger.warning("Could not find 'me.jpg' image from Yonatan subject in watch_list")
             
-            # Upload favicon (use favicon.ico from images directory)
-            config_dir = os.path.dirname(os.path.abspath(self.config_path))
-            favicon_path = os.path.join(config_dir, "images", "favicon.ico")
+            # Upload favicon (use favicon.ico from assets/images directory)
+            project_root = os.path.dirname(os.path.abspath(__file__))
+            favicon_path = os.path.join(project_root, "assets", "images", "favicon.ico")
             if os.path.exists(favicon_path):
                 try:
                     self.client_api.upload_logo(favicon_path, "favicon")
@@ -278,7 +278,7 @@ class OnWatchAutomation:
                 except Exception as e:
                     logger.warning(f"Could not upload favicon logo: {e}")
             else:
-                logger.warning(f"Favicon not found at {favicon_path}")
+                logger.debug(f"Favicon not found at {favicon_path} (optional, skipping)")
                 
         except Exception as e:
             logger.error(f"Failed to configure system settings via API: {e}")
@@ -455,7 +455,7 @@ class OnWatchAutomation:
                 group_map = {g.get('name'): g.get('id') for g in groups if isinstance(g, dict) and g.get('name')}
                 # Get first group as default if available
                 if groups and isinstance(groups[0], dict):
-                    default_group_id = groups[0].get('id')
+                default_group_id = groups[0].get('id')
             elif isinstance(groups, dict) and 'items' in groups:
                 items = groups.get('items', [])
                 group_map = {g.get('name'): g.get('id') for g in items if isinstance(g, dict) and g.get('name')}
@@ -480,11 +480,11 @@ class OnWatchAutomation:
                     description="Default group created automatically"
                 )
                 if isinstance(group_response, dict):
-                    default_group_id = group_response.get('id')
+                default_group_id = group_response.get('id')
                     logger.info(f"Created default group with ID: {default_group_id}")
                     # Update group_map with the newly created group
                     group_map["Default Group"] = default_group_id
-            except Exception as e:
+        except Exception as e:
                 logger.warning(f"Could not create default group: {e}")
         
         for subject in watch_list:
@@ -528,7 +528,8 @@ class OnWatchAutomation:
                 
                 # Add subject with first image
                 response = self.client_api.add_subject_from_image(name, image_path, group_id)
-                logger.info(f"Added subject to watch list: {name} (image: {image_path})")
+                logger.info(f"✓ Added subject to watch list: {name} (image: {os.path.basename(image_path)})")
+                success_count += 1
                 
                 # Add additional images if any (e.g., Yonatan has 2 images)
                 if len(images) > 1:
@@ -549,7 +550,7 @@ class OnWatchAutomation:
                                         try:
                                             self.client_api.add_image_to_subject(subject_id, additional_img_path)
                                             logger.info(f"✓ Added additional image to {name}: {additional_img_path}")
-                                        except Exception as e:
+            except Exception as e:
                                             error_detail = str(e)
                                             logger.error(f"❌ Failed to add additional image '{additional_img_path}' to subject '{name}': {error_detail}")
                                             logger.warning(f"⚠️  Subject '{name}' was created but additional image was not added. You may need to add it manually in the UI.")
@@ -567,8 +568,17 @@ class OnWatchAutomation:
                 subject_name = subject.get('name', 'unknown') if isinstance(subject, dict) else 'unknown'
                 error_detail = str(e)
                 logger.error(f"❌ Failed to add subject '{subject_name}': {error_detail}")
-                logger.error(f"⚠️  MANUAL ACTION REQUIRED: Please add subject '{subject_name}' manually in the UI")
-                self.summary.add_warning(f"Subject '{subject_name}' was not added - manual action required")
+                logger.warning(f"⚠️  Subject '{subject_name}' was not added. You may need to add it manually in the UI.")
+                self.summary.add_warning(f"Subject '{subject_name}' was not added - manual action may be needed")
+                failed_count += 1
+        
+        # Log summary
+        if failed_count == 0:
+            logger.info(f"✓ Watch list population complete: {success_count} subjects added")
+        elif success_count > 0:
+            logger.warning(f"⚠️  Watch list population partial: {success_count} succeeded, {failed_count} failed")
+        else:
+            logger.error(f"❌ Watch list population failed: all {failed_count} subjects failed")
     
     async def configure_groups(self):
         """Configure groups and profiles via API."""
@@ -1414,7 +1424,7 @@ class OnWatchAutomation:
             # Step 1: Initialize API client
             logger.info("\n[Step 1/11] Initializing API client...")
             try:
-                self.initialize_api_client()
+            self.initialize_api_client()
                 self.summary.record_step(1, "Initialize API Client", "success", "API client initialized and logged in")
             except Exception as e:
                 error_msg = f"Failed to initialize API client: {str(e)}"
@@ -1426,7 +1436,7 @@ class OnWatchAutomation:
             # Step 2: Set KV parameters
             logger.info("\n[Step 2/11] Setting KV parameters...")
             try:
-                await self.set_kv_parameters()
+            await self.set_kv_parameters()
                 self.summary.record_step(2, "Set KV Parameters", "success")
             except Exception as e:
                 error_msg = f"Failed to set KV parameters: {str(e)}"
@@ -1437,7 +1447,7 @@ class OnWatchAutomation:
             # Step 3: Configure system settings
             logger.info("\n[Step 3/11] Configuring system settings...")
             try:
-                await self.configure_system_settings()
+            await self.configure_system_settings()
                 self.summary.record_step(3, "Configure System Settings", "success")
             except Exception as e:
                 error_msg = f"Failed to configure system settings: {str(e)}"
@@ -1470,7 +1480,7 @@ class OnWatchAutomation:
             # Step 6: Populate watch list
             logger.info("\n[Step 6/11] Populating watch list...")
             try:
-                self.populate_watch_list()
+            self.populate_watch_list()
                 self.summary.record_step(6, "Populate Watch List", "success")
             except Exception as e:
                 error_msg = f"Failed to populate watch list: {str(e)}"
@@ -1516,7 +1526,7 @@ class OnWatchAutomation:
             try:
                 self.configure_rancher()
                 self.summary.record_step(10, "Configure Rancher", "success")
-            except Exception as e:
+        except Exception as e:
                 error_msg = f"Failed to configure Rancher: {str(e)}"
                 logger.error(f"❌ {error_msg}")
                 logger.error("⚠️  MANUAL ACTION REQUIRED: Please configure Rancher environment variables manually")
@@ -1590,7 +1600,7 @@ def main():
         else:
             logger.error(f"Invalid step number: {args.step}. Must be 1-11.")
     else:
-        asyncio.run(automation.run())
+    asyncio.run(automation.run())
 
 
 if __name__ == "__main__":

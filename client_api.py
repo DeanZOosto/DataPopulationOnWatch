@@ -1851,6 +1851,9 @@ class ClientApi:
                     return {"status": "success", "upload_id": upload_id}
             except ValueError:
                 return {"status": "success", "upload_id": upload_id}
+        except MassImportAlreadyExists:
+            # Re-raise as-is (will be caught and handled as skip)
+            raise
         except requests.exceptions.RequestException as e:
             if hasattr(e, 'response') and e.response is not None:
                 logger.error(f"Failed to upload mass import file '{file_path}': {e}")
