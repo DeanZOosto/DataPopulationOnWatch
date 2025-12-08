@@ -333,7 +333,7 @@ class OnWatchAutomation:
                 group_map = {g.get('name'): g.get('id') for g in groups if isinstance(g, dict) and g.get('name')}
                 # Get first group as default if available
                 if groups and isinstance(groups[0], dict):
-                    default_group_id = groups[0].get('id')
+                default_group_id = groups[0].get('id')
             elif isinstance(groups, dict) and 'items' in groups:
                 items = groups.get('items', [])
                 group_map = {g.get('name'): g.get('id') for g in items if isinstance(g, dict) and g.get('name')}
@@ -1060,7 +1060,7 @@ class OnWatchAutomation:
             # Initialize Rancher API client
             rancher_api = RancherApi(
                 base_url=base_url,
-                username=rancher_config['username'],
+            username=rancher_config['username'],
                 password=rancher_config['password']
             )
             rancher_api.login()
@@ -1143,11 +1143,22 @@ class OnWatchAutomation:
                 return
             
             try:
+                # Get SSH password - prompt if not in config
+                ssh_password = ssh_config.get('password', '').strip()
+                if not ssh_password:
+                    logger.warning("SSH password not set in config.yaml")
+                    logger.info("Prompting for SSH password (will not be saved)...")
+                    import getpass
+                    ssh_password = getpass.getpass(f"Enter SSH password for {ssh_config['username']}@{ssh_config['ip_address']}: ")
+                    if not ssh_password:
+                        logger.error("SSH password is required")
+                        return
+                
                 # Initialize SSH utility
                 ssh_util = SSHUtil(
                     ip_address=ssh_config['ip_address'],
                     username=ssh_config['username'],
-                    password=ssh_config.get('password'),
+                    password=ssh_password,
                     ssh_key_path=ssh_config.get('ssh_key_path')
                 )
                 
@@ -1282,7 +1293,7 @@ def main():
         else:
             logger.error(f"Invalid step number: {args.step}. Must be 1-11.")
     else:
-        asyncio.run(automation.run())
+    asyncio.run(automation.run())
 
 
 if __name__ == "__main__":

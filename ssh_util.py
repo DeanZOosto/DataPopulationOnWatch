@@ -185,6 +185,12 @@ class SSHUtil:
                 )
             else:
                 # Use password
+                if not self.password:
+                    raise ValueError(
+                        "SSH password is required but not provided. "
+                        "Please set ssh.password in config.yaml or provide it when prompted."
+                    )
+                
                 ssh.connect(
                     self.ip_address,
                     username=self.username,

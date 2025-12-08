@@ -55,8 +55,9 @@ Edit the `config.yaml` file with your settings:
 
 2. **SSH Connection** (for translation file upload):
    - Update `ssh.ip_address` (usually same as onwatch IP)
-   - Update `ssh.username` and `ssh.password` if needed
+   - Update `ssh.username` and `ssh.password` (required - will prompt if not set)
    - Update `ssh.translation_util_path` if script is in different location
+   - **Note**: If `ssh.password` is empty, the script will prompt you to enter it securely
 
 3. **Rancher Connection**:
    - Update `rancher.ip_address` and `port` if needed
