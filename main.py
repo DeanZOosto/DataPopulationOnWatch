@@ -547,14 +547,7 @@ class OnWatchAutomation:
         # Device groups - TODO: implement once endpoint is available
         device_groups = groups.get('device_groups', [])
         if device_groups:
-            logger.warning(f"Device groups configuration not yet implemented ({len(device_groups)} groups skipped)")
-            logger.warning("Device groups use a different API endpoint - will be implemented when endpoint details are available")
-        
-        # Time profile - manual/screenshot based, not API-driven
-        time_profile = groups.get('time_profile')
-        if time_profile:
-            logger.info("Time profile configuration requires manual setup or screenshot reference")
-            logger.info(f"Reference: {time_profile.get('screenshot_reference', 'N/A')}")
+            logger.debug(f"Device groups configuration not yet implemented ({len(device_groups)} groups skipped)")
     
     async def configure_accounts(self):
         """Configure user accounts and user groups via API."""
@@ -719,8 +712,8 @@ class OnWatchAutomation:
         # User groups - TODO: implement creation if endpoint is available
         user_groups_config = accounts.get('user_groups', [])
         if user_groups_config:
-            logger.warning(f"User groups creation not yet implemented ({len(user_groups_config)} groups skipped)")
-            logger.warning("User groups may need to be created manually or via different endpoint")
+            logger.debug(f"User groups creation not yet implemented ({len(user_groups_config)} groups skipped)")
+            logger.info("User groups will be implemented with API endpoint details")
     
     async def configure_inquiries(self):
         """Configure inquiries via API."""
@@ -1234,7 +1227,7 @@ class OnWatchAutomation:
             
             # Step 10: Configure Rancher
             logger.info("\n[Step 10/11] Configuring Rancher...")
-            await self.configure_rancher()
+            self.configure_rancher()
             
             # Step 11: Upload files
             logger.info("\n[Step 11/11] Uploading files...")

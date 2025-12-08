@@ -220,14 +220,18 @@ class ClientApi:
             existing_images = current_subject.get("images", [])
             
             # Add new image (not primary)
+            # Only include fields that are present in the data
             new_image = {
-                "objectType": data["objectType"],
+                "objectType": data.get("objectType"),
                 "isPrimary": False,  # Additional images are not primary
-                "featuresQuality": data["featuresQuality"],
-                "url": data["url"],
-                "features": data["features"],
-                "landmarkScore": data["landmarkScore"]
+                "featuresQuality": data.get("featuresQuality", 0),
+                "url": data.get("url"),
+                "features": data.get("features", [])
             }
+            
+            # Only add landmarkScore if it exists
+            if "landmarkScore" in data:
+                new_image["landmarkScore"] = data["landmarkScore"]
             
             existing_images.append(new_image)
             
@@ -907,7 +911,7 @@ class ClientApi:
             
             result = response.json()
             if 'errors' in result:
-                logger.warning(f"Could not get current white label settings: {result['errors']}")
+                logger.debug(f"Could not get current white label settings: {result['errors']}")
                 return None
             
             if 'data' in result and 'settings' in result['data']:
@@ -915,7 +919,7 @@ class ClientApi:
             
             return None
         except Exception as e:
-            logger.warning(f"Could not get current white label settings: {e}")
+            logger.debug(f"Could not get current white label settings: {e}")
             return None
     
     def get_camera_groups(self):
