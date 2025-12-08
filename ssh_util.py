@@ -50,23 +50,35 @@ class SSHUtil:
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             
-            # Connect to SSH (same way as in upload_translation_file)
-            if self.ssh_key_path and os.path.exists(self.ssh_key_path):
-                ssh.connect(
-                    self.ip_address,
-                    username=self.username,
-                    key_filename=self.ssh_key_path,
-                    timeout=30
-                )
-            else:
-                if not self.password:
-                    raise ValueError("SSH password is required for SFTP")
-                ssh.connect(
-                    self.ip_address,
-                    username=self.username,
-                    password=self.password,
-                    timeout=30
-                )
+            # Suppress INFO level logging for paramiko to avoid confusing auth messages
+            paramiko_logger = logging.getLogger('paramiko')
+            original_level = paramiko_logger.level
+            paramiko_logger.setLevel(logging.WARNING)
+            
+            try:
+                # Connect to SSH (same way as in upload_translation_file)
+                if self.ssh_key_path and os.path.exists(self.ssh_key_path):
+                    ssh.connect(
+                        self.ip_address,
+                        username=self.username,
+                        key_filename=self.ssh_key_path,
+                        timeout=30,
+                        look_for_keys=False,  # Don't try public key auth
+                        allow_agent=False  # Don't use SSH agent
+                    )
+                else:
+                    if not self.password:
+                        raise ValueError("SSH password is required for SFTP")
+                    ssh.connect(
+                        self.ip_address,
+                        username=self.username,
+                        password=self.password,
+                        timeout=30,
+                        look_for_keys=False,  # Don't try public key auth
+                        allow_agent=False  # Don't use SSH agent
+                    )
+            finally:
+                paramiko_logger.setLevel(original_level)
             
             # Use SFTP to copy file
             sftp = ssh.open_sftp()

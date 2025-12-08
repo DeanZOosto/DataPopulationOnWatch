@@ -1841,6 +1841,17 @@ class ClientApi:
                 headers=self.headers,
                 files=files
             )
+            
+            # Check if mass import already exists (should be treated as skip, not error)
+            if response.status_code == 400:
+                try:
+                    error_data = response.json()
+                    if error_data.get('code') == 'ERR_MASS_IMPORT_IN_PROGRESS_OR_WITH_ISSUES':
+                        # Mass import with same name already exists - this is a skip, not an error
+                        raise MassImportAlreadyExists(f"Mass import with the same name already exists: {error_data.get('message', '')}")
+                except ValueError:
+                    pass  # Not JSON, continue with normal error handling
+            
             response.raise_for_status()
             logger.info(f"Uploaded mass import file: {filename}")
             # Upload endpoint may return empty response - that's OK
