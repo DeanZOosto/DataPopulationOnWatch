@@ -480,7 +480,7 @@ class OnWatchAutomation:
                     description="Default group created automatically"
                 )
                 if isinstance(group_response, dict):
-                default_group_id = group_response.get('id')
+                    default_group_id = group_response.get('id')
                     logger.info(f"Created default group with ID: {default_group_id}")
                     # Update group_map with the newly created group
                     group_map["Default Group"] = default_group_id
