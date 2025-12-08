@@ -455,7 +455,7 @@ class OnWatchAutomation:
                 group_map = {g.get('name'): g.get('id') for g in groups if isinstance(g, dict) and g.get('name')}
                 # Get first group as default if available
                 if groups and isinstance(groups[0], dict):
-                default_group_id = groups[0].get('id')
+                    default_group_id = groups[0].get('id')
             elif isinstance(groups, dict) and 'items' in groups:
                 items = groups.get('items', [])
                 group_map = {g.get('name'): g.get('id') for g in items if isinstance(g, dict) and g.get('name')}
