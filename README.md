@@ -186,10 +186,10 @@ For issues or questions:
 - **KV Parameters (Step 2)**: GraphQL API mutation
 - **System Settings (Step 3)**: REST API with acknowledge actions and logo uploads
 - **Groups (Step 4)**: Subject groups creation via POST API (works on clean system)
+- **Accounts (Step 5)**: User creation via POST API with role/user group mapping
 - **Watch List (Step 6)**: REST API with multiple images per subject
 
 ### 🚧 Steps Waiting for API Endpoints
-- **Accounts (Step 5)**: Will log warning and skip
 - **Devices (Step 7)**: Will log warning and skip
 - **Inquiries (Step 8)**: Will log warning and skip
 - **Mass Import (Step 9)**: Will log warning and skip
