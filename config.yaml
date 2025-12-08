@@ -7,6 +7,15 @@ onwatch:
   password: "pa$$word!"
   base_url: "https://10.1.71.14"
 
+# SSH Configuration (for translation file upload)
+ssh:
+  ip_address: "10.1.71.14"  # Usually same as onwatch IP
+  username: "user"  # SSH user (will sudo to root for translation-util)
+  password: ""  # SSH password (leave empty if using SSH keys)
+  sudo_password: ""  # Sudo password (if different from SSH password, leave empty to use SSH password)
+  # Path to translation-util script on the device
+  translation_util_path: "/opt/ansible-installer-1.4.0-8/support-scripts/translation-util"
+
 rancher:
   ip_address: "10.1.71.14"
   port: 9443
@@ -44,7 +53,7 @@ system_settings:
     masks_access_control: false
   
   system_interface:
-    translation_file: ""  # Path to translation file (if available)
+    translation_file: "assets/Polski-updated3.json.json"  # Path to translation file (relative to project root)
     product_name: "metropolis"
     icons: ""  # Path to icons directory (if available)
   

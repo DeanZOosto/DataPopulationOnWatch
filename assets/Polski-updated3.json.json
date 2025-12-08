@@ -1,0 +1,4246 @@
+{
+  "Enabled": "Włączone",
+  "Name": "Nazwa",
+  "Import Status": "Status importu",
+  "Add tag to filter or free type to search": "Dodaj tag, aby filtrować lub wpisz tekst, aby wyszukać",
+  "Disabled": "Wyłączone",
+  "Save Changes": "Zapisz zmiany",
+  "Save": "Zapisz",
+  "From": "Od",
+  "To": "Do",
+  "Default Language": "Domyślny język",
+  "System Interface": "Interfejs systemu",
+  "No camera Id": "Brak ID kamery",
+  "Preview not found": "Brak podglądu",
+  "Language": "Język",
+  "Product Name": "Nazwa produktu",
+  "limit of characters: 25": "limit znaków: 25",
+  "add new accessory": "dodaj nowe akcesorium",
+  "Add Camera": "Dodaj kamerę",
+  "Uploading": "Wysyłanie",
+  "Analyzing": "Analizowanie",
+  "SEC": "SEC",
+  "open": "otwórz",
+  "close": "zamknij",
+  "Reset": "Reset",
+  "Attach Device Group": "Przyłącz grupę urządzeń",
+  "Reset to system defaults": "Resetuj do domyślnych",
+  "Click Reset to restore the system to default settings.": "Kliknij Reset, aby odtworzyć system do ustawień domyślnych.",
+  "Cancel": "Anuluj",
+  "Confirm": "Potwierdź",
+  "This is a usage example: {myVar} indeed and {myVar2} also, and {justString}": "To jest przykład użycia: {myVar} oraz {myVar2}, jak również {justString}",
+  "Logos": "Logotypy",
+  "Upload New Logo": "Wyślj nowe logo",
+  "Main Logo:": "Główne logo",
+  "Sidebar Logo:": "Boczne logo",
+  "Favicon (Browser Logo):": "Ikona przeglądarki web",
+  "Supporting Files: {supportedFiles}, up to {fileSize}": "Obsługiwane pliki: {supportedFiles} o rozmiarze do {fileSize}",
+  "Size:": "Rozmiar:",
+  "Max-Width: {width}\nMax-Height: {height}": "Max szerokość: {width}\nMax wysokość: {height}",
+  "Delete": "Usuń",
+  "Enable/Disable": "Włącz/Wyłącz",
+  "Source:": "Źródło",
+  "Style:": "Styl",
+  "Selected image exceeds {fileSize}": "Wybrane zdjęcie przekracza {fileSize}",
+  "Style must start with '{prefix}'": "Styl musi zaczynać się od '{prefix}'",
+  "Source must start with '{prefix}'": "Źródło musi zaczynać się od '{prefix}'",
+  "Supported file types: {supportedFileTypes}": "Obsługiwane typy plików: {supportedFileTypes}",
+  "Searching by Image": "Wyszukiwanie zdjęciem",
+  "Video": "Wideo",
+  "Camera": "Kamera",
+  "Search": "Szukaj",
+  "An error occurred in the environment in which the application is running.": "Wystąpił błąd w środowisku aplikacji",
+  "Try Again": "Spróbuj ponownie",
+  "Loading live stream": "Ładowanie strumienia na żywo",
+  "Import": "Import",
+  "Import Metadata From File": "Import metadanych z pliku",
+  "Supported file: XML": "Obsługiwany plik: XML",
+  "Upload": "Wyślij",
+  "Could not extract information from metadata": "Nie można uzyskać informacji z metadanych",
+  "Approve Access": "Udziel dostępu",
+  "Deny Access": "Odmów dostępu",
+  "Enable": "Włącz",
+  "Disable": "Wyłącz",
+  "Points": "Punkty",
+  "total": "całkowicie",
+  "active": "aktywne",
+  "inactive": "nieaktywne",
+  "error": "błąd",
+  "Name / ID": "Nazwa / ID",
+  "Device Group": "Grupa urządzeń",
+  "Successfully updated points": "Punkty zostały zaktualizowane",
+  "Failed to update points": "Nie powiodła się aktualizacja punktów",
+  "Failed to update all points": "Nie powiodła się aktualizacja wszystkich punktów",
+  "IP": "IP",
+  "Status": "Status",
+  "OFF/ON": "WYŁ/WŁ",
+  "No Zone Selected": "Nie wybrano strefy",
+  "Failed to update point": "Nie powiodła się aktualizacja punktu",
+  "Please select a different point name": "Proszę wybrać inną nazwę punktu",
+  "Device group not found": "Nie znaleziono grupy urządzeń",
+  "Loading": "Ładowanie",
+  "{fileType} files can be previewed only in analyzing mode": "Pliki {fileType} można podglądać tylko w trakcie analizowania",
+  "Edit": "Edytuj",
+  "Are you sure you want to delete these points?": "Czy na pewno chcesz usunąć te punkty?",
+  "Delete Point": "Usuń punkt",
+  "Delete Points": "Usuń punkty",
+  "Are you sure you want to delete point - {title}?": "Czy na pewno chcesz usunąć punkt - {title}?",
+  "Failed to delete point": "Nie powiodło się usuwanie punktu",
+  "Point deletion was successful": "Punkt został usunięty",
+  "Successfully deleted points": "Punkty zostały usunięte",
+  "Failed to delete points": "Nie powiodło się usuwanie punktów",
+  "Failed to get points": "Nie powiodło się pobieranie punktów",
+  "Recognition th": "Próg identyfikacji",
+  "Created date": "Data utworzenia",
+  "Last sync": "Ostatnia synchronizacja",
+  "Not synced": "Niezsynchronizowane",
+  "It Feels A Bit Lonely Here": "Trochę tutaj doskwiera samotność",
+  "Looks like you don't have any registered points yet": "Wygląda na to, że nie masz jeszcze żadnych zarejestrowanych punktów",
+  "System Parameters": "Parametry systemu",
+  "liveCamera": {
+    "caseNameLabelPrefix": "Nazwa sprawy:",
+    "fileLabelPrefix": "Plik:",
+    "cameraGroupLabelPrefix": "Grupa urządzeń:",
+    "cameraNameLabelPrefix": "Nazwa kamery:"
+  },
+  "pointStatuses": {
+    "inactive": "Nieaktywne",
+    "active": "Aktywne",
+    "error": "Zablokowane",
+    "reconnecting": "Łączenie"
+  },
+  "Api key copied to clipboard": "Klucz API skopiowany do schowka",
+  "Api key revoked successfully": "Klucz API został anulowany",
+  "Could not get user api key": "Nie można pobrać klucza API użytkownika",
+  "Could not generate api key": "Nie można wygenerować klucza API",
+  "Could not revoke api key": "Nie można anulować klucza API",
+  "Api Key": "Klucz API",
+  "Generate": "Generuj",
+  "Revoke": "Anuluj",
+  "Please choose an option": "Wybierz",
+  "Creation date": "Data utworzenia",
+  "This API Key can be viewed or copied only one time. You cannot recover it later. However, you can revoke and create new API keys at any time.": "Ten klucz API może zostać otwarty lub skopiowany tylko raz. Nie możesz otworzyć go później, jednak możesz anulować i tworzyć nowe klucze API w dowolnym momencie.",
+  "Could not display video": "Nie można wyświetlić wideo",
+  "general": {
+    "licenseGeneralErr": "System nie może zweryfikować licencji",
+    "subjectsFetchingError": "Nie można pobrać listy poszukiwanych",
+    "passwordComplexity": "Wymagane jest trudne hasło:\n\n* Minimalna długość hasła - 8\n* Maksymalna długość hasła - 30\n* Minimalna liczba dużych liter - 1\n* Minimalna liczba małych liter - 1\n* Minimalna liczba cyfr - 1\n* Minimalna liczba symboli - 1",
+    "passwordComplexity1": "Minimalna długość hasła - 8",
+    "passwordComplexity2": "Maksymalna długość hasła - 30",
+    "passwordComplexity3": "Minimalna liczba dużych liter - 1",
+    "passwordComplexity4": "Minimalna liczba małych liter - 1",
+    "passwordComplexity5": "Minimalna liczba cyfr - 1",
+    "passwordComplexity6": "Minimalna liczba symboli - 1",
+    "fileName": "Nazwa pliku:",
+    "featuresDeprecated": "Cechy tego śladu są nieaktualne",
+    "addSubject": "Dodaj osobę",
+    "addNewSubject": "Dodaj nową osobę",
+    "addToExisting": "Dodaj do istniejącej",
+    "editSubject": "Edytuj osobę",
+    "viewSubject": "Pokaż osobę",
+    "routeView": "Ścieżka archiwalna",
+    "searchByTrack": "Wyszukaj śladem",
+    "addToIgnore": "Dodaj do ignorowanych",
+    "unassign": "Wycofaj identyfikację",
+    "watchVideo": "Otwórz wideo",
+    "tracking": "Ścieżka na żywo",
+    "appearances": "Pokaż wystąpienia",
+    "name": "Nazwa",
+    "subjectDescription": "Opis (opcjonalnie)",
+    "groups": "Grupy",
+    "save": "Zapisz",
+    "create": "Utwórz",
+    "update": "Aktualizuj",
+    "add": "Dodaj",
+    "cancel": "Anuluj",
+    "close": "Zamknij",
+    "change": "Zmień",
+    "results": "Rezultat(ów)",
+    "noResults": "Brak rezultatów",
+    "addImage": "Dodaj zdjęcie twarzy",
+    "unableToExtractFeatures": "Nie można utworzyć cech osoby na podstawie dostarczonego zdjęcia.",
+    "camerasFetchingError": "Nie powiodło się pobieranie kamer.",
+    "inquiriesFetchingError": "Nie powiodło się pobieranie spraw dochodzeniowych.",
+    "noCamerasAreDefined": "Brak zdefiniowanych kamer!",
+    "face": "Twarz",
+    "body": "Sylwetka",
+    "test": "Test",
+    "send": "Wyślij",
+    "success": "Sukces",
+    "fail": "Niepowodzenie",
+    "sec": "Sek",
+    "min": "Min",
+    "hr": "Godz",
+    "enabled": "Włączone",
+    "disabled": "Wyłączone",
+    "dot": ".",
+    "colors": {
+      "WHITE": "Biały",
+      "BLACK": "Czarny",
+      "GRAY": "Szary",
+      "YELLOW": "Żółty",
+      "BLUE": "Niebieski",
+      "RED": "Czerwony",
+      "ORANGE": "Pomarańczowy",
+      "PINK": "Różowy",
+      "UNDEFINED": "Nieokreślony"
+    },
+    "validation": {
+      "description": "Maksymalnie {maxCharacters} znaków"
+    },
+    "confirmUnassignDialog": {
+      "title": "Wycofaj identyfikację osoby z jej śladów",
+      "content": "W ten sposób można wycofać identyfikację osoby \"{name}\" ze wszystkich jej śladów. Przed potwierdzeniem proszę się upewnić, że to nie jest ta osoba.",
+      "errorUnassign": "Nie powiodło się wycofywanie identyfikacji wybranej detekcji",
+      "successUnassign": "Wycofano identyfikację osoby z jej śladów"
+    },
+    "errors": {
+      "somethingWentWrong": "Coś poszło nie tak",
+      "pleaseTryAgain": "Proszę spróbować ponownie"
+    }
+  },
+  "backgroundUploader": {
+    "uploadFilesErrs": {
+      "uploadFileProcess": "Nie można wysłać plików"
+    }
+  },
+  "attachCameraGroupBulk": {
+    "attachZone": "Dołącz grupę urządzeń",
+    "filterZone": "Filtruj grupę urządzeń",
+    "createZone": "Utwórz grupę urządzeń",
+    "searchZone": "Szukaj grup urządzeń",
+    "apply": "Zastosuj",
+    "errors": {
+      "failedGetGroups": "Nie powiodło się pobieranie grup",
+      "failedAttachDeviceGroups": "Nie powiodło się dołączanie grup urządzeń"
+    },
+    "success": {
+      "deviceGroupsAttachedSuccessfuly": "Grupy urządzeń zostały dołączone"
+    }
+  },
+  "schedule": {
+    "labels": {
+      "every": "W każdy",
+      "onThe": "W dniu",
+      "at": "o",
+      "hour": "godz",
+      "day": "dzień",
+      "month": "miesiąc",
+      "year": "rok",
+      "timePeriod": "Okres czasu",
+      "st": "szy",
+      "nd": "gi",
+      "rd": "ci",
+      "th": "ty",
+      "many": "ty"
+    },
+    "errors": {
+      "minute": "Interwał minutowy musi być od 5 do 59",
+      "hour": "Interwał godzinowy musi być od 1 do 23",
+      "day": "Interwał dzienny musi być od 1 do 6",
+      "week": "Interwał tygodniowy musi być od 1 do 4",
+      "month": "Interwał miesięczny musi być od 1 do 12",
+      "year": "Interwał roczny musi być od 1 do 10"
+    }
+  },
+  "cheatSheet": {
+    "kafka": "Kafka HQ",
+    "konga": "Konga",
+    "rabbit": "Rabbit MQ",
+    "grafana": "Grafana",
+    "rancher": "Rancher",
+    "consul": "Consul"
+  },
+  "connectionErrors": {
+    "high": {
+      "title": "Brak połączenia",
+      "content": "Wygląda na to, że połączenie z serwerem zostało utracone. Jeśli problem będzie się utrzymywał, sprawdź połączenia sieciowe lub skontaktuj się z supportem."
+    },
+    "medium": {
+      "socket": "Widok jest nieaktualny"
+    }
+  },
+  "labels": {
+    "min": "MIN",
+    "max": "MAX"
+  },
+  "userFeedback": {
+    "downloadingLogs": "Pobieranie logów",
+    "downloadFailed": "Pobieranie nie powiodło się"
+  },
+  "genericCard": {
+    "deleting": "Usuwanie..."
+  },
+  "subjectGroup": {
+    "cameraGroupName": "Nazwa grupy urządzeń",
+    "pleaseChooseAnOption": "Wybierz",
+    "moreFalseRecognitions": "Więcej fałszywych identyfikacji",
+    "lessFalseRecognitions": "Mniej fałszywych identyfikacji",
+    "timeProfile": "Profil czasowy",
+    "defaultAuthorization": "Domyślna autoryzacja",
+    "defaultAuthorization-hint": "Ustaw domyślny stan dla wszystkich innych grup urządzeń\nktóre nie zostały wybrane poniżej lub w żadnej innej grupie urządzeń",
+    "typeHeader": "Typ",
+    "authorizedCameraGroups": "Warunkowe grupy urządzeń",
+    "subjectGroup": "Grupa osób",
+    "title": "Nazwa grupy",
+    "description": "Opis",
+    "thresholdFactor": "Współczynnik progowy",
+    "cameraGroups": "Grupy urządzeń",
+    "alertLevel": "Alarm",
+    "conditionalAuthorization-hint": "Wybrany alarm dotyczy wyłącznie nieautoryzowanych identyfikacji",
+    "groupThreshold-warning-low": "Ta zmiana jest odejmowana od progu ustawionego w kamerze i może spowodować ekstremalny próg dla kamery w wybranej grupie urządzeń",
+    "groupThreshold-warning-high": "Ta zmiana jest dodawana do progu ustawionego w kamerze i może spowodować ekstremalny próg dla kamery w wybranej grupie urządzeń",
+    "groupThreshold-error-low": "Ta zmiana jest ekstremalna i może spowodować, że kamery z wybranej grupy urządzeń będą miały ustawiony próg powyżej 1",
+    "groupThreshold-error-high": "Ta zmiana jest ekstremalna i może spowodować, że kamery z wybranej grupy urządzeń będą miały ustawiony próg poniżej 0",
+    "groupThreshold-info": "Wybranie grupy urządzeń bez określenia dla niej współczynnika progowego nie będzie miało efektu i zostanie zignorowane",
+    "groupColor": "Kolor grupy",
+    "type": "Typ autoryzacji",
+    "cancel": "Anuluj",
+    "loud": "Głośny",
+    "silent": "Cichy",
+    "none": "Brak",
+    "visible": "Widoczny",
+    "authorized": "Autoryzowany",
+    "unauthorized": "Nieautoryzowany",
+    "alwaysUnauthorized": "Zawsze nieautoryzowana",
+    "alwaysUnauthorized-hint": "Ta grupa nigdy nie otrzyma dostępu do zasobów.",
+    "alwaysAuthorized": "Zawsze autoryzowana",
+    "alwaysAuthorized-hint": "Ta grupa zawsze będzie miała dostęp bez ograniczeń do zasobów. \n",
+    "conditionalAuthorized": "Warunkowo autoryzowana",
+    "conditionalUnauthorized": "Warunkowy brak autoryzacji",
+    "conditionalAuthorized-hint": "Ta grupa będzie miała warunkowy dostęp do zasobów w oparciu o grupę urządzeń i profil czasowy.",
+    "dialogTitle": {
+      "create": "Utwórz grupę osób",
+      "update": "Edytuj grupę osób"
+    },
+    "dialogButton": {
+      "create": "Utwórz",
+      "update": "Aktualizuj"
+    },
+    "errors": {
+      "title": "Tytuł jest wymagany",
+      "cameraGroup": "Wymagana jest grupa urządzeń",
+      "timeProfile": "Wymagany jest profil czasowy",
+      "cameraGroupForTh": "Wymagana jest grupa urządzeń"
+    },
+    "validation": {
+      "title": "Nazwa powinna zawierać znaki"
+    }
+  },
+  "subjectDialog": {
+    "selectPlaceholder": "Wybierz",
+    "sendToHq": "Wyślij do HQ",
+    "hqInvalidImagesError": "Możesz wysłać jedno zdjęcie twarzy do HQ (bez zdjęć sylwetek)",
+    "hqSenderDescription": "Powiadom HQ o tej osobie, aby mogli dodać ją do głównej listy obserwowanych. Jeśli HQ zatwierdzi, ta osoba zostanie przejęta przez HQ i nie będzie mogła już zostać zmodyfikowana. ",
+    "referencePhotos": "Zdjęcia referencyjne",
+    "searchBackwards": "Wyszukaj wstecz",
+    "searchByFace": "po twarzy",
+    "searchByBody": "po sylwetce",
+    "setThreshold": "Ustaw próg rozpoznania",
+    "basicInfo": "Informacje podstawowe",
+    "nameLabel": "Pełna nazwa",
+    "descriptionLabel": "Opis i uwagi",
+    "mandatory": "Obowiązkowy dla HQ",
+    "groupsLabel": "Przypisz do grupy",
+    "name": "Nazwa",
+    "description": "Opis",
+    "groups": "Grupy",
+    "descriptionInfo": "Opisy pomagają członkom zespołu dowiedzieć się więcej o osobach.",
+    "delete": "Usuń",
+    "deleteSubject": "Usuń osobę",
+    "deleteSubjectContent": "Czy na pewno chcesz usunąć osobę - {name} ?",
+    "deleteSubjectDialogConfirmText": "Usuń",
+    "deleteSubjectsDialog": "Czy na pewno chcesz usunąć {number} wybranych osób ?",
+    "done": "Zrobione",
+    "create": "Utwórz",
+    "edit": "Aktualizuj",
+    "cancel": "Anuluj",
+    "addNewSubjectFromTrack": "Dodaj nową osobę ze śladu",
+    "addNewSubject": "Dodaj nową osobę",
+    "editSubject": "Edytuj osobę",
+    "viewSubject": "Pokaż osobę",
+    "cardId": "ID karty",
+    "facilityCode": "Kod obiektu",
+    "add": "Dodaj",
+    "facilityCodeInfo": "Niektóre systemy kontroli dostępu wymagają kodu obiektu w uzupełnieniu do ID karty",
+    "customAttributes": "Atrybuty własne",
+    "errors": {
+      "isRequired": "Wymagana jest {name} osoby",
+      "cannotBeSpaces": "{name} osoby musi zawierać znaki"
+    },
+    "attributes": {
+      "names": {
+        "age": "Wiek",
+        "mask": "Maska",
+        "gender": "Płeć",
+        "backpack": "Plecak",
+        "topcolor": "Kolor góry",
+        "bottomcolor": "Kolory dołu",
+        "glasses": "Okulary"
+      },
+      "values": {
+        "true": "Tak",
+        "false": "Nie",
+        "male": "Mężczyzna",
+        "female": "Kobieta",
+        "white": "Biały",
+        "black": "Czarny",
+        "yellow": "Żółty",
+        "blue": "Niebieski",
+        "red": "Czerwony",
+        "orange": "Pomarańczowy",
+        "pink": "Różowy"
+      }
+    }
+  },
+  "subjectAlreadyExistsDialog": {
+    "thisSubjectAlreadyExists": "Ta osoba już istnieje",
+    "hqSubjectWarning": "Osoba nie może zostać przypisana do osoby wprowadzonej w HQ",
+    "uploadedImage": "Zapisane zdjęcie",
+    "closestSubjectMatch": "Osoba o najbliższym dopasowaniu",
+    "moreResults": "Więcej rezultatów",
+    "subjectGroup": "Grupa osób",
+    "subjectNotFoundError": "Nie powiodło się dodawanie zdjęcia osoby - osoba nie została znaleziona",
+    "addError": "Nie powiodło się dodawanie nowego zdjęcia osoby",
+    "addToExisting": "Przypisz do osoby",
+    "addAsNew": "Dodaj jako nowa",
+    "cancel": "Anuluj"
+  },
+  "ignoreDialog": {
+    "createConfirm": "Utwórz",
+    "editConfirm": "Aktualizuj",
+    "cancel": "Anuluj",
+    "createTitle": "Dodaj do ignorowanych",
+    "editTitle": "Edytuj ignorowany element",
+    "description": "Opis:",
+    "subtitle": "Czy na pewno chcesz dodać do listy ignorowanych?",
+    "altIgnoreImage": "Ignorowane zdjęcie",
+    "addIgnoreSuccess": "Ślad został dodany do grupy ignorowanych",
+    "addIgnoreFail": "Nie powiodło się dodawanie śladu do grupy ignorowanych",
+    "editIgnoreSuccess": "Ignorowany ślad został zmodyfikowany",
+    "editIgnoreFail": "Nie powiodła się modyfikacja ignorowanego śladu"
+  },
+  "acknowledgeDialog": {
+    "ackTitle": "Potwierdzenie alarmu",
+    "actions": "Akcje:",
+    "cancel": "Anuluj",
+    "confirm": "Potwierdź",
+    "subtitle": "Wybierz jedną lub więcej akcji w celu potwierdzenia tego alarmu.",
+    "applyAll": "Zastosuj do wszystkich alarmów tej osoby",
+    "noActions": "Nie określono akcji. Otwórz ustawienia systemu, aby utworzyć i włączyć nowe akcje."
+  },
+  "AlertsAndTracksHeader": {
+    "noCameraSelected": "Wybierz źródło",
+    "cameraFilterMessage": "Wyświetla detekcje z ",
+    "cameras": "{numberOfCameras} kamer",
+    "sources": "{numberOfCameras} źródeł",
+    "filters": {
+      "tracks": {
+        "title": "Detekcje",
+        "all": "Wszystkie",
+        "recognized": "Rozpoznane",
+        "unrecognized": "Nierozpoznane"
+      },
+      "alerts": {
+        "title": "Alarmy",
+        "all": "Niepotwierdzone",
+        "acknowledged": "Potwierdzone"
+      },
+      "filterMessages": {
+        "allDetections": "Wszystkie detekcje",
+        "onlySubjects": "Tylko rozpoznania",
+        "newAlerts": "Nowe alarmy",
+        "acknowledgedAlerts": "Potwierdzone alarmy"
+      }
+    },
+    "message": {
+      "newAlerts": "Niepotwierdzone alarmy - ostatnie {alertAggDays} dni",
+      "onlySubjects": "Tylko rozpoznania",
+      "allDetections": "Wszystkie detekcje",
+      "acknowledgedAlerts": "Potwierdzone alarmy - ostatnie {alertAggDays} dni"
+    }
+  },
+  "zoneDialog": {
+    "addNewZone": "Dodaj nową strefę",
+    "updateZone": "Aktualizuj strefę",
+    "zoneName": "Nazwa strefy",
+    "zoom": "Zoom",
+    "create": "Utwórz",
+    "update": "Aktualizuj",
+    "cancel": "Anuluj",
+    "zoneColor": "Kolor strefy",
+    "deleteZone": "Usuń strefę",
+    "delete": "Usuń",
+    "confirmationDialogMessage": "Czy na pewno chcesz usunąć strefę '{name}'?"
+  },
+  "home": {
+    "description": "Udanego programowania.",
+    "descriptionWithValue": "Nazwa firmy {companyName}"
+  },
+  "recognitionCard": {
+    "reference": "Referencja",
+    "detection": "Detekcja",
+    "unknown": "Nieznana",
+    "actions": {
+      "liveCamera": "Kamera na żywo",
+      "addDescription": "Dodaj opis",
+      "share": "Udostępnij",
+      "playback": "Odtwarzaj",
+      "search": "Szukaj"
+    }
+  },
+  "resultFilters": {
+    "searchQuery": "Zapytanie wyszukania",
+    "searchSummary": {
+      "title": "Podsumowanie wyszukiwania",
+      "goToTitle": "Podsumowanie zakresu czasu",
+      "total": "Suma detekcji",
+      "uniqueTracksCount": "Suma unikalnych detekcji",
+      "subjectsCount": "Suma rozpoznań",
+      "uniqueSubjectsCount": "Suma unikalnych rozpoznań",
+      "unknownCount": "Suma nieznanych detekcji",
+      "nPlusOneCount": "Suma N+1 detekcji",
+      "poiCount": "Suma detekcji POI"
+    },
+    "imgFilter": "Filtruj zdjęciem",
+    "noResults": "Nie znaleziono rezultatów",
+    "exportPDF": "Eksportuj do PDF",
+    "changeFilters": "Zmień filtry wyszukiwania"
+  },
+  "goTo": {
+    "goTo": "Zlokalizuj detekcję"
+  },
+  "dialog": {
+    "selectFace": "Twarz",
+    "selectBody": "Sylwetka",
+    "defaultCancelText": "Anuluj",
+    "defaultConfirmText": "Potwierdź"
+  },
+  "licenseNotificationsManager": {
+    "soonToBeExpired": "Twoja licencja wygaśnie w dniu {expirationDate}",
+    "noteSoonToBeExpired": "Uwaga: wszystkie strumienie wideo zostaną wyłączone w ciągu {daysLeft} dni. Postaraj się odnowić licencję.",
+    "expiredWithGrace": "Twoja licencja wygasła. Przedłużamy ją do dnia {expirationDate}",
+    "noteExpiredWithGrace": "Uwaga: wszystkie strumienie wideo zostaną wyłączone w ciągu {daysLeft} dni. Proszę skontaktować się z adimnistratorem systemu.",
+    "noteExpiredWithGracePermitted": "Uwaga: wszystkie strumienie wideo zostaną wyłączone w ciągu {daysLeft} dni. Proszę odnowić licencję.",
+    "notActiveMsgNotPermitted": "Proszę skontaktować się z administratorem systemu.",
+    "notActiveMsg": "Twoja licencja nie jest aktywna",
+    "noteNotActiveMsg": "Uwaga: wszystkie strumienie wideo zostały wyłączone. Proszę odnowić licencję, aby przywrócić pełną funkcjonalność systemu.",
+    "exceededLicenseLimit": "Przekroczono limit licencji.",
+    "noteExceededCamerasPermitted": "Uwaga: kamera została dodana do listy, ale jest aktualnie wyłączona. \nW celu włączenia nowej kamery musisz wyłączyć istniejącą. \nJeśli chcesz włączyć więcej kamer, rozszerz swoją licencję.",
+    "noteExceededPointsPermitted": "Uwaga: punkt został dodany do listy, ale jest aktualnie wyłączony. \nW celu włączenia nowego punktu musisz wyłączyć istniejący. \nJeśli chcesz włączyć więcej punktów, rozszerz swoją licencję.",
+    "noteExceededSubjects": "Uwaga: w celu dodania nowej osoby musisz usunąc istniejącą. \nJeśli chcesz rozszerzyć swoją licencję, proszę skontaktować się z administratorem systemu.",
+    "noteExceededSubjectsPermitted": "Uwaga: w celu dodania nowej osoby musisz usunąć istniejącą. \nJeśli chcesz dodać więcej osób, rozszerz swoją licencję.",
+    "notActivatedBasicMsg": "Niestety nie masz aktywnej odpowiedniej licencji {extraText}.",
+    "extraTextForFeature": " aby użyć tej funkcji",
+    "LicenseMngBtn": "Zarządzanie licencjami",
+    "failedToGetLicense": "Nie powiodła się weryfikacja licencji"
+  },
+  "noteGrid": {
+    "newDetections": "Nowe",
+    "newAlerts": "Nowe"
+  },
+  "forensicAnalysisSettings": {
+    "automatic": "Automatyczne",
+    "reset": "Resetuj",
+    "min": "Min",
+    "max": "Max",
+    "value": "Wartość",
+    "saveChanges": "Zapisz",
+    "resetToDefault": "Resetuj do domyślnych",
+    "customAnalysisSettings": "Dostosowane ustawienia analizy",
+    "calibrationTool": "Narzędzie do kalibracji wideo",
+    "streamErrorMessage": "Aktualnie źródło nie jest w trybie analizy. Strumień wideo na żywo nie jest dostępny.",
+    "schemas": {
+      "requiredError": "Wymagane",
+      "paddingHeightError": "Wartość pomiędzy 0 i {height} ",
+      "paddingWidthError": "Wartość pomiędzy 0 i {width} ",
+      "shouldNotBeBelow": "Wartość nie powinna być poniżej: {max}"
+    },
+    "errors": {
+      "notAllValuesAreCompleted": "Proszę upewnić się, czy wszystkie pola są prawidłowe"
+    },
+    "videoProcessor": {
+      "header": "Procesor wideo",
+      "pipe": "Potok",
+      "frameRotate": "Obracanie obrazu",
+      "showPreviewWindow": "Pokaż okno podglądu",
+      "autoFrameSkipping": "Automatyczne pomijanie klatek",
+      "reduceCpuLoad": "Zmniejsz obciążenie GPU pomijając klatki i mniej skrupulatnie analizuj strumienie wideo.",
+      "regionOfInterest": "Obszar zainteresowania (w pikselach):",
+      "top": "Górny",
+      "right": "Prawy",
+      "bottom": "Dolny",
+      "left": "Lewy",
+      "analysisPercentage": "Procent analizowanych",
+      "enabledText": "WŁ",
+      "disabledText": "WYŁ"
+    },
+    "lengthTracker": {
+      "header": "Długość śladu (w klatkach)",
+      "faceLength": "Twarz: Min - Max",
+      "bodyLength": "Sylwetka: Min - Max"
+    },
+    "detectionObjectSize": {
+      "header": "Rozmiar wykrywanego obiektu (w pikselach)",
+      "faceDetection": "Min rozmiar twarzy",
+      "bodyDetection": "Min rozmiar sylwetki"
+    },
+    "trackerSeekTimeout": {
+      "header": "Czas szukania śladu (w klatkach)",
+      "trackerSeekTimeoutFace": "Twarz: Czas szukania Min - Max",
+      "trackerSeekTimeoutBody": "Sylwetka: Czas szukania Min - Max"
+    },
+    "notification": {
+      "pipesServiceError": "Nie można połączyć z usługą potoku"
+    }
+  },
+  "pages": {
+    "detections": {
+      "allCameras": "Wszystkie kamery",
+      "selectAll": "Wybierz wszystkie",
+      "reset": "Resetuj",
+      "d&a": "Detekcje i alerty",
+      "loading": "Ładowanie",
+      "failure": {
+        "unacknowledgedFailure": "Nie powiodło się pobieranie licznika niepotwierdzonych rozpoznań"
+      },
+      "treeViewTabs": {
+        "cameras": {
+          "header": "Kamery",
+          "FACE": "Twarz",
+          "BODY": "Sylwetka",
+          "BODY_FROM_FACE": "Twarz i sylwetka",
+          "searchCameras": "Szukaj kamer",
+          "camera": "Kamer",
+          "cameras": "Kamery"
+        },
+        "cases": {
+          "header": "Sprawy dochodzeniowe",
+          "searchCases": "Szukaj spraw",
+          "source": "Źródło",
+          "sources": "Źródło",
+          "edit": "Edytuj",
+          "inquiry": "Dochodzenie",
+          "disabledMessage": "{title} nie jest dostępny w Twojej licencji"
+        },
+        "notifications": {
+          "failedToGetCases": "Nie powiodło się pobieranie spraw",
+          "failedToGetCameras": "Nie powiodło się pobieranie kamer"
+        }
+      }
+    },
+    "watchlist": {
+      "sorts": {
+        "subjectName": "Nazwa osoby A-Z",
+        "mostDetected": "Najwięcej rozpoznań",
+        "newestDetected": "Najnowsze rozpoznania",
+        "createdDate": "Data utworzenia osoby"
+      },
+      "hqStateFilter": {
+        "all": "Wszystkie osoby",
+        "owned": "Przypisane do HQ",
+        "declined": "Odrzucone przez HQ",
+        "pending": "Oczekujące w HQ",
+        "none": "Tylko lokalne"
+      },
+      "subjectMenu": {
+        "edit": "Edytuj",
+        "view": "Pokaż",
+        "addImage": "Dodaj zdjęcie",
+        "delete": "Usuń",
+        "viewAuditTrail": "Dziennik dostępu",
+        "exportSubjectDetails": "Eksportuj szczegóły"
+      },
+      "massImportDialog": {
+        "dropLabel": "Przeglądaj lub przenieś tutaj skompresowane pliki",
+        "fileCaption": "Obsługiwane pliki: ZIP, TAR",
+        "selectedFile": "Wybrany plik",
+        "dialogSubTitle": "Dodaj osoby z plików",
+        "dialogTitle": "Masowy import",
+        "massImportThresholdLabelFirstLine": "Szukaj duplikatów",
+        "massImportThresholdLabelSecondLine": "na liście osób wg progu",
+        "subjectGroups": "Nazwa grupy osób",
+        "subjectGroupsPlaceHolder": "Wybierz nazwę grupy",
+        "importName": "Nazwa masowego importu",
+        "threshold": "Szukaj twarzy wstecz",
+        "import": "Importuj",
+        "cancel": "Anuluj",
+        "searchBackwardsOn": "Ostrzeżenie! Szukanie wstecz może znacząco wydłużyć czas trwania importu",
+        "errors": {
+          "importName": "Wymagana jest nazwa importu",
+          "importNameCharacters": "Nazwa importu powinna zawierać znaki",
+          "importNameMaxCharacters": "Nazwa importu nie może być dłuższa niż 120 znaków",
+          "uploadedFile": "Wymagany jest plik skompresowany",
+          "fileSize": "Rozmiar pliku nie może przekraczać 15GB",
+          "subjectGroups": "Wymagana jest grupa osób",
+          "uploadAreaLabel": "Proszę przesłać wideo"
+        },
+        "serviceErrors": {
+          "failedToUploadFile": "Nie powiodło się przesyłanie pliku",
+          "failedToCheckIsMassImportNameExist": "Nie powiodło się sprawdzanie nazwy masowego importu",
+          "massImportNameAlreadyExist": "Nazwa masowego importu już istnieje"
+        },
+        "success": {
+          "uploadingFile": "Wysyłanie pliku do masowego importu"
+        }
+      },
+      "viewAuditTrail": {
+        "auditTrailTitle": "Dziennik dostępu dla {name}"
+      },
+      "filterByHq": "Filtruj wg HQ",
+      "subjectImagesExpired": "Wygasły wszystkie zdjęcia osoby {subjectName}",
+      "searchByName": "Szukaj nazwą",
+      "searchByGroup": "Szukaj grupami",
+      "searchByImage": "Szukaj zdjęciem",
+      "addNew": "Dodaj",
+      "disabledAddMassImportBtnTxt": "Masowe importy są w trakcie przetwarzania lub oczekują na rozwiązanie problemów",
+      "failedFetchDataIsAllowedAddMassImport": "Nie powiodło się sprawdzanie czy można dodać masowy import",
+      "massImport": "Masowy import",
+      "singleSubject": "Nową osobę",
+      "massImportProgress": "Postęp masowego importu",
+      "selectedSubjects": "Wybrano {number} osób",
+      "selectedSubject": "Wybrano {number} osobę",
+      "referenceImage": "Zdjęcie referencyjne",
+      "moreResults": "Więcej rezultatów",
+      "rank": "Pozycja",
+      "subject": "Osoba",
+      "subjectName": "Nazwa osoby",
+      "subjectGroup": "Grupa osoby",
+      "createdDate": "Data utworzenia",
+      "lastIdentifiedAt": "Ostatnio zidentyfikowana",
+      "description": "Opis",
+      "rankWithParam": "Pozycja {rank} osoby",
+      "noSubjectsFound": "Nie znaleziono osób",
+      "deleteSubject": "Usuń osobę",
+      "deleteSubjectContent": "Czy na pewno chcesz usunąć osobę - {name} ?",
+      "deleteSubjectsDialog": "Czy na pewno chcesz usunąć {number} wybranych osób ?",
+      "deleteSubjectsDialogWarning": "Osoby przypisane do HQ nie zostaną usunięte",
+      "deleteSubjectDialogConfirmText": "Usuń",
+      "editSubjectTitle": "Edytuj osobę",
+      "update": "Aktualizuj",
+      "errorDeleteSubject": "Nie można usunąć osoby",
+      "subjectIsLocked": "Osoba nie jest dostępna, ponieważ jest w trakcie usuwania",
+      "deletedBulkSubjects": "{number} osób zostało usuniętych",
+      "deletedOneSubject": "{number} osoba została usunięta",
+      "errorEditSubject": "Nie można edytować osoby",
+      "errorViewAuditTrail": "Nie można pokazać dziennika dostępu",
+      "errorGetMassImportProcesses": "Nie można pobrać procesów masowego importu"
+    },
+    "search": {
+      "title": "Filtruj rezultaty",
+      "search": "Szukaj",
+      "reset": "Resetuj",
+      "noResults": "Nie znaleziono rezultatów",
+      "appearances": "Pokaż wystąpienia",
+      "selectImage": "Wybierz zdjęcie",
+      "downloadStarted": "Proszę czekać, trwa eksportowanie raportu..",
+      "filters": {
+        "titles": {
+          "person": "Szukaj osoby",
+          "sources": "W źródłach",
+          "date": "Data i czas",
+          "attributes": "Atrybuty osoby",
+          "association": "Powiązanie"
+        },
+        "errors": {
+          "invalidDate": "Nieprawidłowy format daty",
+          "fromTo": "Data 'Od' nie może być po dacie 'Do'",
+          "toFrom": "Data 'To' nie może być przed datą 'From'",
+          "maxDate": "Data 'To' nie może być po dacie {date}",
+          "minDate": "Data 'From' nie może być przed datą {date}"
+        },
+        "labels": {
+          "all": "Wszystkie",
+          "body": "Sylwetka",
+          "face": "Twarz",
+          "imageExists": "Tak, PRÓG: {threshold}",
+          "faceAndBody": "Twarz i sylwetka",
+          "noneSelected": "Nie wybrano",
+          "image": "Zdjęcie",
+          "subject": "Osoba",
+          "subjectGroup": "Grupa osób",
+          "faceThreshold": "Próg twarzy",
+          "bodyThreshold": "Próg sylwetki",
+          "deletePhoto": "Usuń zdjęcie",
+          "last24": "Ostatnie 24 godziny",
+          "last48": "Ostatnie 48 godzin",
+          "last72": "Ostatnie 72 godziny",
+          "specific": "Określone dni",
+          "caseTime": "Data i czas sprawy",
+          "noCasesSelectedTitle": "Nie wybrano sprawy",
+          "noCasesSelectedDescription": "Proszę wybrać sprawę w sekcji “W źródłach”",
+          "selected": "Wybrano {count}",
+          "reset": "Resetuj",
+          "subjects": "Osoby",
+          "cameras": "Kamery",
+          "cases": "Sprawy",
+          "points": "Punkty",
+          "enable": "Włącz",
+          "disable": "Wyłącz",
+          "showMaskInfo": "Pokaż informacje o masce",
+          "withDwell": "Z czasem obecności",
+          "minDwellTime": "Min czas obecności",
+          "dwellTimeAll": "Zakres czasu",
+          "dwellTimeSpecific": "Obecność: Określony czas",
+          "seconds": "Sekund",
+          "minutes": "Minut",
+          "secondsShort": "SEK",
+          "minutesShort": "MIN",
+          "allTime": "Okno",
+          "maxTimeBetweenDetections": "Max czas pomiędzy detekcjami",
+          "n1faceThreshold": "N+1 próg twarzy",
+          "n1bodyThreshold": "N+1 próg sylwetki",
+          "n1AnyThreshold": "N+1 {type} PRÓG",
+          "tooltipInfoContent": "Określa łączny czas \nspędzony przez POI z osobą N+1",
+          "yes": "Tak",
+          "no": "Nie",
+          "maskInfo": "Info o masce",
+          "dwellTime": "Czas",
+          "allTimeMaxTimeBetweenTracks": "Czas pomiędzy detekcjami",
+          "specificTimeMaxTimeBetweenTracks": "Czas pomiędzy detekcjami",
+          "nPlusOneTH": "N+1 PRÓG",
+          "from": "Od",
+          "to": "Do",
+          "entireCase": "Cała sprawa",
+          "caseEvent": "Zdarzenie sprawy",
+          "sourceCases": "Sprawy źródłowe",
+          "hoursBeforeEvent": "Godziny przed zdarzeniem",
+          "hoursAfterEvent": "Godziny po zdarzeniu",
+          "start": "Start",
+          "end": "Koniec",
+          "eventTime": "Czas zdarzenia",
+          "alwaysUnauthorized": "Zawsze nieautoryzowana",
+          "alwaysAuthorized": "Zawsze autoryzowana",
+          "conditionalUnauthorized": "Warunkowo nieautoryzowana",
+          "conditionalAuthorized": "Warunkowo autoryzowana",
+          "additionalGroups": "(+{count})",
+          "person": "Osoba",
+          "identifiers": "Cechy",
+          "clothingColor": "Kolor ubrania",
+          "ageGender": "Wiek i płeć",
+          "mask": "Maska",
+          "age": "Wiek",
+          "glasses": "Okulary",
+          "backpack": "Plecak",
+          "gender": "Płeć",
+          "ageRange": "Zakres wieku",
+          "upperBodyColor": "Kolor góry sylwetki",
+          "lowerBodyColor": "Kolor dołu sylwetki",
+          "male": "Mężczyzna",
+          "female": "Kobieta",
+          "identifiersLabel": "Maska: {mask}, Okulary: {glassesk}, Plecak: {backpack}",
+          "top": "Góra",
+          "bottom": "Dół",
+          "none": "Brak",
+          "white": "Biały",
+          "black": "Czarny",
+          "gray": "Szary",
+          "yellow": "Żółty",
+          "blue": "Niebieski",
+          "red": "Czerwony",
+          "orange": "Pomarańczowy",
+          "pink": "Różowy",
+          "subjectsPlaceholder": "Filtruj osoby",
+          "allGender": "Obie płcie",
+          "inquiryDisabledMessage": "Dochodzenie nie jest dostępne w Twojej licencji",
+          "fromDateTime": "Od: Data i czas",
+          "toDateTime": "Do: Data i czas",
+          "noEventTime": "Brak czasu zdarzenia"
+        }
+      },
+      "results": {
+        "filters": {
+          "allView": "Twarz i sylwetka",
+          "faceSelection": "Twarz",
+          "bodySelection": "Sylwetka",
+          "aggregate": "Agregacja",
+          "detection": "Detekcja",
+          "face": "Twarz",
+          "body": "Sylwetka",
+          "all": "Wszystko",
+          "unauthorized": "Dopasowano nieautoryzowaną osobę",
+          "unauthorizedTimeRestricted": "Dopasowano osobę w nieautoryzowanym czasie",
+          "unknown": "Nieautoryzowana nieznana osoba",
+          "authorized": "Dopasowano autoryzowaną osobę",
+          "noMaskNotAllowed": "Osoba nie ma maski (niedozwolone)",
+          "noMaskAllowed": "Osoba nie ma maski (dozwolone)",
+          "spoofNotAllowed": "Próba oszustwa (niedozwolona)",
+          "spoofBlocked": "Próba oszustwa (zablokowana)",
+          "noReason": "Brak",
+          "dateAndTime": "Najnowsze detekcje",
+          "score": "Wynik",
+          "sources": "Źródła",
+          "view": "Widok",
+          "detectionType": "Typ detekcji",
+          "sortBy": "Sortuj wg",
+          "showCollated": "Pokaż powiązane {count}",
+          "show": "Pokaż",
+          "hide": "Ukryj",
+          "recognized": "Rozpoznane",
+          "source": "Źródło",
+          "detections": "Detekcje",
+          "unrecognized": "Nierozpoznane",
+          "exportCsv": "Eksportuj",
+          "searchResultsLimited": "Wyświetlono {show}/{total} rezultatów.",
+          "searchResultsLimitedLocateDetection": "Wyświetlono {count} rezultatów.",
+          "numOfRecognized": "Liczba detekcji",
+          "disabledUnique": "Wyłączone podczas wyszukiwania powiązań",
+          "alertingReason": "Przyczyna alarmu"
+        },
+        "nPlusOneInstancesDialog": {
+          "appearances": "Wygląd",
+          "reference": "{type} Referencja",
+          "totalDwellTime": "Całkowity czas obecności",
+          "compareToRefImage": "Wyniki są porównywane do obrazu referencyjnego {type}",
+          "instancesStaleError": "Rezultaty wyszukiwania wygasły, proszę wyszukać ponownie",
+          "instancesError": "Błąd przy otwieraniu okna dialogowego"
+        },
+        "proximityMaskFilter": {
+          "banner": "Maska: {type}",
+          "with": "Z",
+          "without": "Bez",
+          "both": "Oba"
+        },
+        "proximityDetectionsFilter": {
+          "banner": "Detekcje: {type}",
+          "all": "Wszystkie",
+          "poi": "POI",
+          "nPlusOne": "N+1"
+        }
+      }
+    },
+    "addEditCamera": {
+      "FACE": "Twarz",
+      "BODY": "Sylwetka",
+      "BODY_FROM_FACE": "Twarz i sylwetka",
+      "createCamera": "Utwórz kamerę",
+      "editCamera": "Edytuj kamerę",
+      "automatic": "Automatycznie",
+      "saveChanges": "Zapisz zmiany",
+      "titleWithClone": "clone_{title}",
+      "success": {
+        "createCamera": "Kamera została utworzona",
+        "updateCamera": "Kamera została zaktualizowana"
+      },
+      "errors": {
+        "cameraAlreadyExists": "Proszę wybrać inną nazwę kamery",
+        "failedGetCameraGroups": "Nie powiodło się pobieranie grup kamer",
+        "failedGetTimeProfiles": "Nie powiodło się pobieranie profilów czasowych",
+        "failedGetCameraDefaultSettings": "Nie powiodło się pobieranie domyślnych ustawień kamery",
+        "failedGetPipesOptions": "Nie powiodło się pobieranie opcji potoków",
+        "failedGetAvailablePipes": "Nie powiodło się pobieranie potoków",
+        "notAllValuesAreCompleted": "Proszę wypełnić prawidłowo wszystkie pola",
+        "noLicense": "Nie można utworzyć kamery. Licencja jest nieaktywna.",
+        "updateCameraFail": "Nie powiodło się aktualizowanie kamery",
+        "createCameraFail": "Nie powiodło się tworzenie kamery",
+        "failedToDeleteCameraToAccessory": "Nie powiodło się usuwanie akcesorium kamery.",
+        "failedToCreateCameraToAccessory": "Nie powiodło się tworzenie akcesorium kamery",
+        "failedToUpdateCameraToAccessory": "Nie powiodło się aktualizowanie akcesorium kamery."
+      },
+      "schemas": {
+        "requiredError": "Wymagane",
+        "minError": "Wymagane więcej niż {min} znaków",
+        "maxError": "Wymagane mniej niż [max} znaków",
+        "trackerSeekTimeOutError": "Limit klatek szukania śladu {mode} musi wynosić od 0 do 5000",
+        "notValidURL": "Proszę wprowadzić prawidłowy URL",
+        "latError": "Szerokość musi wynosić od -90 do 90",
+        "lngError": "Długość musi wynosić od -180 do 180",
+        "paddingHeightError": "Wartość od 0 do {height} ",
+        "paddingWidthError": "Wartość od 0 do {width} ",
+        "timeProfileShouldBeSet": "Profil czasowy musi być ustawiony jeśli alternatywny próg jest włączony."
+      },
+      "tabs": {
+        "cameraDetails": {
+          "tabTitle": "Szczegóły kamery",
+          "generalDetails": {
+            "header": "Ogólne",
+            "cameraName": "Nazwa kamery",
+            "cameraGroup": "Grupa urządzeń",
+            "cameraMode": "Tryb kamery",
+            "pipe": "Potok",
+            "description": "Opis"
+          },
+          "connection": {
+            "header": "Połączenie",
+            "videoUrl": "Wideo URL",
+            "sdpFile": "Plik SDP",
+            "username": "Nazwa użytkownika",
+            "password": "Hasło",
+            "uploadSdpFile": "Prześlij plik SDP",
+            "selectedFile": "Wybrany plik"
+          },
+          "threshold": {
+            "header": "Próg",
+            "camera": "Próg dla kamery",
+            "enableAlternativeThreshold": "Włącz alternatywny próg dla kamery",
+            "alternativeTimeProfile": "Alternatywny profil czasowy",
+            "pleaseSelectAnOption": "Wybierz"
+          },
+          "location": {
+            "header": "Lokalizacja",
+            "lng": "Długość",
+            "lat": "Szerokość",
+            "timeZone": "Strefa czasowa",
+            "assignTimeZone": "Przypisz strefę czasową do kamery zgodnie z jej lokalizacją fizyczną",
+            "pleaseSelectAnOption": "Wybierz"
+          }
+        },
+        "cameraCalibration": {
+          "tabTitle": "Kalibracja kamery",
+          "minLabel": "MIN",
+          "maxLabel": "MAX",
+          "videoFrame": {
+            "header": "Klatka wideo",
+            "automatic": "Automatyczne",
+            "frameRotate": "Obracanie obrazu",
+            "autoFrameSkipping": "Automatyczne pomijanie klatek",
+            "reduceCpuLoad": "Zmniejsz obciążenie GPU pomijając klatki i mniej skrupulatnie analizuj strumień wideo.",
+            "active": "Aktywne",
+            "inactive": "Nieaktywne",
+            "analysisPercentage": "Procent analizowanych",
+            "top": "Góra",
+            "right": "Prawo",
+            "bottom": "Dół",
+            "left": "Lewo",
+            "reset": "Resetuj"
+          },
+          "tracker": {
+            "header": "Ślad",
+            "trackerSeekTimeoutFace": "Limit klatek szukania śladu twarzą",
+            "trackerSeekTimeoutBody": "Limit klatek szukania śladu sylwetką",
+            "trackLength": "{source} - Długość śladu (w klatkach)"
+          },
+          "detector": {
+            "header": "Detektor",
+            "top": "Górny",
+            "right": "Prawy",
+            "bottom": "Dolny",
+            "left": "Lewy",
+            "min": "Min",
+            "save": "Zapisz",
+            "reset": "Resetuj",
+            "cancel": "Anuluj",
+            "cameraPaddingPx": "Zaznacz obszar (piksele):",
+            "detectionMinSize": "Min rozmiar detekcji (w pikselach):",
+            "cameraDetectorLiveTool": "Narzędzie do kalibracji",
+            "detectionSizeTitle": "{source} MIN",
+            "errors": {
+              "greaterThanError": "Więcej niż {side}",
+              "lowerThanError": "Mniej niż {side}"
+            }
+          },
+          "ffmpeg": {
+            "header": "Konfiguracja FFmpeg",
+            "ffmpegOptions": "Opcje FFmpeg"
+          },
+          "cameraPreview": {
+            "cameraResolutionError": "Nie można pobrać rozdzielczości kamery",
+            "streamError": {
+              "title": "Strumień nie jest dostępny",
+              "details": "Nie powiodło się podłączanie strumienia kamery na żywo. Proszę spróbować ponownie."
+            }
+          }
+        },
+        "securityAccess": {
+          "tabTitle": "Kontrola dostępu",
+          "liveness": {
+            "header": "Autentyczność",
+            "enableOrDisableLiveness": "Funkcja wykrywania sztucznych twarzy",
+            "livenessThreshold": "Próg autentyczności"
+          },
+          "maskClassification": {
+            "header": "Detekcja maski",
+            "maskDetectionAccess": "Dostęp w maskach",
+            "denyAccess": "Brak dostępu bez maski",
+            "maskThreshold": "Próg maski",
+            "maskThresholdDescription": "Wynik większy niż ustawiona wartość będzie oznaczał, że osoba ma założoną maskę"
+          },
+          "active": "Aktywna",
+          "inactive": "Nieaktywna"
+        },
+        "accessories": {
+          "tabTitle": "Akcesoria",
+          "removeAccessory": "Usuń akcesorium"
+        }
+      },
+      "notifications": {
+        "invalidInput": "Nieprawidłowe ID kamery",
+        "errorGetCamera": "Nie powiodło się pobieranie szczegółów kamery"
+      }
+    },
+    "addEditPoint": {
+      "editPoint": "Edytuj punkt",
+      "errors": {
+        "failedGetCameraGroups": "Nie powiodło się pobieranie grup kamer",
+        "failedGetPoint": "Nie powiodło się pobieranie punktu"
+      },
+      "success": {
+        "updatePoint": "Punkt został zaktualizowany"
+      },
+      "schemas": {
+        "requiredError": "Wymagany",
+        "minError": "Nie może być mniej niż {min} znaków",
+        "maxError": "Nie może być więcej niż {max} znaków"
+      },
+      "tabs": {
+        "pointDetails": {
+          "tabTitle": "Szczegóły",
+          "generalDetails": {
+            "header": "Ogólne",
+            "pointName": "Nazwa punktu",
+            "description": "Opis",
+            "pointIP": "IP punktu",
+            "relatedZone": "Powiązana grupa urządzeń"
+          }
+        },
+        "advancedSettings": {
+          "tabTitle": "Zaawansowane ustawienia",
+          "detectionRecognition": {
+            "header": "Detekcja i rozpoznanie",
+            "recognitionThreshold": "Próg rozpoznania",
+            "minimumRecognitionFace": "Minimalny rozmiar twarzy do rozpoznania",
+            "detectionFaceSize": "Rozmiar twarzy do detekcji",
+            "trackLength": "Długość śladu"
+          },
+          "security": {
+            "header": "Bezpieczeństwo",
+            "tailgaitingPrevention": "Zapobieganie wejściom grupowym",
+            "tailgaitingPreventionDescription": "Uniemożliwia wejście, jeśli na obrazie zostanie wykryta więcej niż jedna twarz",
+            "ignore": "Ignoruj",
+            "prevent": "Zapobiegaj",
+            "showAccessDeniedScreen": "Pokaż ekran blokady dostępu",
+            "showAccessDeniedScreenDescription": "Umożliwia pokazanie ekranu z blokadą dostępu w przypadku braku rozpoznania",
+            "showSubjectImage": "Pokaż zdjęcie osoby",
+            "showSubjectImageDescription": "Umożliwia wyświetlenie zarejestrowanego zdjęcia rozpoznanej osoby",
+            "hide": "Ukryj",
+            "show": "Pokaż",
+            "maskDetectionAccess": "Detekcja maski",
+            "maskDetectionAccessDescription": "Odmawiaj dostępu, jeśli osoba nie nosi maski",
+            "approveAccess": "Zezwalaj",
+            "denyAccess": "Odmawiaj",
+            "maskThreshold": "Próg maski",
+            "maskThresholdDesecription": "Wynik powyżej tego progu będzie uznawany za rozpoznanie osoby"
+          },
+          "liveness": {
+            "header": "Autentyczność",
+            "enableOrDisableLiveness": "Włącz lub wyłącz funkcję wykrywania sztucznych twarzy",
+            "livenessThreshold": "Próg autentyczności",
+            "active": "Aktywna",
+            "inactive": "Nieaktywna"
+          },
+          "redundancy": {
+            "header": "Redundancja (tryb offline)",
+            "active": "Aktywna",
+            "inactive": "Nieaktywna"
+          },
+          "sync": {
+            "header": "Synchronizacja",
+            "syncInterval": "Interwał synchronizacji",
+            "syncIntervalDescription": "Interwał synchronizacji personelu",
+            "minutes": "Min.",
+            "syncNow": "Synchronizuj teraz",
+            "lastSync": "Ostatnia synchronizacja: {lastSync}",
+            "syncStatus": "{status} ...",
+            "successfulSync": "Pełna synchronizacja ukończona",
+            "syncFinished": "Synchronizacja ukończona",
+            "failedToStartSync": "Nie powiodła się synchronizacja punktów personelu",
+            "status": {
+              "none": "Niezsynchronizowane",
+              "failed": "Niezsynchronizowane"
+            }
+          },
+          "timezone": {
+            "header": "Strefa czasowa",
+            "deviceTimeZone": "Strefa czasowa urządzenia",
+            "deviceTimeZoneDescription": "Przypisz strefę czasową do punktu zgodnie z jego lokalizacją fizyczną"
+          }
+        },
+        "accessories": {
+          "tabTitle": "Akcesoria",
+          "wiegand": {
+            "header": "Protokół Wiegand"
+          },
+          "accessory": {
+            "header": "Akcesorium",
+            "selectAnExistingAccessory": "Wybierz istniejące akcesorium",
+            "removeAccessory": "Usuń akcesorium",
+            "addAccessoryDialog": {
+              "header": "Wybierz akcesorium",
+              "cancel": "Anuluj",
+              "select": "Wybierz",
+              "accessoryName": "Nazwa akcesorium",
+              "ip": "IP",
+              "channel": "Kanał",
+              "status": "Status",
+              "unavailable": "Niedostępne",
+              "active": "Aktywne",
+              "inactive": "Nieaktywne"
+            },
+            "accessoryInfo": {
+              "generalDetails": {
+                "header": "Ogólne",
+                "accessoryName": "Nazwa akcesorium"
+              },
+              "connectionDetails": {
+                "header": "Szczegóły połączenia",
+                "accessoryType": "Typ akcesorium",
+                "moxa": "Moxa",
+                "tibbo": "Tibbo",
+                "other": "Inne",
+                "close": "Zamknij",
+                "open": "Otwórz",
+                "accessoryIP": "IP akcesorium",
+                "channel": "Kanał",
+                "initialState": "Stan początkowy",
+                "initialStateDescription": "Określa stan drzwi, w którym personel jest w pobliżu i próbuje wejść. (Otwarte = Odblokowane. Zamknięte = Zablokowane)",
+                "activeState": "Stan aktywny",
+                "activeStateDescription": "Określa stan drzwi, w którym ktoś ma zezwolenie na wejście. Ta wartość zawsze będzie przeciwna do stanu początkowego",
+                "throttle": "Przepust",
+                "throttleDescription": "Drzwi są otwarte raz w danym okresie czasu",
+                "revert": "Powrót",
+                "revertDescription": "Liczba sekund potrzebna do tego, aby drzwi wróciły do stanu początkowego",
+                "normallyOpened": "Normalnie otwarte",
+                "closed": "Zamknięte",
+                "sec": "SEK"
+              },
+              "redundancy": {
+                "header": "Redundantne akcesorium (tryb offline)",
+                "accessoryType": "Typ akcesorium",
+                "accessoryTypeDescription": "Integruje z fizycznym akcesorium, aby bezpośrednio aktywować punkt wejściowy, kiedy pracuje w trybie “offline” i nie jest podłączony do serwera.",
+                "offlineDevices": {
+                  "sameAsOnlineDevice": "To samo co akcesorium online",
+                  "directConnectionDryContact": "Połączenie bezpośrednie - suchy kontakt (I/O)",
+                  "directConnectionWiegand": "Połączenie bezpośrednie - Wiegand 26"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "settings": {
+      "maskDetection": {
+        "pageHeader": "Dostęp w masce",
+        "header": "Wykrywanie maski",
+        "enabled": "Włączone",
+        "disabled": "Wyłączone",
+        "defaultThreshold": {
+          "header": "Ustawienia",
+          "label": "Domyślny próg wykrycia maski",
+          "description": "Wynik powyżej tej wartości zostanie uznany za osobę, która ma założoną maskę"
+        },
+        "notification": {
+          "label": "Powiadomienie",
+          "description": "Określa, czy system wyśle alarm w przypadku, gdy osoba nie ma założonej maski",
+          "notify": "Powiadamiaj",
+          "noNotify": "Nie powiadamiaj"
+        },
+        "denyAccess": {
+          "label": "Dostęp domyślny",
+          "description": "Dostęp domyślny, kiedy personel nie ma założonej maski",
+          "deny": "Odmów dostępu",
+          "approve": "Udziel dostępu"
+        },
+        "submit": "Zapisz zmiany"
+      },
+      "timeProfile": {
+        "Working Days (Sun-Thu)": "Dni robocze (Nie-Czw)",
+        "Working Days (Mon-Fri)": "Dni robocze (Pod-Pia)",
+        "24/7": "24/7",
+        "itemName": "Profil czasowy",
+        "itemsName": "Profile czasowe",
+        "enabled": "Włączony",
+        "disabled": "Wyłączony",
+        "enable": "Włącz",
+        "disable": "Wyłącz",
+        "timeProfileDialog": {
+          "sunday": "Niedziela",
+          "monday": "Poniedziałek",
+          "tuesday": "Wtorek",
+          "wednesday": "Środa",
+          "thursday": "Czwartek",
+          "friday": "Piątek",
+          "saturday": "Sobota",
+          "addTimeProfile": "Utwórz nowy profil czasowy",
+          "editTimeProfile": "Edytuj profil czasowy",
+          "title": "Nazwa profilu",
+          "description": "Opis profilu (opcjonalny)",
+          "errors": {
+            "title": "Wymagane pole",
+            "titleLength": "Maksymalnie 30 znaków",
+            "titleCharacters": "Tytuł musi zawierać znaki",
+            "getTimeProfileFailed": "Nie powiodło się pobieranie profilów czasowych"
+          },
+          "allDay": "24 godziny / 7 dni",
+          "selectWorkingDays": "Wybrane dni robocze / godziny",
+          "update": "Aktualizuj profil",
+          "create": "Utwórz profil"
+        },
+        "columns": {
+          "title": "Nazwa profilu",
+          "description": "Opis",
+          "createdAt": "Utwórz datę",
+          "updatedAt": "Aktualizuj datę",
+          "usageCount": "Licznik użycia"
+        },
+        "serviceErrors": {
+          "ERR_TIME_PROFILE_NOT_FOUND": "Nie powiodło się pobieranie profilu czasowego",
+          "ERR_TIME_PROFILES_NOT_FOUND": "Nie powiodło się pobieranie profilów czasowych",
+          "ERR_TIME_PROFILE_SLOTS_NOT_FOUND": "Nie powiodło się pobieranie slotów profilów czasowych",
+          "ERR_TIME_PROFILE_ALREADY_EXISTS": "Profil czasowy już istnieje",
+          "ERR_TIME_PROFILE_SLOT_INVALID_TIME": "Sloty profilów czasowych są nieprawidłowe",
+          "ERR_TIME_PROFILE_IN_USE_CANNOT_BE_DELETED": "Profil czasowy jest w użyciu i nie może zostać usunięty",
+          "ERR_TIME_PROFILE_DEFAULT_CANNOT_BE_DELETED": "Domyślny profil czasowy nie może zostać usunięty"
+        }
+      },
+      "tabs": {
+        "deviceSettings": "Ustawienia urządzeń",
+        "integrations": "Integracje",
+        "systemSettings": "Ustawienia systemu",
+        "engineSettings": "Ustawienia silnika",
+        "groupsAndProfiles": "Grupy i profile",
+        "accountManagement": "Zarządzanie kontami",
+        "analytics": "Analityka",
+        "licenseManagement": "Licencja",
+        "emailSettings": "Ustawienia email",
+        "automationCenter": "Centrum automatyzacji",
+        "status": "Status systemu",
+        "version": "Wersja"
+      },
+      "systemSettings": {
+        "general": "Ogólne",
+        "mapSettings": "Ustawienia map",
+        "ackActions": "Akcje alarmowe",
+        "maskDetection": "Wykrywanie maski",
+        "systemInterface": "Interfejs systemu",
+        "errors": {
+          "pipesServiceError": "Nie można uzyskać dostępu do usługi potoków"
+        },
+        "kv": {
+          "systemParameters": "Parametry systemu",
+          "failedToGetSettings": "Nie powiodło się pobieranie ustawień",
+          "failedToUpdateSetting": "Nie powiodło się aktualizowanie ustawień",
+          "settingWasUpdatedSuccessfully": "Ustawienia zostały zaktualizowane",
+          "apply": "Zastosuj",
+          "cancel": "Anuluj"
+        }
+      },
+      "engineSettings": {
+        "general": "Ogólne",
+        "storage": "Archiwum",
+        "labels": {
+          "videoTtl": "Termin usuwania wszystkich nagrań:",
+          "description": "Określ, jak długo każdy plik wideo ma pozostać w archiwum, zanim zostanie usunięty.",
+          "hint": "Użyj poniższych ustawień, aby zoptymalizować swoje archiwum.",
+          "detectionTtl": "Termin usuwania detekcji:",
+          "recognitionTtl": "Termin usuwania alarmów:",
+          "inquiryTtl": "Termin usuwania spraw dochodzeniowych:",
+          "videosWithoutRecognitionsTtl": "Termin usuwania nagrań zawierających tylko detekcje:",
+          "videoStorage": "Archiwum nagrań",
+          "detectionStorage": "Archiwum detekcji",
+          "recognitionStorage": "Archiwum alarmów",
+          "inquiryStorage": "Archiwum spraw dochodzeniowych",
+          "hours": "GODZINY",
+          "days": "DNI",
+          "saveChanges": "Zapisz zmiany"
+        },
+        "errors": {
+          "outOfSequence": "Poza sekwencją",
+          "videosWithoutRecognitionsTtl": "Nie można przekroczyć terminu usuwania określonego w opcji “wszystkie nagrania”",
+          "recognitionTime": "Czas rozpoznania musi być równy lub większy niż detekcji",
+          "detectionTime": "Czas detekcji musi być równy lub mniejszy niż rozpoznania",
+          "videoTtlHours": "Wartość od 1 do 23976",
+          "videoTtlDays": "Wartość od 1 do 999",
+          "inquiryTtl": "Wartość od 1 do 365"
+        },
+        "userFeedback": {
+          "successSettingsChange": "Ustawienia zostały zmienione",
+          "failSettingsChange": "Nie powiodła się zmiana ustawień",
+          "failedToGetSettings": "Nie powiodło się pobieranie ustawień"
+        }
+      },
+      "generalSystemSettings": {
+        "notAvailableLicense": "Funkcja nie jest dostępna w Twojej licencji",
+        "gdprSupport": "Ustawienia prywatności",
+        "labels": {
+          "privacyMode": "Odrzucaj detekcje osób, których nie ma na liście",
+          "gdprMode": "Zasłaniaj wszystkie twarze poza bieżącą detekcją",
+          "saveChanges": "Zapisz zmiany",
+          "bodyImageTtlH": "Okres ważności obrazu sylwetki",
+          "hour": "{value}GODZ.",
+          "defaultFaceThreshold": "Domyślny próg twarzy",
+          "defaultBodyThreshold": "Domyślny próg sylwetki",
+          "cameraDefaultLivenessTh": "Domyślny próg autentyczności"
+        },
+        "userFeedback": {
+          "successSettingsChange": "Ustawienia zostały zmienione",
+          "failSettingsChange": "Nie powiodła się zmiana ustawień",
+          "failedToGetSettings": "Nie powiodło się pobieranie ustawień",
+          "cameraDefaultLivenessThError": "Domyślny próg autentyczności musi być od 0.03 do 1.0",
+          "emptyThreshold": "Proszę wprowadzić wartość"
+        }
+      },
+      "ackActions": {
+        "containerTitle": "Ustawienia potwierdzania alarmów",
+        "tableTitle": "Tabela akcji",
+        "enforceToggle": "Wymuszaj wybór akcji",
+        "actionsDisabledMessage": "Akcje wyłączone",
+        "noItemsFound": "Nie znaleziono akcji alarmowych",
+        "updateAckActionsFlagError": "Nie powiodło się aktualizowanie wymuszania akcji alarmowych",
+        "title": "Nazwa akcji",
+        "createdAt": "Data utworzenia",
+        "description": "Opis",
+        "actions": "Menu akcji",
+        "create": "Utwórz akcję",
+        "delete": "Usuń",
+        "edit": "Edytuj akcję",
+        "actionSucceeded": "{actionType} powiodła się",
+        "actionFailed": "{actionType} nie powiodła się",
+        "actionsFetchingError": "Nie powiodło sie pobieranie akcji alarmowych",
+        "actionFailedNameExists": "Nazwa akcji już istnieje",
+        "titleShouldContain": "Nazwa musi zawierać znaki",
+        "deleteDialog": {
+          "deleteItem": "Usuń akcję alarmową",
+          "deleteConfirmText": "Usuń",
+          "deleteItemDialog": "Czy na pewno chcesz usunąć akcję '{actionName}'?",
+          "errorDeleteItem": "Nie można usunąć akcji alarmowej",
+          "deleteSuccess": "Akcja alarmowa została usunięta"
+        },
+        "manageDialog": {
+          "cancel": "anuluj",
+          "createTitle": "Dodaj akcję alarmową",
+          "editTitle": "Edytuj akcję alarmową",
+          "createConfirm": "Dodaj",
+          "editConfirm": "Edytuj",
+          "title": "Nazwa:",
+          "description": "Opis:"
+        }
+      },
+      "mapSettings": {
+        "offlineModeExplainer": "W tej wersji systemu mapa nie jest dostępna w trybie offline. Ustaw ręcznie domyślną lokalizację kamery m.in. po to, aby uwzględnić jej strefę czasową.",
+        "seedLocation": "Lokalizacja",
+        "defaultZoom": "Domyślna skala mapy",
+        "lat": "Szer",
+        "lng": "Dług",
+        "invalidInput": "Nieprawidłowe dane",
+        "saveChanges": "Zapisz zmiany",
+        "successSettingsChange": "Ustawienia zostały zmienione",
+        "SettingsChangeFailed": "Nie powiodła się zmiana ustawień",
+        "connectionTest": "Test połączenia",
+        "success": "Sukces",
+        "fail": "Niepowodzenie",
+        "localAddress": "Adres lokalnego serwera map",
+        "chooseServer": "Wybierz swój preferowany serwer map",
+        "token": "Token",
+        "local": "Lokalnie",
+        "cloud": "Chmura",
+        "offlineMode": "Tryb offline",
+        "title": "Serwer map",
+        "invalidMapApiToken": "Nieprawidłowy token do API mapy",
+        "invalidApiUrl": "Nieprawidłowy URL do API"
+      },
+      "cameraSettings": {
+        "multiple": "wiele",
+        "ssfPlaceholder": "Dodaj tag, aby filtrować lub wpisz tekst, aby wyszukać",
+        "error": "Błąd {code}",
+        "troubleshooting": "Rozwiązywanie problemów",
+        "titleWithClone": "clone_{title}",
+        "clearDelete": "Wyczyść lub usuń kamerę",
+        "camerasDetections": "Detekcje kamer",
+        "cameraDetections": "Detekcje kamery",
+        "areYouSureYouWantTo": "Czy na pewno chcesz",
+        "cameraDeletionDisclaimer": "Ta akcja usunie wszystkie powiązane informacje, czyli wszystkie detekcje i rozpoznania",
+        "cameraClearDisclaimer": "Czy na pewno chcesz wyczyścić wszystkie detekcje i rozpoznania w {itemsInfoString}?",
+        "fetchingCameraGroupName": "Pobieranie nazwy grupy urządzeń",
+        "status": "Status kamery",
+        "cameraGroupTitle": "Grupa urządzeń",
+        "isEnabled": "Status administratora",
+        "restriction": "Restrykcyjna",
+        "streamType": "Typ",
+        "restrictedCameraGroupTooltip": "Grupa restrykcyjna",
+        "videoUrl": "Adres IP kamery",
+        "threshold": "Próg",
+        "pipe": "Potok",
+        "createdAt": "Data utworzenia",
+        "title": "Nazwa kamery",
+        "detectionsAndRecognitions": "Detekcje i rozpoznania",
+        "camera": "Kamera",
+        "cameras": "kamery",
+        "enable": "Włącz",
+        "disable": "Wyłącz",
+        "edit": "Edytuj",
+        "clone": "Klonuj",
+        "delete": "Usuń",
+        "clear": "Wyczyść",
+        "cleared": "Wyczyszczona",
+        "deleted": "Usunięta",
+        "addCamera": "Dodaj kamerę",
+        "aiCamera": "Kamera AI",
+        "cctvCamera": "Kamera CCTV",
+        "export": "Eksportuj",
+        "exportCSV": "Eksportuj CSV",
+        "exportHoverMessage": "Eksportuj listę kamer do CSV",
+        "deleteWarning": "Ta akcja usunie wszystkie powiązane informacje, czyli wszystkie detekcje, rozpoznania i nagrania wideo.",
+        "cameraDialog": {
+          "sdpFile": "Plik SDP",
+          "uploadSdpFile": "Prześlij plik SDP",
+          "autoFrameSkippingDescription": "Zmniejsz obciążenie GPU pomijając klatki i mniej skrupulatnie analizuj strumienie wideo.",
+          "reset": "Resetuj",
+          "infinity": "Nieskończoność",
+          "addCamera": "Dodaj kamerę",
+          "editCamera": "Edytuj kamerę",
+          "general": "Ogólne",
+          "advanced": "Zaawansowane",
+          "maskDetection": "Wykrywanie maski",
+          "maskDescription": "Udziel dostępu w przypadku, gdy osoba nie nosi maski",
+          "maskThreshold": "Próg maski",
+          "title": "Nazwa",
+          "pipe": "Potok",
+          "description": "Opis",
+          "videoProcessor": "Procesor wideo",
+          "tracker": "Detektor",
+          "ffmpegOptions": "Opcje FFMpeg",
+          "minDetectionObjectSize": "Min rozmiar obiektu w detekcji",
+          "maxDetectionObjectSize": "Max rozmiar obiektu w detekcji",
+          "frameRotate": "Obracanie obrazu",
+          "enableAlternativeCameraThreshold": "Włącz alternatywny próg",
+          "finish": "Zakończ",
+          "cancel": "Anuluj",
+          "location": "Lokalizacja",
+          "lat": "szer:",
+          "lng": "dług:",
+          "threshold": "Próg",
+          "livenessThreshold": "Próg autentyczności",
+          "minTrackLength": "Min długość śladu (klatki)",
+          "maxTrackLength": "Max długość sładu (klatki)",
+          "trackerSeekTimeOut": "Limit klatek szukania śladu",
+          "requiredErrors": {
+            "title": "Nazwa kamery jest wymagana",
+            "videoUrl": "URL wideo jest wymagany",
+            "cameraGroupId": "Grupa urządzeń jest wymagana",
+            "cameraMode": "Tryb kamery jest wymagany",
+            "location": "Lokalizacja jest wymagana",
+            "sdpFile": "Plik SDP jest wymagany"
+          },
+          "validationErrors": {
+            "title": "Nazwa musi zawierać znaki",
+            "videoUrl": "Proszę wprowadzić URL w prawidłowym formacie",
+            "cameraPaddingRange": "0-{limit}",
+            "cameraPadding": "Wymagana liczba",
+            "trackMinAndMaxLength": "> max wartość",
+            "detectionMinObjectSizeLessThanMax": "> max wartość",
+            "detectionMinFaceSize": "1-500",
+            "detectionMaxFaceSize": "1-500 lub pozostaw puste jako nieskończoność",
+            "trackFaceMinLength": "1-5000",
+            "trackFaceMaxLength": "1-5000",
+            "trackerFaceSeekTimeOut": "0-5000",
+            "detectionMinBodySize": "1-500",
+            "detectionMaxBodySize": "1-500 lub pozostaw puste jako nieskończoność",
+            "trackBodyMinLength": "1-5000",
+            "trackBodyMaxLength": "1-5000",
+            "trackerBodySeekTimeOut": "0-5000",
+            "timeProfileId": "Profil czasowy jest wymagany",
+            "location": "Koordynaty lokalizacji muszą być liczbami",
+            "cameraLivenessTh": "Próg autentyczności musi być od 0.03 do 1.0"
+          },
+          "cameraSettings": "Ustawienia kamery",
+          "videoUrl": "Wideo URL",
+          "fps": "Nadpisz FPS w próbce",
+          "height": "Nadpisz wysokość w próbce",
+          "width": "Nadpisz szerokość w próbce",
+          "detector": "Detektor",
+          "minFaceSize": "Minimalny rozmiar twarzy",
+          "cameraPadding": "Wypełnienie kamery (w pikselach)",
+          "preview": "Pokaż okno podglądu",
+          "webRTC": "webRTC",
+          "restricted": "Restrykcyjna",
+          "cameraMode": "Tryb kamery",
+          "FACE": "Twarz",
+          "BODY": "Sylwetka",
+          "BODY_FROM_FACE": "Twarz i sylwetka",
+          "group": "Grupa urządzeń",
+          "automatic": "Automatycznie",
+          "locationError": "Proszę dodać lokalizację",
+          "locationLat": "Szer: {lat}",
+          "locationLng": "Dług: {lng}",
+          "status": "Auto start",
+          "liveness": "Autentyczność",
+          "livenessDescription": "Włącz lub wyłącz funkcję sprawdzania autentyczności",
+          "autoFrameSkipping": "Automatyczne pomijanie klatek",
+          "manualFrameSkipping": "Procent analizowanych",
+          "alternativeThreshold": "Alternatywny próg",
+          "enableAlternativeThreshold": "Włącz alternatywny próg kamery",
+          "alternativeProfileTime": "Alternatywny profil czasowy"
+        },
+        "cameraStatuses": {
+          "unknown": "Nieznany",
+          "disconnected": "Rozłączona",
+          "connected": "Podłączona",
+          "connecting": "Podłączanie",
+          "failed": "Niepowodzenie",
+          "reconnecting": "Łączenie"
+        },
+        "exportConfiguration": "Eksportuj konfigurację",
+        "enabled": "Włączone",
+        "disabled": "Wyłączone",
+        "unknown": "Nieznane",
+        "serviceErrors": {
+          "ERR_CAMERA_ALREADY_EXISTS": "Proszę wybrać inną nazwę kamery",
+          "ERR_CAMERA_TITLE_IS_INVALID": "Nazwa kamery jest nieprawidłowa",
+          "ERR_FAILED_FETCH_CAMERA_GROUPS": "Nie powiodło się pobieranie grup urządzeń",
+          "ERR_FAILED_FETCH_TIME_PROFILES": "Nie powiodło się pobieranie profilów czasowych",
+          "ERR_FAILED_FETCH_CAMERA_DEFAULT_SETTINGS": "Nie powiodło się pobieranie domyślnych ustawień kamery"
+        },
+        "success": {
+          "updateCamera": "Kamera została zaktualizowana",
+          "createCamera": "Kamera została utworzona",
+          "clearedCamera": "Detekcje w kamerze zostały wyczyszczone",
+          "clearedCameras": "Detekcje w kamerach zostały wyczyszczone",
+          "deletedCamera": "Kamera została usunięta",
+          "deletedCameras": "Kamery zostały usunięte",
+          "enabledCamera": "Kamera została włączona",
+          "disabledCamera": "Kamera została wyłączona",
+          "enablingCameras": "Kamery zostały włączone",
+          "disablingCameras": "Kamery zostały wyłączone"
+        },
+        "errors": {
+          "bulkDeleteCamerasFail": "Nie powiodło się usuwanie kamer",
+          "bulkClearCamerasFail": "Nie powiodło się czyszczenie kamer",
+          "bulkStatusChangeCamerasFail": "Nie powiodło się aktualizowanie niektórych kamer. Zaktualizowano {successfullyUpdatedCamerasAmount} z {allUpdatedCamerasAmount}.",
+          "bulkStatusChangeCamerasLicenseFail": "Proszę sprawdzić szczegóły licencji. Zaktualizowano {successfullyUpdatedCamerasAmount} z {allUpdatedCamerasAmount}.",
+          "bulkStatusChangeAllCamerasLicenseFail": "Nie powiodło się włączanie kamer. Proszę sprawdzić szczegóły licencji.",
+          "clearCamerasFail": "Nie powiodło się czyszczenie kamery",
+          "updateCameraFail": "Nie powiodło się aktualizowanie kamery",
+          "createCameraFail": "Nie powiodło się utworzenie kamery",
+          "deletedCamera": "Nie powiodło się usuwanie kamery",
+          "enablingCameras": "Nie powiodło się włączanie kamer",
+          "disablingCameras": "Nie powiodło się wyłączanie kamer",
+          "enablingCamera": "Nie powiodło się włączanie kamery",
+          "disablingCamera": "Nie powiodło się wyłączanie kamery"
+        },
+        "iconTitles": {
+          "delete": "Usuń kamerę",
+          "clearDetections": "Wyczyść detekcje Clear Detections and Recognitions",
+          "enableDisable": "Włącz/Wyłącz kamerę"
+        }
+      },
+      "deviceSettings": {
+        "cameraSettings": "Ustawienia kamer",
+        "points": "Punkty",
+        "accessories": "Akcesoria",
+        "vms": "VMS",
+        "btRemote": "OnPatrol",
+        "btRemoteSettings": {
+          "userFeedback": {
+            "successSettingsChange": "Ustawienia zostały zmienione",
+            "failSettingsChange": "Nie powiodła się zmiana ustawień",
+            "failedToGetSettings": "Nie powiodło się pobieranie ustawień"
+          },
+          "labels": {
+            "pushNotification": "Powiadomienie Push",
+            "tokenNumber": "Numer tokena",
+            "btRemoteSettings": "Ustawienia zdalne OnPatrol",
+            "save": "Zapisz",
+            "test": "Testuj",
+            "success": "Sukces",
+            "fail": "Niepowodzenie"
+          }
+        }
+      },
+      "groupsAndProfiles": {
+        "menuItems": {
+          "subjectGroups": "Grupy osób",
+          "cameraGroups": "Grupy urządzeń",
+          "timeProfile": "Profile czasowe",
+          "cameraCredentialsProfile": "Profil danych logowania do kamery",
+          "ignoreGroup": "Grupa ignorowanych"
+        },
+        "ignoreGroup": {
+          "delete": "Usuń",
+          "searchByDescription": "Wyszukaj wg opisu",
+          "selectedItems": "Wybrano {number} ignorowanych elementów",
+          "selectedItem": "Wybrano {number} ignorowany element",
+          "noItemsFound": "Nie znaleziono ignorowanych elementów",
+          "errorOpenItem": "Nie można otworzyć ignorowanego elementu",
+          "errorDeleteItem": "Nie można usunąć ignorowanego elementu",
+          "errorDeleteItems": "Nie można usunąć ignorowanych elementów",
+          "deleteItem": "Usuń ignorowany element",
+          "deleteItems": "Usuń ignorowane elementy",
+          "deleteItemDialog": "Czy na pewno chcesz usunąć ten ignorowany element ?",
+          "deleteItemsDialog": "Czy na pewno chcesz usunąć te {number} ignorowanych elementów ?",
+          "deleteConfirmText": "Usuń",
+          "menu": {
+            "view": "Pokaż opis",
+            "edit": "Edytuj",
+            "delete": "Usuń"
+          },
+          "addItem": "Dodaj do ignorowanych",
+          "editItem": "Edytuj ignorowany element"
+        },
+        "cameraGroups": {
+          "cameraGroup": "Grupę urządzeń",
+          "cameraGroups": "Grupy urządzeń",
+          "title": "Nazwa grupy urządzeń",
+          "createdAt": "Data utworzenia",
+          "description": "Opis",
+          "cameras": "Powiązane kamery",
+          "cameraGroupTooltip": "Grupa restrykcyjna",
+          "serviceErrors": {
+            "ERR_CAMERA_GROUP_ALREADY_EXISTS": "Proszę wybrać inną nazwę grupy urządzeń"
+          },
+          "errors": {
+            "deletionFailed": "Usuwanie grupy urządzeń nie powiodło się",
+            "deletionFailedDueGroupNotEmpty": "Usuwanie grupy urządzeń nie powiodło się\nGrupa nie jest pusta",
+            "deletionFailedDueGroupInUse": "Usuwanie grupy urządzeń nie powiodło się\nGrupa jest w użyciu"
+          }
+        },
+        "cameraGroupDialog": {
+          "addCameraGroup": "Dodaj grupę urządzeń",
+          "editCameraGroup": "Edytuj grupę urządzeń",
+          "groupName": "Nazwa grupy",
+          "description": "Opis",
+          "unknownAlert": "Alarm braku rozpoznania",
+          "restrictedGroup": "Grupa restrykcyjna",
+          "restrictedGroupText": "Funkcja umożliwia otrzymywanie alarmów o wszystkich nierozpoznanych osobach",
+          "errors": {
+            "description": "Maksymalnie {maxCharacters} znaków",
+            "title": "Nazwa grupy jest wymagana",
+            "invalidTitle": "Nazwa grupy musi zawierać znaki"
+          },
+          "save": "Zapisz",
+          "cancel": "Anuluj",
+          "visible": "Widoczny",
+          "loud": "Głośny",
+          "silent": "Cichy"
+        }
+      },
+      "accountManagement": {
+        "menuItems": {
+          "userAccounts": "Konta użytkowników",
+          "userGroups": "Grupy użytkowników",
+          "activeDirectory": "Active Directory",
+          "saml": "SAML SSO"
+        },
+        "userAccounts": {
+          "users": "Użytkownicy",
+          "userInfo": "Przypisz użytkowników do określonych ról i grup użytkowników,\naby określić ich uprawnienia dostępu.",
+          "roleInfo": "Każdy z użytkowników ma przypisaną rolę,\nktóra określa ich uprawnienia dostępu\n w systemie.",
+          "userGroupInfo": "Każdy z użytkowników jest przypisany do grupy,\nktóra określa grupy urządzeń,\nsprawy dochodzeniowe i grupy osób,\ndo których mogą uzyskać dostęp.",
+          "userImported": "Użytkownik zaimportowany z {idpName}",
+          "deletionSuccess": "Użytkownik został usunięty",
+          "deletionFail": "Usuwanie użytkownika nie powiodło się",
+          "readMore": "Czytaj więcej",
+          "createNewUser": "Utwórz nowego użytkownika",
+          "changePassword": "Zmień hasło",
+          "apiKey": "Klucz API",
+          "role": "Rola",
+          "userGroup": "Grupa użytkownika",
+          "firstName": "Imię",
+          "lastName": "Nazwisko",
+          "delete": "Usuń",
+          "username": "Nazwa użytkownika",
+          "email": "Email",
+          "updatedDate": "Data aktualizacji",
+          "actions": {
+            "edit": "Edytuj",
+            "clone": "Klonuj",
+            "delete": "Usuń",
+            "changePassword": "Zmień hasło"
+          },
+          "deleteDialog": {
+            "deleteUser": "Usuń użytkownika",
+            "bulkDeleteUsers": "Usuń użytkowników",
+            "deleteButton": "Usuń",
+            "deleteUserConfirmText": "Czy na pewno chcesz usunąć użytkownika {name} ?",
+            "bulkDeleteUsersConfirmText": "Czy na pewno chcesz usunąć {number} wybranych użytkowników"
+          },
+          "userDialog": {
+            "updateSuccess": "Użytkownik został zaktualizowany",
+            "creationSuccess": "Użytkownik został utworzony",
+            "idpDisclaimer": "Szczegóły importowanych użytkowników {idpName} nie mogą zostać zmienione w systemie.\nProszę zmodyfikować zewnętrzną importowaną bazę użytkowników.",
+            "cancel": "Anuluj",
+            "title": {
+              "update": "Aktualizuj użytkownika",
+              "create": "Utwórz nowego użytkownika"
+            },
+            "confirm": {
+              "update": "Aktualizuj",
+              "create": "Utwórz"
+            },
+            "inputs": {
+              "userGroupTooltip": "Użytkownik będzie mógł uzyskać dostęp tylko do tych kamer, spraw dochodzeniowych i osób, które zostały udostępnione tej grupie użytkowników.",
+              "firstName": "Imię",
+              "lastName": "Nazwisko",
+              "username": "Nazwa użytkownika",
+              "email": "Email",
+              "role": "Rola",
+              "userGroup": "Grupa użytkownika",
+              "password": "Hasło",
+              "passwordRetype": "Powtórzenie hasła",
+              "photo": "Zdjęcie",
+              "statusEnabled": "Status",
+              "mobileAccessEnabled": "Dostęp mobilny"
+            },
+            "errors": {
+              "submitFailed": "Nie powiodła się operacja {action} użytkownika",
+              "required": "{name} jest wymagana",
+              "shouldContainCharacters": "{name} musi zawierać znaki",
+              "passwordRetypeNotMatching": "Hasła nie są identyczne",
+              "rolesFailed": "Nie powiodło się podłączenie usługi użytkowników",
+              "userGroupsFailed": "Nie powiodło się podłączenie do usługi zarządzania uprawnieniami",
+              "userAlreadyExists": "Użytkownik już istnieje",
+              "emailIsNotValid": "Email nie jest prawidłowy",
+              "passwordIsNotValid": "Hasło nie jest prawidłowe"
+            }
+          },
+          "serviceErrors": {},
+          "changePasswordByAdminDialog": {
+            "dialogTitle": "Zmiana hasła dla {name}",
+            "password": "Hasło",
+            "retypePassword": "Powtórzenie hasła",
+            "changeBtn": "Zmień",
+            "cancelBtn": "Anuluj",
+            "errors": {
+              "password": "Hasło jest wymagane",
+              "passwordCharacters": "Hasło musi zawierać znaki",
+              "retypePassword": "Powtórzenie hasła jest wymagane",
+              "retypePasswordCharacters": "Powtórzenie hasła musi zawierać znaki",
+              "passwordsNotEqual": "Hasła muszą być identyczne"
+            },
+            "serviceErrors": {
+              "ERR_PERMISSION_DENIED": "Nie masz uprawnień do zmiany hasła tego użytkownika",
+              "ERR_INVALID_PASSWORD": "Hasło nie jest wystarczająco trudne do złamania",
+              "ERR_USER_NOT_ALLOWED_TO_SELF_UPDATE": "Nie masz uprawnień do zmiany własnego hasła z tego poziomu",
+              "default": "Nie powiodła się zmiana hasła"
+            },
+            "userFeedback": {
+              "successPasswordUpdated": "Nowe hasło dla {name} zostało utworzone",
+              "failPasswordChange": "Nie powiodła się zmiana hasła"
+            }
+          }
+        },
+        "userGroups": {
+          "userGroup": "Grupa użytkowników",
+          "usersCount": "Liczba użytkowników",
+          "userGroups": "Grupy użytkowników",
+          "title": "Grupy użytkowników",
+          "tooltip": "Dodaj nową grupę użytkowników, aby zarządzać uprawnieniami dostępu w swojej organizacji.\nDla każdej nowej grupy użytkowników zdefiniuj uprawnienia dostępu do określonych urządzeń, spraw dochodzeniowych i osób.\nUżytkownicy nieprzypisani do grup, nie będą mieli uprawnień do kamer, spraw dochodzeniowych lub osób, które są dostępne tylko dla wybranych grup użytkowników.",
+          "addUserGroup": "Dodaj nową grupę użytkowników",
+          "createDate": "Data utworzenia",
+          "updateDate": "Data aktualizacji",
+          "notifications": {
+            "deleteNotEmptyGroupError": "Można usunąć tylko pustą grupę użytkowników",
+            "deleteUsedGroupError": "Można usunąć tylko nieużywaną grupę użytkowników",
+            "deleteError": "Nie powiodło się usuwanie grupy użytkowników z powodu błędu serwera",
+            "deleteSuccess": "Grupa użytkowników została usunięta"
+          },
+          "dialog": {
+            "addTitle": "Dodaj nową grupę użytkowników",
+            "deleteTitle": "Usuń grupę użytkowników",
+            "deleteContent": "Czy na pewno chcesz usunąć {title}?",
+            "deleteButtonText": "Usuń"
+          },
+          "actions": {
+            "edit": "Edytuj",
+            "clone": "Klonuj",
+            "delete": "Usuń"
+          }
+        }
+      },
+      "emailSettings": {
+        "emailIntegrationSettings": "Ustawienia integracji email",
+        "emailDescription": "Wysyłaj emaile z alarmami i powiadomieniami po ustanowieniu połączenia z serwerem email.\nUpewnij się, że odbiorcy email znajdują się w tej samej domenie.\nPo zakończeniu przejdź do centrum automatyzacji, aby skonfigurować odbiorców email i ustawić alarmy.",
+        "failedToFetchEmailSettings": "Nie powiodło się pobieranie ustawień email",
+        "successSettingsChange": "Ustawienia email zostały zmienione",
+        "failSettingsChange": "Nie powiodła się zmiana ustawień email",
+        "server": "Serwer email",
+        "serverDescription": "Serwer odpowiedzialny za wysyłanie alarmów email",
+        "address": "Adres nadawcy",
+        "addressDescription": "Wprowadź adres nadawcy",
+        "smtpAddress": "Adres SMTP",
+        "smtpPort": "Port SMTP",
+        "securityProtocol": "Protokół bezpieczeństwa",
+        "username": "Nazwa użytkownika",
+        "usernameDescription": "Wprowadź nazwę użytkownika od swojego dostawcy usług email",
+        "password": "Hasło",
+        "passwordDescription": "Wprowadź hasło od swojego dostawcy usług email",
+        "connectionTest": "Test połączenia",
+        "emailTest": "Test emaila",
+        "connectionTestText": "Przetestuj, czy połączenie zostało ustanowione prawidłowo.",
+        "emailTestText": "Wiadomość testowa zostanie wysłana na wprowadzony adres email, aby sprawdzić, czy połączenie zostało skonfigurowane prawidłowo.",
+        "testAddress": "Adres email odbiorcy",
+        "saveChanges": "Zapisz zmiany",
+        "errors": {
+          "required": "{name} jest wymagana",
+          "emailIsNotValid": "Email nie jest prawidłowy",
+          "failedToSendTestEmail": "Nie powiodło się wysyłanie wiadomości testowej",
+          "failedToEstablishConnection": "Nie powiodło sie ustanawianie połączenia",
+          "badCredentials": "Nieprawidłowa nazwa użytkownika i/lub hasło",
+          "addressNotFound": "Nie znaleziono adresu"
+        }
+      },
+      "automationCenter": {
+        "startingTitle": "Pozwól nam pracować !",
+        "startingDescription": "Oszczędzaj czas łatwo automatyzując zadania systemowe.",
+        "addSubjectGroupRule": "Dodaj regułę grupy osób",
+        "addCameraGroupRule": "Dodaj regułę grupy urządzeń",
+        "addNewRuleButton": "Dodaj nową",
+        "myAutomations": "Moje automatyzacje",
+        "emailNotConfiguredLabel": "Automatyzacja email nie działa, proszę sprawdzić poprawność ustawień integracji email",
+        "emailNotConfiguredLink": "Integracja email",
+        "automationOneRuleInvalid": "już nie istnieje i została usunięta z tej reguły",
+        "automationManyRulesInvalid": "oraz kolejne {number} już nie istnieją i zostały usunięte z tej reguły",
+        "automationRuleData": "UTWORZONA W DNIU {date} - AUTOMATYZACJA NUMER: ",
+        "noGroups": "Brak grup",
+        "delete": "Usuń",
+        "deleteRule": "Usuń regułę automatyzacji",
+        "deleteRuleContent": "Czy chcesz usunąć regułę automatyzacji numer {number} ?",
+        "deleteRuleSuccessfully": "Reguła została usunięta",
+        "errors": {
+          "failedToGetRules": "Nie powiodło się pobieranie reguł",
+          "couldNotDisplayData": "Brak danych do wyświetlenia",
+          "failedToDeleteRule": "Nie powiodło się usuwanie reguł",
+          "failedToToggleRule": "Nie powiodło się włączanie / wyłączanie reguły"
+        }
+      },
+      "licenseManagement": {
+        "myLicenseDetails": "Szczegóły licencji",
+        "licenseCode": "Kod licencji",
+        "expirationDate": "Termin wygaśnięcia",
+        "licenseId": "ID licencji",
+        "daysLeft": "pozostało do terminu",
+        "daysLeftCounter": "{daysLeft} dni",
+        "watchListCapacity": "Pojemność listy osób",
+        "numberOfVideoStreams": "Liczba strumieni wideo",
+        "numberOfPointStreams": "Liczba strumieni punktów",
+        "numberOfInquiryHours": "Godzin analiz dochodzeniowych",
+        "maximumOf": "Max",
+        "currentUsage": "Używanych",
+        "gdpr": "Funkcje RODO",
+        "privacy": "Funkcje prywatności",
+        "inquiry": "Funkcje dochodzeniowe",
+        "updateLicense": "Aktualizuj licencję",
+        "updateLicenseOffline": "Aktualizuj licencję offline",
+        "invalidDateErrorMsg": "Ustawienia licencji - system nie może pobrać terminu wygaśnięcia",
+        "failedToFetchErrorMsg": "Nie powiodło się pobieranie szczegółów licencji",
+        "onlineActivation": "Aktywacja online",
+        "offlineActivation": "Aktywacja offline",
+        "licenseExpired": "Wygasła",
+        "online": {
+          "activate": "Aktywuj",
+          "stepsExplanation": "Aby przeprowadzić aktywację online, proszę wykonać następujące czynności:\n",
+          "firstStep": "Skontaktuj się ze swoim opiekunem, aby uzyskać unikalny kod licencji.\n",
+          "secondStep": "Upewnij się, że jesteś podłączony do Internetu.\n",
+          "thirdStep": "Wprowadź unikalny kod licencji w przeznaczonym do tego polu.\n",
+          "fourthStep": "Kliknij przycisk Aktywuj.\n",
+          "fifthStep": "Twoja licencja pojawi się na ekranie po zakończeniu procesu aktywacji. \n",
+          "licenseCode": "Kod licencji:",
+          "activationError": "Nie powiodła się aktywacja licencji",
+          "activationSuccess": "Licencja została aktywowana",
+          "wrongCode": "Nieprawidłowy kod aktywacji",
+          "serviceErrors": {
+            "default": "Błąd weryfikacji licencji"
+          }
+        },
+        "offline": {
+          "generate": "Generuj",
+          "activate": "Aktywuj",
+          "phaseOneExplanation": "Jeśli system nie jest podłączony do Internetu, musisz wykonać aktywację offline. W tym celu wykonaj następujące czynności:\n",
+          "phaseOneTitle": "Pobierz swój plik licencyjny",
+          "phaseTwoTitle": "Aktywuj swoją licencję",
+          "firstStep": "Skontaktuj się ze swoim opiekunem, aby uzyskać swój unikalny kod licencyjny i link do portalu licencyjnego.\n",
+          "secondStep": "Wprowadź unikalny kod i kliknij przycisk Pobierz plik/Wygeneruj.\n",
+          "thirdStep": "Wyeksportuj tekstowy plik licencyjny na zewnętrzny nośnik (USB, dysk, itp.) i przenieś go na komputer online, z dostępem do Internetu.\n",
+          "fourthStep": "Na tym komputerze zaloguj się przez Internet do portalu licencyjnego używając linku podanego przez opiekuna.\n",
+          "fifthStep": "Po zalogowaniu się wyślij plik tekstowy przez portal. \n",
+          "sixthStep": "Po otrzymaniu pliku portal odpowie unikalnym tekstowym plikiem aktywacyjnym, który musisz skopiować i zapisać na swoim nośniku.\n",
+          "seventhStep": "Wróć do systemu offline i podłącz nośnik zawierający plik aktywacyjny.\n",
+          "eighthStep": "Otwórz tekstowy plik aktywacyjny, skopiuj jego zawartość i wklej do pola Treść licencji. \n",
+          "ninthStep": "Kliknij Aktywuj offline.\n",
+          "tenthStep": "Twoja licencja pojawi się na ekranie po zakończeniu procesu aktywacji. \n",
+          "licenseCode": "Kod licencji:",
+          "activationKey": "Klucz aktywacji:",
+          "generationError": "Nie powiodło sie generowanie licencji",
+          "generationSuccess": "Pobrano plik licencyjny",
+          "activationError": "Nie powiodło się aktywowanie licencji",
+          "activationSuccess": "Licencja została aktywowana",
+          "serviceErrors": {
+            "default": "Błąd weryfikacji licencji"
+          }
+        },
+        "errors": {
+          "lengthError": "Proszę wprowadzić dokładnie 18 znaków",
+          "onlyNumbers": "Proszę wprowadzić tylko cyfry"
+        }
+      },
+      "subjectGroupsSettings": {
+        "isActive": "Status",
+        "title": "Nazwa grupy osób",
+        "createdAt": "Data utworzenia",
+        "type": "Typ",
+        "detector": "Detektor",
+        "alertLevel": "Alarm",
+        "th": "Współczynnik progowy",
+        "subjectCount": "Liczba osób",
+        "cameraGroups": "Alternatywna grupa",
+        "color": "Kolor",
+        "description": "Opis",
+        "action": "Akcja",
+        "subjectGroups": "Grupy osób",
+        "subjectGroup": "Grupę osób",
+        "delete": "Usuń",
+        "serviceErrors": {
+          "ERR_GROUP_ALREADY_EXISTS": "Grupa o tej nazwie już istnieje",
+          "TIME_PROFILES_FETCH_FAILED": "Nie powiodło się pobieranie profilów czasowych"
+        },
+        "errors": {
+          "deletionFailed": "Nie powiodło się usuwanie grupy osób",
+          "deletionFailedDueToSubjectWithASingleGroup": "Nie powiodło się usuwanie grupy osób.\nW usuwanej grupie istnieje osoba przypisana tylko do tej grupy."
+        }
+      }
+    },
+    "login": {
+      "username": "Nazwa użytkownika",
+      "password": "Hasło",
+      "rateLimitExceeded": "Osiągnięto limit prób logowania. Proszę spróbować ponownie w ciągu minuty.",
+      "credentialsErrorMsg": "Wprowadzono nieprawidłową nazwę użytkownika i/lub hasło",
+      "connectionErrorMsg": "Wystąpił błąd połączenia w trakcie próby uwierzytelnienia, proszę spróbować ponownie",
+      "defaultErrorMsg": "Wystąpił błąd połączenia w trakcie próby uwierzytelnienia, proszę spróbować ponownie",
+      "login": "Zaloguj",
+      "samlConnection": "połącz z SSO",
+      "errors": {
+        "requiredField": "Wymagane pole",
+        "failedToConfirmEula": "Nie powiodło się potwierdzenie umowy EULA"
+      }
+    },
+    "eula": {
+      "accept": "Akceptuję",
+      "decline": "Odmawiam",
+      "userLicenseAgreement": "Umowa licencyjna z użytkownikiem",
+      "failedToGetEula": "Nie powiodło się pobieranie umowy EULA"
+    },
+    "devices": {
+      "tabs": {
+        "accessories": "Akcesoria"
+      }
+    },
+    "reports": {
+      "tabs": {
+        "detections": "Detekcje",
+        "massImport": "Masowy import",
+        "auditLogs": "Dziennik dostępu",
+        "migrationStatus": "Status migracji"
+      },
+      "detections": {
+        "labels": {
+          "time": "Czas",
+          "camera": "Kamera",
+          "cameraOption": "Kamera",
+          "caseOption": "Sprawa",
+          "subjectName": "Nazwa osoby w rankingu",
+          "export": "Eksportuj",
+          "totalDetections": "Liczba detekcji",
+          "cameras": "Kamery",
+          "chooseCamera": "Wybierz kamery lub sprawy i kliknij Szukaj",
+          "changeSearchParams": "Zbyt wiele rezultatów. Proszę tak zmienić kryteria wyszukiwania, aby uzyskać mniej niż {maxResults} rezultatów.",
+          "exportCSV": "Eksportuj CSV",
+          "exportPDF": "Eksportuj PDF",
+          "exportPDFTooltip": "Zmniejsz rezultaty wyszukiwania (mniej niż 8000) lub skorzystaj z funkcji \"Eksportuj PDF i pliki zdjęć\"",
+          "exportPDFWithImages": "Eksportuj PDF i pliki zdjęć",
+          "exportWithImage": "Eksportuj ze zdjęciami",
+          "noResults": "Brak rezultatów",
+          "TrackTime": "Czas śladu",
+          "CameraName": "Nazwa kamery",
+          "FileName": "Nazwa pliku",
+          "cameraDefaultValue": "Wszystkie",
+          "CaseName": "Nazwa sprawy",
+          "SubjectName": "Nazwa osoby",
+          "reportBtn": "Szukaj",
+          "DetectionImage": "Zdjęcie detekcji",
+          "Rank": "Pozycja {number}",
+          "Threshold": "Próg",
+          "THRange": "Zakres progu",
+          "score": "Wynik",
+          "subjectScore": "Wynik osoby",
+          "scoreRange": "Zakres wyniku",
+          "exportReportStart": "Rozpoczęto pobieranie raportu detekcji",
+          "title": "Raport detekcji",
+          "scoreRangeNote": "Wybierz od 0 do 1, aby wyświetlić wszystkie detekcje",
+          "date": "Data",
+          "all": "Wszystkie",
+          "previousDates": "Poprzednie daty",
+          "specificDates": "Określone daty",
+          "upTo7Days": "Do siedmiu dni wstecz",
+          "resetDates": "Resetuj daty"
+        },
+        "timeOptions": {
+          "LAST_1_HOUR": "Ostatnia godzina",
+          "LAST_3_HOURS": "Ostatnie 3 godziny",
+          "LAST_24_HOURS": "Ostatnie 24 godziny",
+          "LAST_THREE_DAYS": "Ostatnie 3 dni",
+          "LAST_SEVEN_DAYS": "Ostatnie 7 dni"
+        },
+        "errors": {
+          "invalidFromToTimes": "Wprowadzono nieprawidłowe zakresy czasu",
+          "failedFetchReport": "Nie powiodło się pobieranie raportu",
+          "failedFetchInquiryCases": "Nie powiodło się pobieranie spraw dochodzeniowych",
+          "failedRedirectToCase": "Sprawa nie zawiera plików",
+          "exportCSVFail": "Nie powiodło się eksportowanie raportu CSV",
+          "exportCSVExceededMaxCount": "Rozmiar raportu przekracza dozwolony limit 10 milionów detekcji",
+          "autoCompleteError": "Wystąpił błąd w trakcie wyszukiwania osób",
+          "invalidDate": "Nieprawidłowy format daty",
+          "fromTo": "Data 'Od' nie może być po dacie 'Do'",
+          "toFrom": "Data 'Do' nie może być przed datą 'Od'",
+          "maxDate": "Data 'Do' nie może być po dacie {date}",
+          "minDate": "Data 'Od' nie może być przed datą {date}",
+          "invalidRange": "Pomiędzy datami może być maksymalnie 7 dni",
+          "chooseCase": "Sprawa jest wymagana"
+        }
+      },
+      "massImportReport": {
+        "headers": {
+          "name": "Nazwa",
+          "endDate": "Data końcowa",
+          "startDate": "Data początkowa",
+          "status": "Status importu",
+          "details": "Liczba uwag",
+          "download": "Pobierz raport",
+          "resolvedIssue": "Czy rozpatrzono uwagi?"
+        },
+        "issuesResolved": "Tak",
+        "goToResolveIssues": "Rozpatrz uwagi",
+        "downloadReportTitle": "Pobierz raport",
+        "summaryTooltip": {
+          "na": "Brak danych",
+          "title": "Podsumowanie masowego importu",
+          "subjectsCount": "Liczba utworzonych osób: {count}",
+          "uploadedImagesCount": "Liczba przetworzonych zdjęć: {count}",
+          "succeededImagesCount": "Liczba zaakceptowanych zdjęć: {count}",
+          "errorsCount": "Liczba odrzuconych zdjęć: {count}"
+        },
+        "filters": {
+          "dropdownLabel": "Pokaż",
+          "fromDate": "Od daty",
+          "ToDate": "Do daty",
+          "dropdownValues": {
+            "all": "Wszystkie",
+            "some": "Niektóre"
+          }
+        },
+        "download": "Pobierz raport",
+        "failedStatus": "Nieudany",
+        "archiveReadyStatus": "Oczekiwanie na dekompresję",
+        "finishedStatus": "Ukończony",
+        "partialStatus": "Ukończony częściowo",
+        "failed": "Nie powiodło się masowe importowanie",
+        "uploadFailed": "Nie powiodło się przesyłanie plików",
+        "extractFailed": "Nie powiodła się dekompresja zdjęć",
+        "finishedDetails": "Zaakceptowano wszystkie zdjęcia: {totalFilesNumber}",
+        "failedDetails": "{failedFilesNumber}/{totalFilesNumber} zdjęć zostało odrzuconych.",
+        "partialDetails": "{failedFilesNumber}/{totalFilesNumber} zdjęć zostało odrzuconych.",
+        "inProgress": "W trakcie, {failedFilesNumber} zdjęć zostało odrzuconych.",
+        "failedFetchData": "Nie powiodło się pobieranie danych z raportów masowego importu",
+        "failedFetchDataSubjectGroups": "Nie powiodło się pobieranie danych grup osób",
+        "failedFetchDataIsAllowedAddMassImport": "Nie powiodło się pobieranie danych",
+        "couldNotDisplayData": "Brak danych do wyświetlenia",
+        "title": "Masowy import",
+        "disabledAddMassImportBtnTxt": "Masowe importy oczekują na rozpatrzenie uwag",
+        "statusIndicator": {
+          "EXTRACTING": "dekompresja",
+          "PROCESSING": "przetwarzanie",
+          "UPLOADING": "przesyłanie",
+          "FAILED": "nieudany",
+          "FINISHED": "ukończony",
+          "PARTIAL": "ukończony częściowo",
+          "STARTED": "rozpoczęty",
+          "ARCHIVE READY": "gotowy",
+          "tooltipStatusFailed": "{failedFiles} zdjęć zostało odrzuconych",
+          "tooltipStatusFinished": "Zaakceptowano wszystkie zdjęcia: {totalFiles}",
+          "tooltipStatusPartial": "{failedFiles} zdjęć zostało odrzuconych.",
+          "tooltipPartialDetails": "{successFiles}/{totalFiles} zdjęć zostało zaakceptowanych."
+        }
+      },
+      "migrationStatus": {
+        "actions": {
+          "retry": "Ponów próbę",
+          "edit": "Edytuj",
+          "selectFeatures": "Wybierz twarz"
+        },
+        "errors": {
+          "poiGeneral": "Błąd ogólny POI",
+          "unmapped": "Błąd PipeNG - brak mapowania",
+          "noFacesDetected": "Nie wykryto twarzy",
+          "multipleFacesDetected": "Wykryto zbyt wiele twarzy",
+          "imageNotFound": "Nie znaleziono zdjęcia",
+          "generalUnknown": "Błąd PipeNG - nieokreślony",
+          "invalidStorageUrl": "Błąd PipeNG - nieprawidłowy URL w archiwum",
+          "cropsAndFacesBoxNumberDontMatch": "Błąd PipeNG - przycięcie i ramka twarzy nie są dopasowane",
+          "failedSavingCropsToObjectStore": "Błąd PipeNG - nie powiodło się zapisywanie przycięcia w archiwum obiektów",
+          "emptyUrl": "Błąd PipeNG - pusty URL",
+          "inputImageNotFoundInObjectStore": "Błąd PipeNG - nie znaleziono zdjęcia w archiwym obiektów",
+          "inputImageNotFoundInLocalFs": "Błąd PipeNG - nie znaleziono zdjęcia w lokalnym systemie plików",
+          "inputImageFileFormat": "Błąd PipeNG - nieprawidłowy format pliku zdjęcia",
+          "failedEncodingFaceIntoImage": "Błąd PipeNG - nieprawidłowe kodowanie twarzy na zdjęciu",
+          "failedCreatingMessage": "Błąd PipeNG - nie powiodło się tworzenie komunikatu",
+          "failedProcessingDueToTimeout": "Błąd PipeNG - przekroczono limit czasu przetwarzania",
+          "failedSendingToPope": "Błąd PipeNG - nie powiodło się wysyłanie do potoku"
+        },
+        "refresh": "odśwież",
+        "errorGettingMigrationData": "Błąd pobierania danych migracyjnych",
+        "errorEditingSubject": "Błąd aktualizowania osoby",
+        "errorTryingAll": "Błąd ponawiania wszystkich migracji",
+        "errorUpdatingMultipleFacesSelection": "Błąd aktualizacji nowych wybranych zdjęć",
+        "errorGettingMultipleFeatures": "Błąd pobierania wielu cech",
+        "errorTrying": "Błąd ponawiania migracji",
+        "searchError": "Błędy filtra",
+        "retryAll": "Ponów wszystkie",
+        "migrationInProgress": "Trwa migracja",
+        "subjectsFailed": "Osoby, których migracja nie powiodła się",
+        "title": "Status migracji",
+        "counters": {
+          "total": "Wszystkie",
+          "resolved": "Rozpatrzone",
+          "failed": "Nieudane",
+          "processing": "Przetwarzanie",
+          "unhandled": "Nieobsłużone"
+        }
+      }
+    },
+    "userProfile": {
+      "title": "Szczegóły użytkownika",
+      "password": "Hasło",
+      "passwordLastChanged": "Hasło zmieniane ostatnio: {lastUpdated}",
+      "saveChanges": "Zapisz zmiany",
+      "tabs": {
+        "userInfo": "Informacje użytkownika"
+      },
+      "userInfo": {
+        "labels": {
+          "userInfo": "Informacje użytkownika",
+          "username": "Nazwa użytkownika",
+          "email": "Email",
+          "firstName": "Imię",
+          "lastName": "Nazwisko",
+          "userGroup": "Grupa użytkownika",
+          "update": "Aktualizacja",
+          "changePassword": "Zmień hasło",
+          "language": "Język"
+        },
+        "userFeedback": {
+          "successUserInfoChange": "Informacje użytkownika zostały zmienione",
+          "failUserInfoChange": "Nie powiodła się zmiana informacji użytkownika",
+          "failedToGetUserInfo": "Nie powiodło się pobieranie informacji użytkownika"
+        },
+        "errors": {
+          "firstName": "Imię użytkownika jest wymagane",
+          "firstNameCharacters": "Imię użytkownika musi zawierać znaki",
+          "lastName": "Nazwisko użytkownika jest wymagane",
+          "lastNameCharacters": "Nazwisko użytkownika musi zawierać znaki"
+        }
+      },
+      "changePasswordDialog": {
+        "dialogTitle": "Zmień hasło",
+        "currentPassword": "Bieżące hasło",
+        "newPassword": "Nowe hasło",
+        "retypeNewPassword": "Potwierdź nowe hasło",
+        "updateBtn": "Aktualizuj",
+        "cancelBtn": "Anuluj",
+        "passwordPolicy": "Polityka haseł",
+        "updatePassword": "Aktualizuj hasło",
+        "errors": {
+          "string": "Musi zawierać tekst",
+          "required": "To pole jest wymagane",
+          "currentPassword": "Bieżące hasło jest wymagane",
+          "currentPasswordCharacters": "Hasło musi zawierać znaki",
+          "newPassword": "Nowe hasło jest wymagane",
+          "newPasswordCharacters": "Hasło musi zawierać znaki",
+          "retypeNewPassword": "Powtórzenie hasła jest wymagane",
+          "retypeNewPasswordCharacters": "Hasło musi zawierać znaki",
+          "newPasswordsNotEqual": "Hasła muszą być identyczne"
+        },
+        "serviceErrors": {
+          "ERR_BAD_CREDENTIALS": "Nieprawidłowe bieżące hasło",
+          "ERR_INVALID_PASSWORD": "Hasło nie jest wystarczająco trudne do złamania"
+        },
+        "userFeedback": {
+          "successPasswordUpdated": "Hasło zostało zmienione",
+          "failPasswordChange": "Nie powiodła się zmiana hasła"
+        }
+      }
+    },
+    "accessories": {
+      "emptyState": {
+        "title": "Trochę tutaj doskwiera samotność",
+        "description": "Wygląda na to, że nie masz jeszcze żadnych akcesorium. \nKliknij przycisk \"Dodaj\", aby rozpocząć dodawanie urządzeń.",
+        "button": "dodaj now akcesorium"
+      },
+      "labels": {
+        "ssfPlaceholder": "Dodaj tag, aby filtrować lub wpisz tekst, aby wyszukać",
+        "title": "Akcesoria",
+        "addBtn": "dodaj nowe akcesorium",
+        "deleteTitle": "Usuń akcesorium",
+        "deleteContent": "Czy na pewno chcesz usunąć - {name}?",
+        "bulkDeleteTitle": "Usuń akcesoria",
+        "bulkDeleteContent": "Czy na pewno chcesz usunąć {count} akcesorium ?",
+        "MOXA": "Moxa",
+        "TIBBO": "Tibbo"
+      },
+      "table": {
+        "name": "Nazwa",
+        "type": "Typ",
+        "address": "IP",
+        "channel": "Kanał",
+        "pairedWith": "Sparowane",
+        "isConnected": "Status",
+        "delete": "Usuń",
+        "edit": "Edytuj",
+        "deleteAccessories": "Usuń akcesoria",
+        "activeStatus": "Aktywne",
+        "disconnectedStatus": "Rozłączone",
+        "lastSeen": "Ostatnio widziane",
+        "labels": {
+          "pairedWith": "{count} punktów dostępu"
+        }
+      },
+      "notifications": {
+        "failedToGetAccessories": "Nie powiodło się pobieranie akcesoriów",
+        "failedToDeleteAccessory": "Nie powiodło się usuwanie akcesorium {name}",
+        "failedToDeleteAccessories": "Nie powiodło się usuwanie akcesoriów",
+        "succeededToDeleteAccessory": "{name} zostało usunięte",
+        "succeededToBulkDeleteAccessories": "Akcesoria zostały usunięte"
+      },
+      "addEdit": {
+        "titles": {
+          "newAccessory": "Nowe akcesorium",
+          "editAccessory": "Edytuj akcesorium",
+          "generalDetails": "Ogólne",
+          "connectionDetails": "Szczegóły połączenia",
+          "settings": "Ustawienia akcesoriów"
+        },
+        "inputs": {
+          "name": "Nazwa akcesorium",
+          "accessoryType": "Typ akcesorium",
+          "address": "IP akcesorium",
+          "channel": "Kanał",
+          "throttle": "Przepust",
+          "revert": "Powrót",
+          "initialState": "Stan początkowy",
+          "activeState": "Stan aktywny",
+          "normallyOpened": "Normalnie otwarte",
+          "closed": "Zamknięte",
+          "moxa": "Moxa",
+          "tibbo": "Tibbo"
+        },
+        "labels": {
+          "submitBtn": "Zapisz zmiany",
+          "testConnection": {
+            "testConnection": "testuj połączenie",
+            "testing": "testowanie",
+            "success": "sukces",
+            "fail": "niepowodzenie"
+          }
+        },
+        "descriptions": {
+          "initialState": "Określa stan drzwi, w którym personel jest w pobliżu i próbuje wejść. (Otwarte = Odblokowane. Zamknięte = Zablokowane)",
+          "activeState": "Określa stan drzwi, w którym ktoś ma zezwolenie na wejście. Ta wartość zawsze będzie przeciwna do stanu początkowego",
+          "throttle": "Drzwi są otwarte raz w danym okresie czasu",
+          "revert": "Liczba sekund potrzebna do tego, aby drzwi wróciły do stanu początkowego"
+        },
+        "errors": {
+          "requiredName": "Nazwa akcesorium jest wymagana",
+          "maxName": "Nazwa akcesorium musi zawierać {num} znaków",
+          "minName": "Nazwa akcesorium musi zawierać znaki",
+          "address": "Adres akcesorium jest nieprawidłowy",
+          "throttle": "Dozwolone wartości: 1 - 1200",
+          "revert": "Dozwolone wartości: 1 - 1200"
+        },
+        "notifications": {
+          "createSuccess": "Akcesorium {name} zostało utworzone",
+          "createFail": "Nie powiodło się tworzenie nowego akcesorium",
+          "updateFail": "Nie powiodło się aktualizowanie nowego akcesorium",
+          "getFail": "Nie powiodło się pobieranie nowego akcesorium"
+        }
+      }
+    },
+    "integration": {
+	  "connectionDetails": "Szczegóły połączenia",
+      "table": {
+        "direction": "Kierunek",
+        "integrationType": "Typ integracji",
+        "sourceGroup": "Grupa źródła",
+        "systemGroup": "Grupa systemu",
+        "syncSchedule": "Harmonogram",
+        "status": "Status",
+        "lastSynced": "Ostatnia synchronizacja",
+        "syncType": "Typ synchronizacji",
+        "fullSync": "Pełna",
+        "diffSync": "Różnicowa",
+        "addBtn": "Dodaj nową integrację",
+        "stopped": "Zatrzymana",
+        "emptyResults": "Zakończona bez rezultatów",
+        "syncing": "Synchronizowanie",
+        "pending": "W trakcie",
+        "preparing": "Przygotowywanie",
+        "failed": "Nieudana",
+        "successful": "Sukces",
+        "disabled": "Wyłączona",
+        "delete": "Usuń",
+        "stopSync": "Zatrzymaj",
+        "startSync": "Rozpocznij",
+        "downloadReport": "Pobierz raport",
+        "setSchedule": "Ustaw harmonogram",
+        "minutely": "Minutowy",
+        "hourly": "Godzinowy",
+        "daily": "Dzienny",
+        "weekly": "Tygodniowy",
+        "monthly": "Miesięczny",
+        "yearly": "Roczny",
+        "bulkDeleteConfirm": "Czy na pewno chcesz usunąć te synchronizacje?",
+        "scheduleDialog": {
+          "title": "Ustaw harmonogram",
+          "syncRepeatedly": "Synchronizuj cyklicznie",
+          "apply": "Zastosuj",
+          "cancel": "Anuluj",
+          "clearInterval": "Interwał czyszczenia"
+        },
+        "stopSyncDialog": {
+          "dismiss": "odrzuć",
+          "save": "zapisz",
+          "message": "Co zrobić z zapisanym personelem?",
+          "header": "Anuluj proces"
+        }
+      },
+      "emptyState": {
+        "title": "Trochę tutaj doskwiera samotność",
+        "description": "Wygląda na to, że nie masz jeszcze żadnych akcesorium. \nKliknij przycisk \"Dodaj\", aby rozpocząć dodawanie urządzeń."
+      },
+      "buttons": {
+        "add": "Dodaj nową integrację"
+      },
+      "wizard": {
+        "selectPlugin": "Wybierz integrację",
+        "connectionDetails": "Szczegóły połączenia",
+        "parametersToSync": "Parametry do synchronizacji",
+        "image": "Zdjęcie",
+        "fullName": "Pełna nazwa",
+        "cardId": "ID karty",
+        "groupsSync": "Grupy i synchronizacja",
+        "title": "Konfiguruj integrację",
+        "next": "Dalej",
+        "back": "Wstecz",
+        "sync": "Synchro",
+        "syncRepeatedly": "Synchronizuj cyklicznie",
+        "groupsAndSync": "Grupy i synchronizacje",
+        "inputs": {
+          "ipAddress": "Adres IP",
+          "getGroupBy": "Pogrupuj wg",
+          "connectionDetails": "Szczegóły połączenia"
+        },
+        "groupsSyncTable": {
+          "integrationGroup": "Grupa integracji",
+          "direction": "Kierunek",
+          "systemGroup": "Grupa systemu",
+          "pairGroups": "Grupy par",
+          "dialog": {
+            "title": "Dodaj grupę",
+            "apply": "Zastosuj",
+            "cancel": "Anuluj",
+            "nameDescription": "Nazwa (ID) / Opis",
+            "personal": "Osobiste"
+          }
+        },
+        "errors": {
+          "getIntegrationsFail": "Nie powiodło się pobieranie integracji",
+          "connectToPluginFail": "Nie powiodło się połączenie z kontrolą dostępu",
+          "getGroupTypesFail": "Nie powiodło się pobieranie przez wtyczkę typów grup",
+          "duplicateGroupNameFoundWithName": "Istnieje duplikat nazwy grupy '{groupName}'. Aby kontynuować, trzeba ją zmodyfikować.",
+          "duplicateGroupNameFound": "Istnieje duplikat nazwy grupy. Aby kontynuować, trzeba ją zmodyfikować.",
+          "syncFailed": "Nie powiodła się synchronizacja grup"
+        },
+        "syncSuccess": "Synchronizacja została utworzona",
+        "syncsSuccess": "{count} synchronizacji zostało utworzonych"
+      }
+    }
+  },
+  "userManagement": {
+    "signOut": "Wyloguj",
+    "profileSettings": "Ustawienia profilu",
+    "userAgreement": "Umowa z użytkownikiem"
+  },
+  "systemStatus": {
+    "healthStatus": {
+      "critical": "Niedostępna",
+      "partial": "{totalOnline} / {totalServices} częściowo niedostępnych",
+      "operational": "Dostępna",
+      "fetchError": "Brak danych do wyświetlenia"
+    },
+    "labels": {
+      "api-services": "Usługi API",
+      "engine-service": "Usługi silnika"
+    },
+    "serviceGroup": {
+      "partial": "Częściowa awaria",
+      "operational": "Dostępna",
+      "critical": "Niedostępna"
+    }
+  },
+  "map": {
+    "trackingMode": "Ścieżka na żywo {subjectName}",
+    "routeMode": "Ścieżka archiwalna {subjectName}",
+    "failures": {
+      "trackingLineFailure": "Nie powiodło się dodawanie linii śledzenia osoby {subjectName}",
+      "lastLocatedFailure": "Nie powiodła się aktualizacja ostatnich lokalizacji z kamer w trybie śledzenia osoby {subjectName}",
+      "noRecognitionsWasFound": "Brak rozpoznań osoby '{subjectName}' w ciągu ostatnich 24 godzin"
+    },
+    "zones": {
+      "zoneCreationSucceeded": "Strefa została utworzona",
+      "zoneCreationFailed": "Nie powiodło się utworzenie nowej strefy",
+      "zoneNameAlreadyExist": "Nazwa strefy już istnieje",
+      "zoneDeleteSucceeded": "Strefa została usunięta",
+      "zoneDeleteFailed": "Nie powiodło się usuwanie strefy",
+      "zoneEditSucceeded": "Strefa została zaktualizowana",
+      "zoneEditFailed": "Nie powiodło się aktualizowanie strefy"
+    }
+  },
+  "coordinates": {
+    "lng": "Dług",
+    "lat": "Szer"
+  },
+  "routes": {
+    "version": "Wersja {version}",
+    "liveCameras": "Pokaż źródła",
+    "forensic": "Dochodzenie",
+    "search": "Wyszukiwanie",
+    "inquiry": "Dochodzenie",
+    "watchList": "Lista osób",
+    "settings": "Ustawienia",
+    "webrtc": "Ściana wideo",
+    "reports": "Raporty",
+    "devices": "Urządzenia",
+    "ongoingActions": "Akcje w toku",
+    "disabledMessage": "{title} nie jest objęte Twoją licencją"
+  },
+  "poi": {
+    "true": "Tak",
+    "false": "Nie",
+    "editSubjectTitle": "Edytuj osobę",
+    "update": "Aktualizuj",
+    "description": "Opis",
+    "ranking": "Ranking",
+    "attributes": "Atrybuty",
+    "info": "Info",
+    "detection": "Detekcja",
+    "actions": "Akcje",
+    "silent": "Brak zdefiniowanych akcji",
+    "defaultName": "Nieznane",
+    "poiNameLabel": "Nazwa osoby",
+    "poiGroupLabel": "Grupa osoby",
+    "createdDateLabel": "Data utworzenia",
+    "defaultGroup": "Nieznana grupa",
+    "noDescription": "Brak opisu",
+    "trackSubject": "Ścieżka na żywo",
+    "editSubject": "Edytuj osobę",
+    "addNewSubject": "Dodaj nową osobę",
+    "addToExisting": "Przypisz do osoby",
+    "addToIgnore": "Dodaj do ignorowanych",
+    "watchVideo": "Otwórz wideo",
+    "invalidGroups": "Nieprawidłowe grupy",
+    "invalidDate": "Nieprawidłowa data",
+    "ackDate": "Data potwierdzenia",
+    "userName": "Nazwa użytkownika",
+    "na": "Brak danych",
+    "face": "Twarz",
+    "body": "Sylwetka",
+    "genderLabel": "Płeć",
+    "ageLabel": "Wiek",
+    "topColor": "Kolor góry",
+    "bottomColor": "Kolor dołu",
+    "backpack": "Plecak",
+    "hasMask": "Maska: ",
+    "masktrue": "Tak",
+    "maskfalse": "Nie",
+    "gender": {
+      "unknown": "Nieznana",
+      "male": "Mężczyzna",
+      "female": "Kobieta"
+    },
+    "timeline": {
+      "timeline": "Linia czasu",
+      "unselectAll": "Wyczyść wszystkie",
+      "selectAll": "Wybierz wszystkie",
+      "downloadVideo": "Pobierz wideo",
+      "watchVideo": "Otwórz wideo",
+      "searchByTrack": "Szukaj śladem",
+      "locateOnMap": "Zlokalizuj na mapie",
+      "goTo": "Zlokalizuj detekcję",
+      "uuid": "UUID",
+      "download": "Pobierz",
+      "routeView": "Ścieżka archiwalna",
+      "cameraGroupNotFound": "Nie znaleziono grupy",
+      "loader": "Ładowanie...",
+      "noItems": "Nie znaleziono śladów",
+      "newDetections": "Nowe",
+      "timelineError": "Nie powiodła się aktualizacja linii czasu",
+      "addToIgnore": "Dodaj do ignorowanych",
+      "authorized": "Autoryz.",
+      "unauthorized": "Nieautoryz.",
+      "unknown": "Nieznana"
+    },
+    "linkDetection": "Powiąż detekcję",
+    "link": "Powiązanie",
+    "detectionImg": "Zdjęcie detekcji",
+    "subjectImg": "Zdjęcie osoby",
+    "linkText": "Czy na pewno chcesz powiązać detekcję z {subjectName} ?",
+    "linkSuccess": "Detekcja została powiązana z osobą",
+    "linkFail": "Błąd wiązania detekcji z osobą",
+    "wrongSubject": "Łączona osoba nie istnieje",
+    "errorPoiInfo": "Błąd pobierania informacji POI",
+    "errorCloseMatches": "Wystąpił błąd w trakcie pobierania podobnych dopasowań",
+    "detectionNotFound": "Nie znaleziono detekcji",
+    "score": "Wynik",
+    "liveness": "Autentyczność"
+  },
+  "imagePicker": {
+    "title": "Wybierz zdjęcie",
+    "selectedImages": "Wybrane zdjęcia",
+    "continue": "Kontynuuj",
+    "cancel": "Anuluj",
+    "unableToExtractType": "Nie można utworzyć cech sylwetki na podstawie dostarczonego zdjęcia.",
+    "unableToExtractFace": "Nie można utworzyć cech twarzy na podstawie dostarczonego zdjęcia."
+  },
+  "sortBy": {
+    "sortBy": "Sortuj wg"
+  },
+  "dateTimePicker": {
+    "saveButton": "Zapisz"
+  },
+  "subjectCard": {
+    "featuresDeprecated": "Jeden lub więcej zdjęć dla tej osoby ma przestarzałe cechy",
+    "allFeaturesDeprecated": "Wszystkie zdjęcia mają przestarzałe cechy",
+    "timesIdentified": "razy rozpoznano",
+    "createdAt": "Data utworzenia",
+    "lastIdentifiedAt": "Ostatnio zidentyfikowana",
+    "synced": "Zsynchronizowana",
+    "groups": "TODO: Groups"
+  },
+  "hqTag": {
+    "pending": "OCZEKUJE NA HQ",
+    "owned": "PRZYPISANA W HQ",
+    "approved": "ZATWIERDZONA PRZEZ HQ",
+    "declined": "ODRZUCONA PRZEZ HQ",
+    "on": "W"
+  },
+  "ignoreCard": {
+    "camera": "Nazwa kamery",
+    "createdAt": "Data utworzenia",
+    "createdBy": "Utworzona przez"
+  },
+  "detectionAndAlertsBar": {
+    "noCameraSelected": "Nie wybrano kamery",
+    "acknowledgeAlertFailed": "Nie powiodło się potwierdzanie alarmu",
+    "acknowledgeAlertsFailed": "Nie powiodło się potwierdzanie alarmów",
+    "acknowledgeAlertSuccess": "Alarm został potwierdzony",
+    "acknowledgeAlertsSuccess": "Alarmy zostały potwierdzone",
+    "errorOpenExisting": "Nie powiodło się przypisywanie do osoby",
+    "errorPoiInfo": "Błąd pobierania informacji POI",
+    "watchVideo": "Otwórz wideo",
+    "searchByTrack": "Szukaj śladem",
+    "getSubjectFail": "Nie powiodło się pobieranie osoby",
+    "cameras": "{numberOfCameras} kamer",
+    "filters": {
+      "filterMessages": {
+        "allDetections": "Wyświetlanie wszystkich detekcji",
+        "onlySubjects": "Wyświetlanie tylko rozpoznań",
+        "newAlerts": "Wyświetlanie nowych alarmów",
+        "acknowledgedAlerts": "Wyświetlanie potwierdzonych alarmów"
+      }
+    },
+    "addToIgnore": "Dodaj do ignorowanych",
+    "addToExisting": "Przypisz do osoby",
+    "noAlerts": "Nie znaleziono alarmów",
+    "noDetections": "Nie znaleziono detekcji",
+    "tracking": "Ścieżka na żywo",
+    "playback": "Odtwarzanie",
+    "liveCameras": "Kamery na żywo",
+    "search": "Szukaj",
+    "share": "Udostępnij",
+    "alert": {
+      "unknown": "Nieznany",
+      "subjectDetected": "Wykryta osoba",
+      "subjectGroup": "Grupa osób",
+      "address": "Adres",
+      "defaultAddress": "Nie można znaleźć adresu",
+      "time": "Czas",
+      "cameraName": "Nazwa kamery",
+      "defaultSubjectName": "Nieznana"
+    },
+    "errors": {
+      "getAlerts": "Nie powiodło się pobieranie alarmów",
+      "getTracks": "Nie powiodło sie pobieranie śladów"
+    }
+  },
+  "extract": {
+    "errors": {
+      "pipeNGImageProcessError": "Wystąpił błąd w trakcie przetwarzania zdjęcia",
+      "generalError": "Błąd ogólny dekompresji"
+    }
+  },
+  "subject": {
+    "errors": {
+      "nameNotValid": "Nazwa nie jest prawidłowa, proszę się upewnić, że nazwa nie jest pusta",
+      "requiredName": "Nazwa osoby jest wymagana",
+      "requiredGroup": "Grupa osoby jest wymagana",
+      "spacesCannotBeName": "Nazwa musi zawierać znaki",
+      "missingImage": "Brakuje zdjęcia, proszę wybrać zdjęcie",
+      "sameNameError": "Osoba o nazwie {name} już istnieje",
+      "noDetectionsForSubject": "Osoba nie została jeszcze rozpoznana",
+      "errorOpeningPoi": "Błąd otwierania informacji POI na bocznym pasku",
+      "pipeNGImageProcessError": "Wystąpił błąd przetwarzania zdjęcia",
+      "exceededCapacityLimit": "Przekroczono limit osób dla tej grupy.",
+      "fetchErrorAfterSearchBackwards": "Nie powiodło się aktualizowanie osoby po wyszukiwaniu wstecznym",
+      "generalError": "Wystąpił błąd ogólny, proszę zaczekać i spróbować ponownie",
+      "getImages": "Nie powiodło się pobieranie zdjęć z powiązanego śladu",
+      "extractImages": "Nie powiodła się dekompresja zdjęć",
+      "creationFailed": "Nie powiodło się utworzenie osoby",
+      "updateFailed": "Nie powiodło się aktualizowanie osoby",
+      "deleteSubjectsFailed": "Nie powiodło się usuwanie osób",
+      "searchBackwardFailed": "Nie powiodło się wyszukiwanie wsteczne dla osoby {subjectName}",
+      "massImportFailed": "Nie powiódł się masowy import {name}\nKliknij tutaj, aby sprawdzić raport"
+    },
+    "success": {
+      "create": "Osoba została utworzona",
+      "delete": "Osoba została usunięta",
+      "creationFinished": "Osoba została utworzona",
+      "deleteSubjectsFinished": "Osoby zostały usunięte",
+      "edit": "Osoba została zmodyfikowana",
+      "searchBackwardFinished": "Wyszukiwanie wsteczne dla osoby {subjectName} zostało zakończone",
+      "massImportStarted": "Masowy import {name} został rozpoczęty\nKliknij tutaj, aby sprawdzić postęp",
+      "massImportFinished": "Masowy Import {name} został zakończony\nKliknij tutaj, aby sprawdzić raport"
+    },
+    "hqResponse": "Osoba {name} - {status}"
+  },
+  "notification": {
+    "notifications": "Powiadomień",
+    "markAllAsRead": "Oznacz wszystkie jako przeczytane",
+    "showAllNotifications": "Pokaż wszystkie powiadomienia",
+    "filterByUnread": "Filtruj wg nieprzeczytanych {unreadNotificationsCount} ",
+    "noNotificationTitle": "Brak powiadomień",
+    "noNotificationMessage": "Warto tu zaglądać, powiadomienia o działaniach pojawią się tutaj"
+  },
+  "recognitionGhostNotification": {
+    "reference": "Referencja",
+    "detection": "Detekcja",
+    "subjectName": "Nazwa osoby",
+    "subjectGroups": "Grupy osoby",
+    "cameraName": "Nazwa kamery",
+    "createDate": "Data utworzenia",
+    "manyGroups": "{firstGroup}...(+{groupCounter} więcej)",
+    "unauthorized": "Nieautoryzowana",
+    "authorized": "Autoryzowana",
+    "unknown": "Nieznana"
+  },
+  "recognitionSidePicture": {
+    "unauthorized": "Nieautoryzowana",
+    "authorized": "Autoryzowana",
+    "unknown": "Nieznana",
+    "none": "Brak"
+  },
+  "reasonDetails": {
+    "reason": "Przyczyna",
+    "restrictedArea": "Obszar zastrzeżony",
+    "existsInWatchList": "Istnieje na liście osób",
+    "spoofAttempt": "Próba oszustwa",
+    "blockedUser": "Wiele prób oszustwa - zablokowano",
+    "notWearingMask": "Nie nosi maski",
+    "timeOverdue": "Niedozwolone w obszarze / czasie"
+  },
+  "mapActions": {
+    "statistic": "Statystyka",
+    "layers": "Warstwy",
+    "camera": "Kamera",
+    "eyes": "Legenda",
+    "status": "Status",
+    "setupMode": "Tryb konfiguracji",
+    "zone": "Strefa",
+    "zones": "Strefy",
+    "noZonesAvailable": "Brak stref",
+    "display": {
+      "recognitionCount": "Licznik rozpoznań",
+      "uniqueSubjects": "Unikalne osoby"
+    },
+    "layer": {
+      "camera": "Kamera",
+      "zones": "Strefy"
+    },
+    "legend": {
+      "deviceImage": "Zdjęcie urządzenia",
+      "subjectImage": "Zdjęcie osoby"
+    },
+    "statuses": {
+      "AdministrativeStatus": "Status administracyjny",
+      "OperationStatus": "Status operacyjny"
+    },
+    "errors": {
+      "setupModeFail": "Nie można wejść w tryb konfiguracji\nTryb śledzenia/ścieżki jest aktywny"
+    }
+  },
+  "statistics": {
+    "detections": "Detekcje",
+    "subjects": "Osoby",
+    "alerts": "Alarmy",
+    "liveCameras": "Kamery",
+    "recognitions": "Rozpoznania",
+    "livePoints": "Punkty"
+  },
+  "closeMatch": {
+    "link": "Powiązanie"
+  },
+  "watchVideo": {
+    "subjectName": "Nazwa osoby",
+    "unknown": "Nieznana",
+    "message": {
+      "dataError": "Nie można pobrać informacji o śladzie",
+      "fetchError": "Nie można pobrać wideo",
+      "fetchVideo": "Pobieranie wideo, proszę czekać..."
+    }
+  },
+  "timelinePlaylist": {
+    "defaultGroup": "Domyślna grupa urządzeń"
+  },
+  "addToExisting": {
+    "okBtnText": "OK",
+    "addToExistingError": "Wystąpił błąd podczas przypisywania do osoby",
+    "addToSubject": "Przypisz do osoby",
+    "selectImage": "Wybierz osobę, do której chciałbyś przypisać to zdjęcie.",
+    "trackImage": "Zdjęcie detekcji",
+    "attributes": "Atrybuty",
+    "face": "Twarz",
+    "body": "Sylwetka",
+    "subjects": "Osoby",
+    "subjectImage": "Zdjęcie osoby",
+    "noResults": "Nie znaleziono osób",
+    "autoCompleteError": "Wystąpił błąd w trakcie wyszukiwania osób",
+    "getSubjectError": "Wystąpił błąd pobierania wybranej osoby",
+    "getSubjectsError": "Wystąpił błąd pobierania osób",
+    "getTrackImagesError": "Wystąpił błąd pobierania zdjęć śladu",
+    "save": "Zapisz",
+    "cancel": "Anuluj",
+    "bodyImageWarning": "Cechy sylwetki będą aktualne przez {hours} godzin od momentu detekcji",
+    "subjectGroups": "Grupa osób",
+    "noSubjects": "W bazie nie ma żadnych osób"
+  },
+  "userDefinitionDialog": {
+    "header": "Przypisz każdego użytkownika do grupy i roli",
+    "userGroups": "Grupy użytkowników",
+    "role": "Role",
+    "editable": "Edytowalne",
+    "preDefined": "Predefiniowane",
+    "subjectGroups": "Grupy osób",
+    "cameraGroups": "Grupy urządzeń",
+    "inquiryCases": "Sprawy dochodzeniowe",
+    "userGroupExplain": "Każdy z użytkowników jest przypisany do grupy użytkowników, która określa jego dostęp do urządzeń, spraw dochodzeniowych i osób.\nUżytkownicy przypisani do określonej grupy użytkowników będą mieli dostęp tylko do kamer, spraw dochodzeniowych oraz osób dostępnych dla tej grupy.",
+    "userRoleExplain": "Każdy z użytkowników ma przypisaną rolę, która określa jego uprawnienia dostępu w systemie.\nSuper operator może dodawać nowe osoby do listy osób, ale operator nie może wykonać takiej czynności. Proszę zapoznać się, czym są role, aby uzyskać więcej informacji dotyczących uprawnień każdej z ról.\nW tej wersji role nie są edytowalne."
+  },
+  "userRoles": {
+    "superAdmin": "Super Admin",
+    "subAdmin": "Prawie Admin",
+    "admin": ".Admin",
+    "superator": "Super Operator",
+    "superOperator": "Super Operator",
+    "operator": ".Operator",
+    "viewer": "Obserwator"
+  },
+  "automationRuleDialog": {
+    "When alert from": "Jeśli wystąpią alarmy dla urządzeń ",
+    "is created, notify via email to": ", wyślij powiadomienia na adres ",
+    "When an alert is created for Subject in": "Jeśli wystąpią alarmy dla grup osób ",
+    ", notify via email to": ", wyślij powiadomienia na adres ",
+    "addAutomationRule": "Dodaj nową automatyzację",
+    "editAutomationRule": "Edytuj automatyzację numer: {number}",
+    "addAutomationSubTitle": "Dostosuj swoją automatyzację",
+    "editAutomationSubTitle": "Edytuj swoją automatyzację",
+    "emailPlaceholder": "Wpisz, aby dodać więcej",
+    "emailHelperText": "Wprowadź email i naciśnij Enter",
+    "createButton": "Utwórz",
+    "updateButton": "Aktualizuj",
+    "cancelButton": "Anuluj",
+    "deleteButton": "Usuń",
+    "delete": "Usuń",
+    "createRuleSuccessfully": "Reguła została utworzona",
+    "updateRuleSuccessfully": "Reguła została zaktualizowana",
+    "deleteRuleSuccessfully": "Reguła została usunięta",
+    "deleteRule": "Usuń regułę automatyzacji",
+    "deleteRuleContent": "Czy na pewno chcesz usunąć regułę automatyzacyjną numer {number} ?",
+    "errors": {
+      "valueIsRequired": "Wartość jest wymagana",
+      "emailIsRequired": "Proszę wprowadzić prawidłowy adres email",
+      "invalidInput": "Przynajmniej jeden email jest nieprawidłowy",
+      "failedToCreateRule": "Nie powiodło się utworzenie reguły",
+      "failedToUpdateRule": "Nie powiodło się aktualizowanie reguły",
+      "failedToDeleteRule": "Nie powiodło się usuwanie reguły"
+    }
+  },
+  "userGroupDialog": {
+    "dialogDescription": "Użytkownicy w tej grupie będą mogli uzyskać dostęp tylko do tych kamer, spraw dochodzeniowych i osób, które zostaną udostępnione tej grupie użytkowników.",
+    "addNew": "Dodaj nową grupę użytkowników",
+    "editTitle": "Edytuj grupę użytkowników",
+    "userGroupName": "Nazwa grupy użytkowników",
+    "cameraGroups": "Grupy urządzeń",
+    "subjectGroups": "Grupy osób",
+    "inquiryCases": "Sprawy dochodzeniowe",
+    "required": "To pole jest wymagane.",
+    "updateSuccess": "Grupa użytkowników została zaktualizowana",
+    "creationSuccess": "Grupa użytkowników została utworzona",
+    "nameAlreadyExists": "Grupa użytkowników o tej samej nazwie już istnieje",
+    "submitFailed": "Nie powiodła się operacja {action} dla grupy użytkowników"
+  },
+  "assignMovePortal": {
+    "maxCapacity": "Przekroczono limit w jednej lub wielu wybranych grupach",
+    "getError": "Nie powiodło się pobieranie grup osób",
+    "succeededToMoveSubject": "Osoba została przeniesiona.",
+    "succeededToAssignSubject": "Osoba została przypisana.",
+    "assignTitle": "Przypisz do grupy osób",
+    "moveTitle": "Przenieś do grupy osób",
+    "filterPlaceholder": "Filtruj grupy osób",
+    "createSubjectGroupAction": "Utwórz grupę osób",
+    "assignAction": "Przypisz",
+    "getTimeProfilesErr": "Nie powiodło się pobieranie profili czasowych",
+    "getCameraGroupsErr": "Nie powiodło się pobieranie grup urządzeń",
+    "successCreateSubjectGroups": "Grupa osób została utworzona",
+    "errCreateSubjectGroups": "Nie powiodło się utworzenie grupy osób",
+    "ActionTypeBtnMove": "Przenieś",
+    "ActionTypeBtnAssign": "Przypisz",
+    "ActionErrAssign": "Nie powiodło się przypisywanie grup osób do wybranych osób",
+    "ActionErrMove": "Nie powiodło się przenoszenie grup osób do wybranych osób",
+    "ActionErrCountLimit": "Wybrano {number} grup osób, a limit wynosi {maxLimit}"
+  },
+  "actionsPortal": {
+    "assignBtn": "Przypisz do grupy",
+    "moveBtn": "Przenieś do grupy",
+    "deleteBtn": "Usuń",
+    "selectedItem": "Wybranych elementów"
+  },
+  "inqueryCase": {
+    "streamErrorMessage": "Źródło dochodzenia aktualnie nie jest w trybie analizy. Strumień wideo na żywo nie jest dostępny.",
+    "addSource": "Dodaj źródło",
+    "cameraTypeAll": "Wszystkie",
+    "ssfPlaceholder": "Dodaj tag, aby filtrować lub wpisz tekst, aby wyszukać",
+    "defaultAnalysis": {
+      "titlePrefix": "Ustawienia domyślne analizy",
+      "backDialog": {
+        "title": "Odrzucić zmiany?",
+        "content": "Twoje zmiany nie zostaną zapisane",
+        "btnTxt": "Odrzuć"
+      }
+    },
+    "tabs": {
+      "files": "Pliki",
+      "cameras": "Kamery"
+    },
+    "notifications": {
+      "invalidInput": "Nieprawidłowy ID sprawy",
+      "errorGetCase": "Nie można pobrać sprawy wg ID",
+      "errorUpdateCase": "Nie można zaktualizować sprawy",
+      "errorUpdateCaseName": "Nazwa sprawy już istnieje",
+      "updateCaseSuccess": "Sprawa została zaktualizowana",
+      "updateCaseFileSuccess": "Plik został zaktualizowany",
+      "updateCaseCameraSuccess": "Kamera została zaktualizowana",
+      "errorGetCamerasToCase": "Nie znaleziono kamer do bieżącej sprawy.",
+      "failedGetCameraDefaultSettings": "Nie powiodło się pobieranie ustawień domyślnych kamery",
+      "failedGetCameraCaseSettings": "Nie powiodło się pobieranie ustawień kamer w sprawie",
+      "errorAddCamerasToCase": "Nie powiodło się dodawanie kamer do bieżącej sprawy.",
+      "errorDeleteCaseFiles": "Nie powiodło się usuwanie plików/kamer z bieżącej sprawy.",
+      "errorGetSelectedFileMediaData": "Nie powiodło się pobieranie multimediów do pliku sprawy.",
+      "errorUpdateSelectedFileMediaData": "Nie powiodło się aktualizowanie multimediów do pliku sprawy.",
+      "errorUpdateSelectedCameraDatesMediaData": "Nie powiodło się aktualizowanie multimediów do pliku sprawy, nieprawidłowe daty wprowadzone do utworzenia kamer w sprawie.",
+      "errorPauseCaseFiles": "Nie powiodło się zatrzymywanie plików/kamer w bieżącej sprawie.",
+      "errorRetryCaseFiles": "Nie powiodło się ponawianie plików/kamer w bieżącej sprawie.",
+      "errorStartAnalyzeCaseFiles": "Nie powiodło się uruchamianie analizy plików/kamer w bieżącej sprawie.",
+      "errorCancelCaseFiles": "Nie powiodło się ponawianie plików/kamer w bieżącej sprawie.",
+      "errorPauseSomeCaseFiles": "Nie powiodło się zatrzymywanie plików/kamer w bieżącej sprawie.",
+      "errorRetrySomeCaseFiles": "Nie powiodło się ponawianie niektórych plików/kamer w bieżącej sprawie.",
+      "errorStartAnalyzeSomeCaseFiles": "Nie powiodło się uruchamianie analizy niektórych plików/kamer w bieżącej sprawie.",
+      "errorCancelSomeCaseFiles": "Nie powiodło się anulowanie niektórych plików/kamer w bieżącej sprawie.",
+      "errorPauseInvalidCaseFiles": "Niektóre z plików/kamer w bieżącej sprawie mają nieprawidłowy status.",
+      "CaseFilesDeletedSuccess": "Pliki zostały usunięte",
+      "CaseFilesPauseSuccess": "Pliki zostały zatrzymane",
+      "CaseFilesRetrySuccess": "Pliki zostały wznowione",
+      "CaseFilesStartAnalyzeSuccess": "Analiza plików została uruchomiona",
+      "CaseFilesCancelSuccess": "Pliki zostały anulowane"
+    },
+    "header": {
+      "priorityOptions": {
+        "high": "Wysoki",
+        "medium": "Średni",
+        "low": "Niski"
+      },
+      "caseName": "Nazwa sprawy",
+      "caseDate": "Data i czas zdarzenia",
+      "priority": "Priorytet",
+      "switchTitle": "Auto usuwanie",
+      "switchLabelOn": "WŁ",
+      "switchLabelOff": "WYŁ",
+      "actionsBtns": {
+        "watchList": "Lista osób",
+        "report": "Raport",
+        "search": "Szukaj",
+        "view": "Pokaż",
+        "analysisDefaults": "Ustawienia domyślne analizy"
+      }
+    },
+    "camerasToCase": {
+      "resultLabel": "Kamera",
+      "cameraToCaseColumnName": "Nazwa kamery",
+      "cameraToCaseColumnGroup": "Grupa urządzeń",
+      "cameraToCaseColumnType": "Typ kamery",
+      "cameraToCaseColumnStatus": "Status",
+      "submitButton": "dodaj kamerę",
+      "info": "Dotyczy kamer, które mają przynajmniej jedną detekcję",
+      "datePickerLabelFrom": "Od Data i Czas",
+      "datePickerLabelTo": "Do Data i Czas",
+      "cameraStatus": {
+        "unknown": "Nieznany",
+        "disconnected": "Rozłączona",
+        "connected": "Podłączona",
+        "connecting": "Podłączanie",
+        "failed": "Błąd",
+        "reconnecting": "Connecting"
+      }
+    },
+    "subjectGroups": {
+      "title": "Grupy osób",
+      "selected": "wybrane"
+    },
+    "alerts": {
+      "title": "Alarmy",
+      "switchLabelOn": "Tak",
+      "switchLabelOff": "Nie",
+      "analysisBtn": "Uruchom analizę"
+    },
+    "cameraType": {
+      "face": "Twarz",
+      "body": "Sylwetka",
+      "person": "Twarz i sylwetka"
+    },
+    "noFiles": {
+      "title": "Dodaj źródła dochodzenia",
+      "subTitle": "Aby uruchomić analizę, kliknij “Dodaj źródła”.",
+      "btn": "Dodaj źródła"
+    },
+    "filesTab": {
+      "uploadBtn": "Wyślij",
+      "uploadAnalyzeBtn": "Wyślij i analizuj",
+      "files": "Pliki",
+      "folder": "Folder",
+      "networkDrive": "Dysk sieciowy",
+      "moveTabWithFiles": {
+        "title": "Odrzucić zmiany?",
+        "content": "Twoje wybrane pliki nie zostaną zapisane/wysłane",
+        "btnTxt": "Odrzuć",
+        "cancelButtonText": "Anuluj"
+      },
+      "analysisDetails": {
+        "dropdownLabel": "Typ analizy",
+        "tresholdLabel": "Próg rozpoznania",
+        "dropdownTitle": "Szczegóły analizy ",
+        "types": {
+          "face": "Twarz",
+          "body": "Sylwetka",
+          "person": "Twarz i sylwetka"
+        }
+      },
+      "filesList": {
+        "deleteSelected": "Usuń wybrane źródło",
+        "addMoreFiles": "Dodaj pliki",
+        "addMoreFolder": "Dodaj folder",
+        "selectedCount": "Pliki",
+        "fileItem": {
+          "unknownDuration": "Nieznany",
+          "videoDuration": "Czas trwania",
+          "fileSize": "Rozmiar"
+        }
+      },
+      "uploadFiles": {
+        "uploadTitle": "Przenieś pliki tutaj lub przeglądaj.",
+        "actionBtnTxt": "Wybierz pliki",
+        "maxUploadTxt": "Maksymalny rozmiar wysyłanego pliku: 15GB ",
+        "supportedUploadTxt": "Obsługiwane formaty plików wideo: AVI, MP4, MKV i WEBM.\nObsługiwane formaty plików zdjęć: PNG, JPG, JFIF, TIFF, BMP.",
+        "subTitle": ""
+      },
+      "uploadFolder": {
+        "uploadTitle": "Przenieś pliki tutaj lub przeglądaj.",
+        "actionBtnTxt": "Wybierz folder",
+        "maxUploadTxt": "Pliki z foldera głównego zostaną wysłane. Maksymalny rozmiar wysyłanego pliku: 15GB ",
+        "supportedUploadTxt": "Obsługiwane formaty plików wideo: AVI, MP4, MKV & WEBM.\nObsługiwane formaty plików zdjęć: PNG, JPG, JFIF, TIFF, BMP.",
+        "subTitle": ""
+      },
+      "uploadNetworkDrive": {
+        "uploadTitle": "Wybierz plik z dysku sieciowego",
+        "actionBtnTxt": "Wybierz pliki",
+        "subTitle": "URL: https://drive.google.com/drive/folders",
+        "maxUploadTxt": "Maksymalny rozmiar wysyłanego pliku: 15GB ",
+        "supportedUploadTxt": "Obsługiwane formaty plików wideo: AVI, MP4, MKV & WEBM.\nObsługiwane formaty plików zdjęć: PNG, JPG, JFIF, TIFF, BMP."
+      },
+      "uploadFilesErrs": {
+        "regex": "musi być zgodne ze wzorcem '00:00:00'",
+        "mustBeBelowEnd": "musi być przed końcem",
+        "mustBeAboveStart": "musi być po starcie",
+        "cannotExceedMaxDuration": "Nie można przekroczyć dozwolonego czasu trwania wideo",
+        "invalidFileType": "Typ pliku jest nieprawidłowy",
+        "unsupportedFileType": "Typ pliku nie jest obsługiwany",
+        "maxFileSizeExceeded": "Nie można przekroczyć maksymalnego rozmiaru pliku: 15GB",
+        "maxFileNameExceeded": "Nie można przekroczyć maksymalnej długości nazwy pliku: 255 znaków",
+        "generalFileError": "Wystąpił błąd w trakcie wysyłania pliku",
+        "durationWarning": "Czas trwania źródła nieznany. Ustawiono domyślne 5 min",
+        "uploadFileToCase": "Nie można dodać pliku do sprawy",
+        "uploadFileProcess": "Nie można wysłać plików",
+        "uploadFileProcessSome": "Nie można wysłać niektórych plików",
+        "notValidNetworkPathProvided": "Wprowadzona ścieżka sieciowa jest nieprawidłowa",
+        "networkPathNotProvided": "Nie wprowadzono ścieżki sieciowej"
+      }
+    },
+    "uploadedFileList": {
+      "fileItem": {
+        "unknownDuration": "Nieznany",
+        "videoDuration": "Czas trwania",
+        "imageFormat": "Format",
+        "mode": "Tryb",
+        "fileSize": "Rozmiar",
+        "cameraGroup": "Grupa urządzeń",
+        "status": "Status",
+        "cameraStatuses": {
+          "unknown": "Nieznany",
+          "disconnected": "Rozłączona",
+          "connected": "Podłączona",
+          "connecting": "Podłączanie",
+          "failed": "Niepowodzenie",
+          "reconnecting": "Łączenie"
+        },
+        "progressIndicatorTxt": {
+          "FINISHED_UPLOADING": "Wysyłanie zakończone",
+          "UPLOAD_FAILED": "Wysyłanie nie powiodło się",
+          "CANCEL_UPLOAD": "Wysyłanie anulowane",
+          "DONE": "Analiza zakończona",
+          "ANALYSIS_FAILED": "Analiza nie powiodła się",
+          "QUEUED": "W kolejce",
+          "PAUSE_ANALYZING": "Analiza wstrzymana",
+          "STOPPED": "Analiza zatrzymana"
+        }
+      },
+      "listHeader": {
+        "title": "Pliki spraw dochodzeniowych",
+        "addSources": "Dodaj źródło",
+        "searchPlaceholder": "Filtruj pliki sprawy",
+        "filesCount": "Pliki",
+        "actions": {
+          "stop": "Zatrzymaj",
+          "cancel": "Anuluj",
+          "delete": "Usuń",
+          "unpause": "Wznów / Ponów",
+          "sort": "Sortuj",
+          "filter": "Filtruj"
+        },
+        "sortOptions": {
+          "A_Z": "Nazwa pliku: A-Z",
+          "Z_A": "Nazwa pliku: Z-A",
+          "STATUS": "Status",
+          "TYPE": "Typ",
+          "DURATION": "Czas trwania",
+          "SIZE": "Rozmiar"
+        },
+        "filterOptions": {
+          "ALL": "Wszystkie",
+          "CREATED": "Utworzone",
+          "ANALYZING": "Analizowanie",
+          "UPLOADING": "Wysyłanie",
+          "FINISHED_UPLOADING": "Wysyłanie zakończone",
+          "UPLOAD_FAILED": "Wysyłanie nie powiodło się",
+          "CANCEL_UPLOAD": "Wysyłanie anulowane",
+          "DONE": "Analiza zakończona",
+          "ANALYSIS_FAILED": "Analiza nie powiodła się",
+          "QUEUED": "W kolejce",
+          "PAUSE_ANALYZING": "Analiza wstrzymana",
+          "STOPPED": "Analiza zatrzymana"
+        }
+      }
+    },
+    "editMediaFile": {
+      "saveBtn": "ZAPISZ",
+      "details": {
+        "duration": "Czas trwania",
+        "valueLabel": "wartość",
+        "dateLabel": "Data i czas nagrania",
+        "analysisLabel": "Typ analizy",
+        "thresholdTitle": "Próg czułości rozpoznania",
+        "timeTitlePrefix": "Ustaw czas:",
+        "manually": "Ręcznie",
+        "fromFile": "Z pliku",
+        "imgAlt": "Zdjęcie sprawy",
+        "fromDate": "Od Data i czas",
+        "toDate": "Do Data i czas"
+      },
+      "clearDataDialog": {
+        "title": "Wyczyścić rezultaty?",
+        "content": "Ponowne uruchomienie analizy wyczyści rezultaty zebrane w poprzedniej analizie",
+        "btnTxt": "Kontynuuj"
+      }
+    }
+  },
+  "filterSelectList": {
+    "selectAllAction": "Wybierz/Wyczyść wszystkie",
+    "noResult": "Nie znaleziono rezultatów",
+    "clearFilter": "Wyczyść filtry",
+    "limitTitle": "Limit do {limitNumber} grup"
+  },
+  "rolesPermissionsDialog": {
+    "limited": "Ograniczone",
+    "limitedA": "Ograniczone A",
+    "limitedB": "Ograniczone B",
+    "rolesPermissions": "Uprawnienia ról",
+    "roles": "Role",
+    "videoWall": "Ściana wideo",
+    "search": "Wyszukiwarki",
+    "watchList": "Lista osób",
+    "liveCameras": "Kamery",
+    "reports": "Raporty",
+    "adminSettings": "Administracja",
+    "forensic": "Dochodzenie",
+    "searchLimit": "Nie można wyszukać zdjęciem.",
+    "liveCamerasLimitA": "Nie można wykonać żadnych akcji (add new subjects, ignore,\nacknowledge alerts, etc.) or view rendered videos and routes.",
+    "liveCamerasLimitB": "Nie można wykonać żadnych akcji (add new subjects, \nignore, acknowledge alerts, etc.).",
+    "watchListLimitA": "Can’t search for subjects by image or make changes to the watch list.",
+    "watchListLimitB": "Can’t make changes to the watch list.",
+    "settingsLimit": "Can’t create admin accounts.",
+    "reportsLimits": "Can't view audit logs",
+    "adminSettingsLimitSubAdmin": "TODO: Can only access: \nacknowledge actions, \ncamera settings, \nall groups and profiles settings"
+  },
+  "appHealthStatus": {
+    "partial": "System częściowo niesprawny",
+    "passing": "System sprawny",
+    "critical": "System niesprawny",
+    "labels": {
+      "downloadLogs": "Pobierz logi"
+    }
+  },
+  "track": {
+    "poi": "POI",
+    "nPlus": "N + {proximity}",
+    "sec": "Sek",
+    "min": "Min",
+    "hr": "Godz"
+  },
+  "drawers": {
+    "ongoingActions": {
+      "header": "Akcje w toku",
+      "massImport": "masowy import",
+      "pluginSync": "synchronizacja integracji",
+      "RUNNING": "URUCHOMIONA",
+      "DONE": "ZAKOŃCZONA",
+      "FAILED": "NIEUDANA",
+      "CANCELLED": "ANULOWANA",
+      "DISABLED": "WYŁĄCZONA",
+      "definitions": {
+        "abort": "anuluj",
+        "retry": "ponów",
+        "running": "uruchomiona",
+        "failed": "nieudana",
+        "cancelled": "anulowana",
+        "completed": "ukończona",
+        "disabled": "wyłączona",
+        "download": "pobierz raport"
+      },
+      "notifications": {
+        "failedToGetActions": "Nie powiodło się pobieranie akcji w toku",
+        "failedToGetAdditionalActions": "Nie powiodło się pobieranie dodatkowych akcji w toku",
+        "failedToMarkAsRead": "Nie można oznaczyć akcji jako przeczytanych. Proszę spróbować ponownie."
+      },
+      "list": {
+        "abortProcessDialogTitle": "Anuluj proces",
+        "abortProcessDialogInfo": "Czy na pewno chcesz anulować proces?",
+        "confirm": "Potwierdź",
+        "cancel": "Anuluj",
+        "dismiss": "Odrzuć",
+        "save": "Zapisz",
+        "item": {
+          "membersWereImportedInto": "osób zostało zaimportowanych do",
+          "massImportDescription": "Użytkownik {creatorName} poprosił o uruchomienie importu osób do grupy {group}.",
+          "syncDescription": "Użytkownik {creatorName} poprosił o import osób do grupy {group}. \n Zaimportowano {finished} z {total} osób.",
+          "initiatedBy": "Uruchomione przez",
+          "importedSuccessfully": "Zaimportowano pomyślnie",
+          "outOf": "z",
+          "members": "osób",
+          "deletedGroup": "usunięta grupa",
+          "defaultGroupName": "grupa osób"
+        },
+        "emptyList": {
+          "nothingToSee": "Pusto",
+          "stayTunedAllFinished": "Warto tu zaglądać, wszystkie ukończone akcje pojawią się tutaj",
+          "allActionsFinished": "Ukończono wszystkie akcje",
+          "allFinishedActionsCanBeSeen": "Wszystkie ukończone akcje można zobaczyć na zakładce Ukończone."
+        }
+      },
+      "tabs": {
+        "active": {
+          "tabTitle": "Aktywne"
+        },
+        "finished": {
+          "tabTitle": "Ukończone"
+        }
+      }
+    }
+  },
+  "save": "Zapisz",
+  "finish": "Zakończ",
+  "next": "Następna",
+  "cancel": "Anuluj",
+  "confirm": "Potwierdź",
+  "step": "etap",
+  "stepOutOf": "z",
+  "columnManagement": "Zarządzanie kolumnami",
+  "results": "Rezultat(ów)",
+  "yes": "Tak",
+  "no": "Nie",
+  "areYouSure": "Czy na pewno?",
+  "leavePage": "Opuść stronę",
+  "changesWillBeLost": "Wszelkie zmiany w formularzu zostaną utracone",
+  "none": "Brak",
+  "noResultsFound": "Nie znaleziono rezultatów",
+  "noResultsMessage": "Proszę spróbować dostosować parametry wyszukiwania.",
+  "inputErrors": {
+    "required": "To pole jest wymagane",
+    "minNumeric": "Przynajmniej {min} cyfr",
+    "minLowerCase": "Przynajmniej {min} małych liter",
+    "minUpperCase": "Przynajmniej {min} dużych liter",
+    "minSymbol": "Przynajmniej {min} symboli",
+    "string": {
+      "min": "Minimum ${min} znaków długości",
+      "max": "Maximum ${max} znaków długości",
+      "email": "Nie wygląda to na prawidłowy email",
+      "noSpace": "Spacje nie są dozwolone",
+      "certificate": "Nie wygląda to na prawidłowy certyfikat"
+    }
+  },
+  "emptyPage": {
+    "title": "Pusto",
+    "description": "Warto tu zaglądać, pojawią się tutaj powiadomienia"
+  },
+  "auditTrails": {
+    "failedToGetAuditLogs": "Nie powiodło się pobieranie dziennika dostępu"
+  },
+  "inquiries": {
+    "addEditInquiries": {
+      "titleCreate": "Nowa sprawa",
+      "startInquiryBtn": "Rozpocznij dochodzenie",
+      "requiredError": "Wymagane",
+      "minError": "Nie może być krótsze, niż {min} znaków",
+      "maxError": "Nie może być dłuższe, niż {max} znaków",
+      "successMessage": "Utworzono nowe dochodzenie!",
+      "errorMessage": "Nie można utworzyć nowego dochodzenia",
+      "licenseQuotaExceeded": "Czas trwania pliku wideo przekracza dozwolony limit",
+      "duplicateCaseName": "Proszę wybrać inną nazwę sprawy",
+      "tabs": {
+        "details": {
+          "tabTitle": "Szczegóły sprawy",
+          "cards": {
+            "caseDetails": {
+              "header": "Szczegóły sprawy",
+              "name": "Nazwa"
+            },
+            "analysisDetails": {
+              "header": "Szczegóły analizy",
+              "analysisType": "Typ analizy",
+              "face": "Twarz",
+              "body": "Sylwetka",
+              "person": "Twarz i sylwetka",
+              "threshold": "Próg rozpoznań i alarmów"
+            },
+            "fileDetails": {
+              "mainHeader": "Szczegóły pliku",
+              "dropLabel": "Przenieś pliki tutaj lub",
+              "uploadFileBtn": "Wyślij plik",
+              "fileCaption": "Obsługiwane pliki: AVI, MP4, MJPEG, ASF i WEBN",
+              "start": "Początek przycięcia",
+              "end": "Koniec przycięcia",
+              "captureDate": "Początek data i czas nagrania",
+              "duration": "Czas trwania: ",
+              "size": "Rozmiar: ",
+              "uploadAreaLabel": "Proszę wysłać wideo",
+              "durationUnknown": "nieznany",
+              "fileErrors": {
+                "regex": "musi pasować do wzorca '00:00:00'",
+                "mustBeBelowEnd": "musi być przed końcem",
+                "mustBeAboveStart": "musi być po starcie",
+                "cannotExceedMaxDuration": "Nie może przekraczać dozwolonego czasu trwania",
+                "invalidFileType": "Typ pliku jest nieprawidłowy",
+                "unsupportedFileType": "Typ pliku nie jest obsługiwany",
+                "maxFileSizeExceeded": "Nie może przekraczać max rozmiaru pliku: 15GB",
+                "maxFileNameExceeded": "Nie może przekraczać max długości nazwy pliku: 255 znaków",
+                "generalFileError": "Wystąpił błąd przy wysyłaniu pliku",
+                "durationWarning": "Czas trwania źródła nieznany. Ustawiono domyślne 5 min"
+              }
+            }
+          }
+        },
+        "advancedSettings": {
+          "tabTitle": "Ustawienia zaawansowane",
+          "cards": {
+            "automatic": "Automatyczne",
+            "degrees": "stopni",
+            "videoProcessor": {
+              "header": "Procesor wideo",
+              "pipe": "Potok",
+              "frameRotate": "Obracanie obrazu",
+              "autoFrameSkipping": "Automatyczne pomijanie klatek",
+              "autoFrameSkippingDesc": "Zmniejsz obciążenie GPU pomijając klatki i mniej skrupulatnie analizuj strumienie wideo.",
+              "analysisPercentage": "Procent analizowanych",
+              "analysisPercentageErrors": {
+                "min": "Nie może być poniżej 10%",
+                "max": "Nie może przekraczać 100%"
+              },
+              "cameraPadding": "Obszar zainteresowania",
+              "top": "Góra",
+              "bottom": "Dół",
+              "left": "Lewo",
+              "right": "Prawo"
+            },
+            "tracker": {
+              "header": "Detektor",
+              "minTrackLength": "Min długość śladu (w klatkach)",
+              "face": "Twarz",
+              "body": "Sylwetka",
+              "maxTrackLength": "Max długość śladu (w klatkach)",
+              "trackerSeekTimeout": "Limit klatek szukania śladu",
+              "detectionMinObjectSize": "Min rozmiar obiektu w detekcji",
+              "detectionMaxObjectSize": "Max rozmiar obiektu w detekcji",
+              "infinity": "Nieskończoność",
+              "reset": "Resetuj",
+              "minError": "Musi być {min} lub więcej",
+              "maxError": "Nie może przekraczać {max}"
+            }
+          }
+        }
+      }
+    }
+  },
+  "auditLogsPage": {
+    "auditLogs": "Dziennik dostępu",
+    "download": "Pobierz plik logu",
+    "unkownSubject": "nieznana osoba",
+    "sourceIp": "Źródłowe IP: ",
+    "failedToGetAuditLogs": "Nie powiodło się pobieranie logów dostępu",
+    "filters": {
+      "failedToGetUsers": "Nie powiodło się pobieranie użytkowników",
+      "failedToGetIps": "Nie powiodło się pobieranie źródłowych IPS",
+      "usersChipsPlaceholder": "Szukaj wg użytkownika/źródła IP",
+      "fromDatePlaceholder": "Data Od",
+      "toDatePlaceholder": "Data Do"
+    },
+    "auditLogsListActions": {
+      "kvSetting": {
+        "update": "zmieniono ustawienie {path} z {oldSetting} na {newSetting}"
+      },
+      "user": {
+        "bulk": {
+          "delete": "seryjnie usunięto użytkowników",
+          "deleteFailed": "nie udało się usunąć użytkowników"
+        },
+        "deleteFailed": "nie udało się usunąć użytkownika",
+        "eula": "potwierdzono umowę licencyjną użytkownika końcowego (EULA)",
+        "login": "zalogowano",
+        "logout": "wylogowano",
+        "loginFailed": "nieudane logowanie",
+        "update": "zaktualizowano użytkownika",
+        "updateFailed": "nie udało się zaktualizować użytkownika",
+        "create": "utworzono użytkownika",
+        "delete": "usunięto użytkownika",
+        "updatePassword": "zaktualizowano hasło",
+        "updatePasswordFailed": "nie udało się zaktualizować hasła",
+        "suffix": {
+          "updatePassword": " - hasło"
+        },
+        "generate": "wygenerowano klucz api dla użytkownika",
+        "revoke": "odwołano klucz api dla użytkownika"
+      },
+      "userGroup": {
+        "create": "utworzono grupę użytkowników",
+        "update": "zaktualizowano grupę użytkowników",
+        "delete": "usunięto grupę użytkowników"
+      },
+      "ldap": {
+        "update": "zaktualizowano konfigurację LDAP",
+        "create": "utworzono konfigurację LDAP",
+        "delete": "usunięto konfigurację LDAP",
+        "deleteGroup": "usunięto grupę LDAP",
+        "createGroups": "utworzono grupy LDAP",
+        "updateGroup": "zaktualizowano grupę LDAP"
+      },
+      "systemLog": {
+        "download": "wyeksportowano logi systemowe"
+      },
+      "plugin": {
+        "connect": "podłączono do wtyczki",
+        "delete": "usunięto wtyczkę",
+        "sync": "zsycnhronizowano wtyczkę",
+        "resync": "ponownie zsynchronizowano wtyczkę",
+        "stop": "zatrzymano synchronizację wtyczki",
+        "updateSyncSchedule": "zaktualizowano harmonogram synchronizacji wtyczki",
+        "importDevices": "zaimportowano urządzenia do wtyczki",
+        "report": "wyeksportowano raport synchronizacji wtyczki",
+        "bulk": {
+          "delete": "seryjnie usunięto synchronizacje"
+        }
+      },
+      "accessory": {
+        "connect": "podłączono do akcesorium",
+        "create": "utworzono akcesorium",
+        "update": "zaktualizowano akcesorium",
+        "delete": "usunięto akcesorium",
+        "addAccessory2Camera": "dodano akcesorium {accessoryName} do kamery {cameraName} w grupie urządzeń {cameraGroupName}",
+        "bulk": {
+          "delete": "seryjnie usunięto akcesoria"
+        }
+      },
+      "zone": {
+        "create": "utworzono strefę",
+        "update": "zaktualizowano strefę",
+        "delete": "usunięto strefę",
+        "deleteSensorEntity": "usunięto strefę dla czujnika",
+        "updateSensorEntity": "zaktualizowano strefę dla czujnika",
+        "addSensor2Entity": "dodano strefę dla czujnika",
+        "bulk": {
+          "delete": "seryjnie usunięto strefy"
+        }
+      },
+      "subjectGroup": {
+        "create": "utworzono grupę osób",
+        "update": "zaktualizowano grupę osób",
+        "delete": "usunięto grupę osób",
+        "addSubjectGroup2Zone": "dodano strefę do grupy osób",
+        "deleteSubjectGroup2Zone": "usunięto strefę z grupy osób",
+        "bulk": {
+          "delete": "seryjnie usunięto grupy osób"
+        }
+      },
+      "forensic": {
+        "create": "utworzono sprawę dochodzeniową",
+        "update": "zmodyfikowano sprawę dochodzeniową",
+        "delete": "usunięto sprawę dochodzeniową",
+        "addFile": "dodano plik do sprawy dochodzeniowej",
+        "addFiles": "dodano pliki do sprawy dochodzeniowej",
+        "deleteFile": "usunięto plik ze sprawy dochodzeniowej",
+        "deleteFiles": "usunięto pliki ze sprawy dochodzeniowej",
+        "updateFile": "zmodyfikowano plik w sprawie dochodzeniowej",
+        "addCamera": "dodano kamerę do sprawy dochodzeniowej",
+        "addCameras": "dodano kamery do sprawy dochodzeniowej",
+        "updateCamera": "zmodyfikowano kamerę w sprawie dochodzeniowej",
+        "deleteCamera": "usunięto kamerę ze sprawy dochodzeniowej",
+        "deleteCameras": "usunięto kamery ze sprawy dochodzeniowej",
+        "startAnalyzingFiles": "rozpoczęto analizę plików w sprawie dochodzeniowej",
+        "startAnalyzingFile": "rozpoczeto analizę pliku w sprawie dochodzeniowej",
+        "stopAnalyzingFiles": "zastrzymano analizę plików w sprawie dochodzeniowej",
+        "cancelAnalyzingFile": "anulowano analizę plików w sprawie dochodzeniowej",
+        "stopAnalyzingFile": "zatrzymano analizę pliku w sprawie dochodzeniowej",
+        "reanalyzeFiles": "ponownie przeanalizowano pliki w sprawie dochodzeniowej",
+        "reanalyzeFile": "ponownie przeanalizowano plik w sprawie dochodzeniowej",
+        "disable": "zatrzymano",
+        "clear": "wyczyszczono detekcje w sprawie dochodzeniowej",
+        "replay": "zainicjowano powtórkę",
+        "suffix": {
+          "disable": "analiza przed ukończeniem",
+          "delete": "ze wszystkimi rezultatami analizy"
+        },
+        "bulk": {
+          "update": "zatrzymano dochodzenie",
+          "delete": "usunięto dochodzenie"
+        }
+      },
+      "camera": {
+        "create": "utworzono kamerę",
+        "update": "zaktualizowano kamerę",
+        "delete": "usunięto kamerę",
+        "enable": "włączono kamerę",
+        "disable": "wyłączono kamerę",
+        "clear": "wyczyszczono detekcje kamery",
+        "bulk": {
+          "delete": "usunięto wiele kamer",
+          "create": "utworzono wiele kamer",
+          "enable": "włączono wiele kamer",
+          "update": "zaktualizowano wiele kamer",
+          "disable": "wyłączono wiele kamer",
+          "clear": "wyczyszczono detekcje wielu kamer"
+        },
+        "addDeviceToCamera": "dodano urządzenie do kamery",
+        "updateDeviceToCamera": "zaktualizowano urządzenie do kamery",
+        "deleteDeviceToCamera": "usunięto urządzenie z kamery"
+      },
+      "nodeRtsp": {
+        "enable": "wyświetlono strumień wideo na żywo z kamery"
+      },
+      "acknowledge": {
+        "create": "utworzono akcję alarmową",
+        "update": "updated akcję alarmową",
+        "delete": "usunięto akcję alarmową",
+        "acknowledgeTrack": "potwierdzono alarm dla osoby {subjectName}",
+        "acknowledgeTrackWithAction": "potwierdzono alarm dla osoby {subjectName} z wywołaniem akcji alarmowej ",
+        "enable": "włączono wymuszenie akcji",
+        "disable": "wyłączono wymuszenie akcji",
+        "bulk": {
+          "acknowledgeTrack": "potwierdzono wszystkie alarmy dla {subjectName} z wywołaniem akcji alarmowej "
+        }
+      },
+      "email": {
+        "create": "utworzono konfigurację integracji email z nazwą użytkownika",
+        "update": "zaktualizowano konfigurację integracji email z nazwą użytkownika",
+        "sendTestEmail": "wysłano testową wiadomość email do"
+      },
+      "rule": {
+        "create": "utworzono regułę numer",
+        "update": "zaktualizowano regułę numer",
+        "delete": "usunięto regułę numer"
+      },
+      "hq": {
+        "sync": "była powiązana z tą lokalizacją",
+        "delete": "była powiązana z tą lokalizacją"
+      },
+      "track": {
+        "view": "otwarto osobę",
+        "watchDetectionVideo": "otwarto nagranie wideo detekcji ",
+        "watchRecognitionVideo": "otwarto nagranie wideo rozpoznania ",
+        "assignSubject": "powiązano detekcję z osobą"
+      },
+      "cameraGroup": {
+        "create": "utworzono grupę urządzeń",
+        "update": "zaktualizowano grupę urządzeń",
+        "delete": "usunięto grupę urządzeń",
+        "bulk": {
+          "delete": "seryjnie usunięto grupy urządzeń",
+          "create": "seryjnie utworzono grupy urządzeń"
+        }
+      },
+      "point": {
+        "create": "utworzono punkt",
+        "update": "zaktualizowano punkt",
+        "delete": "usunięto punkt",
+        "startSubjectSync": "rozpoczęto synchronizację osób dla punktu",
+        "bulk": {
+          "delete": "seryjnie usunięto punkty",
+          "update": "zaktualizowano wiele punktów",
+          "enable": "włączono wiele punktów",
+          "disable": "wyłączono wiele punktów"
+        },
+        "addDeviceToCamera": "dodano urządzenie do punktu",
+        "updateDeviceToCamera": "zaktualizowano urządzenie do punktu",
+        "deleteDeviceToCamera": "usunięto urządzenie z punktu"
+      },
+      "saml": {
+        "updateConfiguration": "zaktualizowano konfigurację SAML",
+        "createConfiguration": "utworzono konfigurację SAML",
+        "deleteConfiguration": "usunięto konfigurację SAML",
+        "downloadCertificate": "pobrano certyfikat publiczny SAML",
+        "downloadMetadata": "pobrano metadane SAML"
+      },
+      "vms": {
+        "connect": "podłączono do VMS"
+      },
+      "massImport": {
+        "start": "rozpoczęto masowy import",
+        "finish": "ukończono masowy import",
+        "update": "rozpatrzono uwagi w masowym imporcie",
+        "bulk": {
+          "update": "seryjnie rozpatrzono uwagi w masowym imporcie"
+        }
+      },
+      "report": {
+        "download": "wykesportowano {replaceObj}",
+        "reportType": {
+          "attendance": "Raport obecności",
+          "massImport": "Raport masowego importu",
+          "exportSubjectDetails": "Szczegóły osoby",
+          "detections": "dla",
+          "auditLogs": "raport dziennika dostępu",
+          "proximity": "Raport z wyszukiwania powiązań",
+          "cameras": "Lista kamer",
+          "kvSetting": "Ustawienia systemu"
+        },
+        "additionalTranslations": {
+          "csv": "Raport CSV",
+          "pdf": "Raport PDF",
+          "zip": "Raport PDF z plikami zdjęć",
+          "all": "wszystkie kamery",
+          "multipleCameras": "wiele kamer"
+        }
+      },
+      "subject": {
+        "bulk": {
+          "delete": "seryjnie usunięto osoby",
+          "update": "przegrupowano osoby"
+        },
+        "delete": "usunięto osobę",
+        "update": "zaktualizowano osobę",
+        "unassign": "usunięto przypisanie śladu z {replaceObj} z",
+        "updateBySync": "zostało zaktualizowano w synchronizacji",
+        "createBySync": "zostało utworzone w synchronizacji",
+        "create": "utworzono osobę",
+        "plugin": "utworzono osobę w synchronizacji",
+        "massImport": "utworzono osobęz masowego importu",
+        "view": "otwarto osobę",
+        "search": "wyszukano osoby zdjęciem",
+        "approved": "zatwierdzono osobę",
+        "declined": "odrzucono osobę",
+        "pending": "wysłano osobę do HQ:"
+      },
+      "timeProfile": {
+        "delete": "usunięto profil czasowy",
+        "update": "zaktualizowano profil czasowy",
+        "create": "utworzono profil czasowy"
+      },
+      "settings": {
+        "updateSettings": "zaktualizowano ustawienia",
+        "enable": "włączono ustawienia dla",
+        "disable": "wyłączono ustawienia dla",
+        "entityName": {
+          "gdprMode": "zasłanianie twarzy",
+          "privacyMode": "zapisywanie wyłącznie detekcji alarmowych"
+        }
+      },
+      "search": {
+        "search": "wykonano wyszukiwanie",
+        "searchDivider": " i ",
+        "searchBy": "wykonano wyszukiwanie {actionAttributes}",
+        "searchByImage": "zdjęciem",
+        "searchBySubject": "wybraną osobą",
+        "searchBySubjects": "grupą osób",
+        "associationSearch": "powiązaniami"
+      },
+      "ignore": {
+        "create": "dodano element do grupy ignorowanych",
+        "update": "zmodyfikowano element w grupie ignorowanych",
+        "delete": "usunięto element z grupy ignorowanych",
+        "bulk": {
+          "delete": "usunięto wiele elementów z grupy ignorowanych"
+        }
+      },
+      "ldapGroup": {
+        "delete": "usunięto grupę LDAP",
+        "create": "utworzono grupy LDAP",
+        "update": "zaktualizowano grupę LDAP"
+      },
+      "license": {
+        "activate": "zaktywowano licencję",
+        "activateFailed": "nie udało się zaktywować licencji"
+      },
+      "createSubject": "utworzono osobę",
+      "updateSubject": "zaktualizowano osobę",
+      "createEntity": "utworzono strefę",
+      "updateEntity": "zaktualizowano strefę",
+      "deleteEntity": "usunięto strefę"
+    }
+  },
+  "saml": {
+    "title": "pojedyncze logowanie SAML",
+    "settings": {
+      "title": "Ustawienia",
+      "enableSaml": {
+        "title": "Włącz SAML",
+        "description": "Umożliwia uwierzytelnianie i autoryzację we współpracy z zewnętrzną bazą danych.",
+        "active": "Aktywne",
+        "disabled": "Wyłączone"
+      },
+      "idpUrl": {
+        "title": " IDP URL",
+        "description": "Użytkownicy będą przekierowywani do tego URL usługi uwierzytelniającej, kiedy będą się logować do systemu."
+      },
+      "idpIssuer": {
+        "title": " IDP Entity ID",
+        "description": "Jest to unikalny, wrażliwy na wielkość liter, identyfikator usługi uwierzytelniania. Zweryfikuj, czy wprowadzona wartość jest zgodna z Entity ID skonfigurowanym u dostawcy usługi."
+      },
+      "issuer": {
+        "title": " SP Entity ID",
+        "description": "Jest to unikalny, wrażliwy na wielkość liter, identyfikator dostawcy usługi uwierzytelniania. Jeśli skonfigurowano dostawcę, proszę się upewnić, że wprowadzone ID jest zgodne ze skonfigurowanym u dostawcy usługi."
+      },
+      "certificate": {
+        "title": "Certyfikat",
+        "description": "Wprowadź swój certyfikat dostarczony przez dostawcę usługi uwierzytelniania SAML."
+      },
+      "signatureAlgorithm": {
+        "title": "Algorytm podpisywania",
+        "description": "Jest to algorytm używany do podpisywania komunikatów wymienianych z usługą SAML."
+      },
+      "userGroup": {
+        "title": "Domyślna grupa użytkowników",
+        "description": "Grupa użytkowników określa, do których zasobów użytkownik ma uprawnienia dostępu. Proszę wybrać domyślną grupę dla wszystkich zaimportowanych użytkowników. Po pierwszym zalogowaniu się użytkownika Administrator może przenieść go do innej grupy."
+      },
+      "saveSettings": "Zapisz ustawienia",
+      "failedToSaveSettings": "Nie powiodła się zmiana konfiguracji SAML",
+      "successUpdateSettings": "Ustawienia zostały zaktualizowano",
+      "failUpdateSettings": "Nie powiodła się aktualizacja ustawień. Proszę spróbować ponownie",
+      "savedSuccessfully": "Konfiguracja SAML została zapisana",
+      "issuerCantMatch": "IDP Entity ID nie może być takie samo, jak SP Entity ID, powinno być unikalne",
+      "idpIssuerCantMatch": "SP Entity ID nie może być takie samo, jak IDP Entity ID, powinno być unikalne",
+      "userGroupRequired": "Grupa użytkownika jest wymaganym polem"
+    },
+    "info": {
+      "title": "Aby włączyć SAML, proszę wprowadzić te szczegóły u dostawcy usługi uwierzytelniania SAML",
+      "roleHint": "Uwaga: domyślna rola, która zostanie przypisana do użytkownika, to obserwator. Możesz ustawić inne role w sekcji Konta użytkowników.",
+      "acs": {
+        "title": "ACS URL",
+        "description": "To jest adres usługi, na który dostawca powinien przekierować logowanie inicjowane poprzez IdP."
+      },
+      "fields": {
+        "title": "Pola",
+        "description": "Aby wspierać integrację z systemem, proszę skonfigurować następujące pola u dostawcy usługi uwierzytelniania SAML.",
+        "nameID": "nameID (unikalny identyfikator)",
+        "username": "username",
+        "lastName": "lastName",
+        "firstName": "firstName",
+        "mail": "email"
+      },
+      "downloadCertificate": "publiczny certyfikat",
+      "downloadMetadata": "metadane"
+    }
+  },
+  "activeDirectory": {
+    "title": "Active Directory",
+    "addLdap": "Dodaj integrację LDAP",
+    "description": "Wygląda na to, że nie masz skonfigurowanej wtyczki AD. Kliknij przycisk, aby rozpocząć konfigurowanie.",
+    "adActivation": "Aktywacja AD",
+    "sso": "SSO",
+    "ssoDescription": "Umożliwia użytkownikowi zalogowanie się pojedynczym ID używając baz danych AD",
+    "active": "Aktywna",
+    "disabled": "Wyłączona",
+    "usersGroup": "Grupy użytkowników",
+    "descriptionColumn": "Opis",
+    "role": "Rola",
+    "errors": {
+      "failedToSaveSettings": "Nie powiodło się zapisywanie ustawień",
+      "failedToDeleteGroup": "Nie powiodło się usuwanie grupy LDAP",
+      "failedToDeleteLdap": "Nie powiodło się usuwanie konfiguracji LDAP",
+      "failedToUpdateGroup": "Nie powiodło się aktualizowanie grupy LDAP"
+    },
+    "dropDownTitles": {
+      "delete": "usuń"
+    },
+    "deleteAlertGroup": "Czy na pewno chcesz usunąć tę grupę?",
+    "deleteAlertLdap": "Czy na pewno chcesz usunąć tę konfigurację LDAP?",
+    "importedGroups": "Zaimportowane grupy",
+    "addNewGroup": "Dodaj inną grupę"
+  },
+  "ldapWizard": {
+    "connectTitle": "Dodaj integrację LDAP",
+    "title": "Dodaj integrację LDAP",
+    "editTitleConnect": "Edytuj integrację LDAP",
+    "groupsTitle": "Dodaj grupy AD",
+    "continue": "kontynuuj",
+    "save": "zapisz",
+    "addSelectedGroups": "Dodaj {groupsNumber} grup",
+    "addSingleGroup": "Dodaj {groupsNumber} grup",
+    "loadingGroups": {
+      "title": "Zapisywanie wybranych grup...",
+      "message": "Proszę czekać, ukończenie może zająć trochę czasu."
+    },
+    "loadingConnect": {
+      "title": "Podłączanie do AD...",
+      "message": "Proszę czekać, ukończenie może zająć trochę czasu."
+    },
+    "connect": {
+      "title": "Podłącz do LDAP",
+      "description": "LDAP (Lightweight Directory Access Protocol) jest otwartym i wieloplatformowym protokołem używanym do uwierzytelniania w usługach katalogowych. LDAP zapewnia aplikacjom wspólny język, którego mogą używać do komunikacji z usługami katalogowymi.",
+      "address": "Adres",
+      "port": "Port",
+      "username": "Nazwa użytkownika",
+      "bindAttribute": "Atrybut powiązania",
+      "password": "Hasło",
+      "searchBase": "Baza wyszukiwania",
+      "searchFilter": "Filtr wyszukiwania",
+      "groupSearchBase": "Baza wyszukiwania grup",
+      "userGroup": "Grupa użytkowników",
+      "userGroupDescription": "Grupy użytkowników określają, do których zasobów użytkownik ma uprawnienia dostępu. Proszę wybrać domyślną grupę dla wszystkich zaimportowanych użytkowników. Po pierwszym zalogowaniu się użytkownika Administrator może przenieść go do innej grupy.",
+      "groupSearchFilter": "Filtr wyszukiwania grup",
+      "addressValidation": "Musi być w formacie LDAP (ldap://<ip>)",
+      "portValidation": "Minimalna długość 2",
+      "portTypeValidation": "Port musi być numerem",
+      "minimumValidation": "Minimalna długość 2",
+      "filterRegex": "Musi pasować formatem jako {regex}",
+      "required": "{key} jest wymaganym polem",
+      "sections": {
+        "server": "Szczegóły serwera",
+        "admin": "Szczegóły administracyjne",
+        "search": "Szczegóły wyszukiwania",
+        "userGroup": "Domyślna grupa użytkowników"
+      },
+      "connectError": "Ups! Połączenie nie powiodło się, proszę sprawdzić wszystkie ustawienia i spróbować ponownie"
+    },
+    "groups": {
+      "title": "Szukaj i wybierz grupy AD",
+      "usersGroup": "Grupy użytkowników",
+      "description": "Opis",
+      "role": "Role",
+      "searchBase": "Baza wyszukiwania",
+      "search": "Wyszukiwanie",
+      "searchFilter": "Filtr wyszukiwania",
+      "selectRole": "Wybierz rolę",
+      "searchError": "Nie powiodło się wyszukiwanie grup",
+      "searchFilterHelper": "Dostępne wartości:\n(objectclass=group),(objectclass=groupOfNames),(objectclass=posixGroup)",
+      "groupsError": "Nie powiodło się zapisywanie grup",
+      "performSearch": "Użyj funkcji wyszukiwania,\naby zaimportować i wybrać nowe grupy do zapisania",
+      "emptyState": "Niestety nie ma żadnych rezultatów pasujących do tego zapytania. Proszę spróbować innego filtra lub bazy wyszukiwania."
+    }
+  },
+  "roles": {
+    "systemAdministrator": "Administrator systemu",
+    "systemManager": "Menedżer systemu",
+    "accessManager": "Menedżer dostępu",
+    "accessViewer": "Obserwator dostępu",
+    "tabletOperator": "Operator tableta",
+    "subAdmin": "Prawie Admin",
+    "superAdmin": "Super Admin",
+    "admin": "Admin",
+    "superOperator": "Super Operator",
+    "operator": "Operator",
+    "viewer": "Obserwator"
+  },
+  "InquiryPage": {
+    "inquiryCases": "Sprawy dochodzeniowe",
+    "addNew": " + Dodaj nową sprawę",
+    "name": "Nazwa",
+    "createdAt": "Data utworzenia",
+    "eventDate": "Czas zdarzenia",
+    "priority": "Priorytet",
+    "files": "Pliki",
+    "cameras": "Kamery",
+    "high": "Wysoki",
+    "medium": "Średni",
+    "low": "Niski",
+    "startLabel": "Od",
+    "endLabel": "Do",
+    "ssfPlaceholder": "Dodaj tag, aby filtrować lub wpisz tekst, aby wyszukać",
+    "detections": "Detekcje",
+    "recognitions": "Rozpoznania",
+    "uploadProgress": "Status wysyłania",
+    "analysisProgress": "Status analizy",
+    "detectionCell": "detekcja",
+    "detectionsCell": "detekcje",
+    "recognitionCell": "rozpoznanie",
+    "recognitionsCell": "rozpoznania",
+    "stopAnalysis": "Zatrzymaj analizę",
+    "viewCase": "Pokaż sprawę",
+    "searchCase": "Szukaj w sprawie",
+    "reportCase": "Raport ze sprawy",
+    "editCase": "Edytuj sprawę",
+    "caseSubjectGroup": "Lista osób w sprawie",
+    "stopUpload": "Zatrzymaj wysyłanie",
+    "deleteCase": "Usuń",
+    "showResults": "Pokaż rezultaty",
+    "replayCase": "Powtórz analizę",
+    "notifications": {
+      "failedToGetCases": "Nie powiodło się pobieranie spraw",
+      "failedToStopAnalysis": "Nie powiodło się zatrzymanie analizy",
+      "failedToClearDetections": "Nie powiodło się czyszczenie detekcji",
+      "failedToDeleteCase": "Nie powiodło się usuwanie sprawy",
+      "failedToReplayCase": "Nie powiodło się powtórzenie analizy",
+      "failedToCreateCase": "Nie powiodło się utworzenie sprawy",
+      "succeededToDeleteCase": "Sprawa została usunięta",
+      "succeededToReplayCase": "Powtórka analizy została uruchomiona",
+      "succeededToClearDetections": "Usunięto detekcje w sprawie",
+      "cannotReplayCaseWithDeletedFile": "Nie można powtórzyć analizy. Plik został usunięty."
+    },
+    "clearDetectionsTitle": "Wyczyść detekcje w zatrzymanej sprawie",
+    "clearDetectionsContent": "Czy chcesz wyczyścić detekcje w sprawie - {name}?",
+    "clearDetectionsConfirmText": "Usuń detekcje",
+    "clearDetectionsCancelText": "Zatrzymaj detekcje",
+    "deleteCaseTitle": "Usuń sprawę",
+    "deleteCaseContent": "Czy na pewno chcesz usunąć sprawę - {name}?",
+    "filters": {
+      "detectionsLower": "Licznik detekcji jest mniejszy niż",
+      "detectionsHigher": "Licznik detekcji jest większy niż",
+      "recognitionsLower": "Licznik rozpoznań jest mniejszy niż",
+      "recognitionsHigher": "Licznik rozpoznań jest większy niż"
+    },
+    "status": {
+      "inProgress": "W toku",
+      "inQueue": "W kolejce",
+      "complete": "Ukończone",
+      "done": "Zakończone",
+      "empty": "- - -"
+    }
+  },
+  "uiComponents": {
+    "table": {
+      "dialogHeader": "Zarządzanie kolumnami",
+      "saveButton": "Zapisz",
+      "noResultsFound": "Nie znaleziono rezultatów",
+      "noResultsMessage": "Proszę spróbować dostosować parametry wyszukiwania",
+      "results": "Rezultat(ów)",
+      "showHideColumns": "Pokaż/Ukryj kolumnny",
+      "selected": "Wybrane",
+      "yes": "Tak",
+      "no": "Nie",
+	    "itemsSelected": "TODO: Items Selected"
+    },
+    "dialogWizard": {
+      "finish": "Zakończ",
+      "cancel": "Anuluj",
+      "next": "Następny",
+      "step": "etap",
+      "stepOutOf": "z"
+    },
+    "textField": {
+      "none": "Brak"
+    },
+    "dropDown": {
+      "itemSelected": "Wybrany element",
+      "itemsSelected": "Wybrane elementy",
+      "selectOption": "Wybierz",
+      "label": "Etykieta",
+      "noResultsFound": "Nie znaleziono rezultatów"
+    },
+    "resultsIndicator": {
+      "completed": "Ukończone",
+      "inQueue": "W kolejce",
+      "stopped": "Zatrzymane",
+      "done": "Zakończone",
+      "failed": "Nieudane"
+    },
+    "progressWithIndicator": {
+      "processing": "Przetwarzanie"
+    },
+    "dateAndTimePicker": {
+      "dateAndTime": "Data i czas"
+    },
+    "timePicker": {
+      "time": "Czas"
+    },
+    "datePicker": {
+      "date": "Data"
+    },
+    "rangeSlider": {
+      "start": "Początek",
+      "end": "Koniec"
+    },
+    "tree": {
+      "search": "Wyszukiwanie",
+      "item": "Element",
+      "items": "Elementy",
+      "listIsEmpty": "Lista jest pusta",
+      "selectNone": "Wyczyść wszystkie",
+      "selectAll": "Wybierz wszystkie",
+      "collapseAll": "Zwiń wszystkie",
+      "expandAll": "Rozwiń wszystkie",
+      "selected": "Wybrano",
+      "clearSearch": "Wyczyść",
+      "noResultsFound": "Nie znaleziono rezultatów"
+    },
+    "toastMessage": {
+      "undo": "Cofnij"
+    },
+    "autocomplete": {
+      "selectOption": "TODO: select option",
+      "label": "TODO: label",
+      "noResultsFound": "TODO: No Results"
+    },
+    "dynamicFilterDateTime": {
+      "fromDatePickerLabel": "TODO: From Date & Time",
+      "toDatePickerLabel": "TODO: To Date & Time",
+      "DateTimeSubLabel": "TODO: Specific Time",
+      "DateTimeDurationSubLabel": "TODO: During the Last",
+      "DateTimeDurationDropdownLabel": "TODO: Duration",
+      "days": "TODO: Days",
+      "hours": "TODO: Hours",
+      "minutes": "TODO: Minutes"
+    },
+    "dynamicFilterListFilter": {
+      "title": "TODO: Filter",
+      "searchPlaceholder": "TODO: Search",
+      "selectAll": "TODO: Select All/None",
+      "loading": "TODO: Loading...",
+      "noResults": "TODO: No Results"
+    },
+    "dynamicFilterMenu": {
+      "applyBtn": "TODO: Apply"
+    },
+    "selectMenu": {
+      "itemsSelected": "TODO: Items Selected",
+      "selectOption": "TODO: Select Option",
+      "defaultLabel": "TODO: Label"
+    }
+  },
+  "oldUIComponents": {
+    "error": "Błąd",
+    "noMatches": "Nie udało się znaleźć dopasowania",
+    "searchSuspect": "Szukaj podejrzanego",
+    "loadingMessage": "Ładowanie, proszę czekać.",
+    "signOut": "Wyloguj",
+    "submit": "Wyślij",
+    "markAllAsRead": "Oznacz wszystkie jako przeczytane",
+    "notifications": "Powiadomienia",
+    "displayVideoError": "Nie można wyświetlić wideo",
+    "showHideColumns": "Pokaż/Ukryj kolumny",
+    "select": {
+      "selectAll": "Wybierz wszystkie opcje",
+      "unSelectAll": "Wyczyść wszystkie opcje",
+      "noOptionsToSelect": "Nie ma opcji do wybrania",
+      "selectedOption": "Wybierz"
+    },
+    "video": {
+      "message": {
+        "error": "Nie można wyświetlić wideo",
+        "loading": "Ładowanie wideo, proszę czekać ..."
+      }
+    },
+    "date": {
+      "months": {
+        "january": "Styczeń",
+        "february": "Luty",
+        "march": "Marzec",
+        "april": "Kwiecień",
+        "may": "Maj",
+        "june": "Czerwiec",
+        "july": "Lipiec",
+        "august": "Sierpień",
+        "september": "Wrzesień",
+        "october": "Październik",
+        "november": "Listopad",
+        "december": "Grudzień"
+      },
+      "days": {
+        "sunday": "Niedziela",
+        "monday": "Poniedziałek",
+        "tuesday": "Wtorek",
+        "wednesday": "Środa",
+        "thursday": "Czwartek",
+        "friday": "Piątek",
+        "saturday": "Sobota"
+      }
+    },
+    "avDataTable": {
+      "itemSelected": "Wybrany element",
+      "itemsSelected": "Wybrane elementy",
+      "customizeColumn": "Dostosuj kolumny",
+      "save": "Zapisz"
+    },
+    "table": {
+      "all": "Wszystkie ",
+      "clearSelection": "Wyczyść zaznaczenie",
+      "areSelected": "{{ all }} {{ totalItems }} {{ itemsName }} są wybrane.",
+      "itemSelected": "1 {{ itemName }} jest wybrany.",
+      "pageSelected": "Wszystkie {{ totalItems }} {{ itemsName }} na tej stronie są wybrane.",
+      "itemOnPageSelected": "1 {{ itemName }} na tej stronie jest wybrany.",
+      "selectAll": "Wybierz wszystkie {{ totalItems }} {{ itemsName }}",
+      "addItem": "Dodaj {{ itemName }}",
+      "noItems": "Nie znaleziono {{ itemsName }}",
+      "importItem": "Importuj {{ itemName }}",
+      "action": "Akcje",
+      "export": "Eksportuj",
+      "columnMenu": "Pokaż/Ukryj kolumny",
+      "filter": "Filtruj",
+      "actionMenu": "Menu akcji",
+      "edit": "Edytuj",
+      "clone": "Klonuj",
+      "titleWithClone": "clone_{{ title }}",
+      "delete": "Usuń",
+      "notifications": {
+        "success": "{{ itemName }} {{ action }} z sukcesem",
+        "fail": "Nie powiodło się {{ itemName }} {{ action }}"
+      },
+      "deleteItemDialog": {
+        "title": "Usuń {{ itemName }}",
+        "content": "Czy na pewno chcesz usunąć",
+        "deleteConfirmButton": "Usuń"
+      }
+    },
+    "avTextSwitch": {
+      "enabled": "Włączone",
+      "disabled": "Wyłączone"
+    },
+    "avImageSelector": {
+      "featuresQuality": {
+        "pass": {
+          "label": "OK",
+          "description": "Wystarczająco dobre zdjęcie"
+        },
+        "poor": {
+          "label": "Złe",
+          "description": "Niewystarczająco dobre zdjęcie:\nProszę wysłać nowe zdjęcie\nz odpowiednim oświetleniem\ni twarzą skierowaną na wprost\nw kierunku kamery"
+        }
+      },
+      "objectType": {
+        "1": {
+          "label": "Twarz"
+        },
+        "2": {
+          "label": "Sylwetka"
+        }
+      },
+      "markAsMain": "Oznacz jako zdjęcie główne",
+      "deletePhoto": "Usuń zdjęcie",
+      "imageDeprecated": "Cechy tego zdjęcia są przestarzałe"
+    },
+    "avTrack": {
+      "poi": "POI",
+      "nPlus": "N + {{ proximity }}",
+      "sec": "Sek",
+      "min": "Min",
+      "hr": "Godz"
+    }
+  },
+  "massImportDuplication": {
+    "subjectImage": "zdjęcie osoby",
+    "newImage": "nowe zdjęcie",
+    "newImageName": "nazwa nowego zdjęcia",
+    "subjectName": "nazwa osoby",
+    "subjectGroups": "grupy osób",
+    "score": "wynik",
+    "action": "akcja",
+    "uploadDate": "Data wysłania",
+    "issues": "Uwagi",
+    "applyBtn": "ZASTOSUJ",
+    "massImportProgress": "Progres masowego importu",
+    "resolveTypes": {
+      "addToExisting": "Dodaj zdjęcie do istniejącej osoby",
+      "addAsNewSubject": "Dodaj jako nową osobę",
+      "replaceImage": "Podmień stare zdjęcie referencyjne",
+      "doNotAdd": "Nie dodawaj tej osoby"
+    },
+    "errors": {
+      "failedFetchDataSubjectGroups": "Nie powiodło się pobieranie grup osób",
+      "failedFetchMassImportIssuesData": "Nie powiodło się pobieranie uwag do masowego importu",
+      "failedRemoveIssues": "Nie powiodło się usuwanie uwag masowego importu",
+      "failedAddOtherImageIssues": "Nie powiodło się dodawanie innych zdjęć w uwagach do masowego importu",
+      "failedCreateNewSubjectIssues": "Nie powiodło się utworzenie nowej osoby w uwagach do masowego importu",
+      "failedSetPrimaryImageIssues": "Nie powiodło się ustawianie głównego zdjęcia w uwagach do masowego importu",
+      "failedGetMassImportById": "Nie powiodło się pobieranie danych masowego importu",
+      "failedUpdateIssues": "Nie powiodło się aktualizowanie uwag masowego importu"
+    },
+    "filters": {
+      "all": "Wszystkie",
+      "title": "Filtruj rezultaty",
+      "resetBtn": "RESETUJ",
+      "subjectGroupsDropdownTitle": "Grupa osób",
+      "issuesDropdownTitle": "Uwagi",
+      "newImageQualityDropdownTitle": "Jakość nowego zdjęcia",
+      "subjectImageQualityDropdownTitle": "Jakość zdjęcia osoby",
+      "issues": {
+        "NO_FACE_DETECTED": "Nie wykryto twarzy",
+        "IMAGE_DUPLICATION": "Duplikat zdjęcia",
+        "NAME_DUPLICATION": "Duplikat nazwy"
+      },
+      "imageQuality": {
+        "POOR": "Złe",
+        "PASS": "OK"
+      },
+      "thresholdRangeTitle": "Zakres wyników"
+    },
+    "popups": {
+      "noDescription": "Brak opisu",
+      "otherImages": "Inne zdjęcia",
+      "totalGroups": "Liczba grup",
+      "subjects": "osoby",
+      "alwaysUnauthorized": "Zawsze nieautoryzowani",
+      "alwaysAuthorized": "Zawsze autoryzowani",
+      "conditionalUnauthorized": "Warunkowa autoryzacja",
+      "conditionalAuthorized": "Warunkowa autoryzacja",
+      "subject": "osoba",
+      "otherImportImages": "inne importowane zdjęcia"
+    }
+  }
+}

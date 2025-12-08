@@ -16,15 +16,14 @@ Automated data population script for OnWatch on-premise software. This tool auto
 - **Inquiries Configuration** (Step 8): Inquiry case creation with file uploads and custom file configuration (ROI, threshold)
 - **Mass Import** (Step 9): Mass import file upload (processing continues in background; issues may need manual resolution)
 - **Rancher Configuration** (Step 10): Kubernetes pod environment variables via Rancher REST API
+- **Translation File Upload** (Step 11): Translation file upload via SSH/SCP to device
 
 ### 🚧 Not Yet Implemented (Requires API Endpoints)
-- **File Uploads** (Step 11): Translation file and icons directory uploads - currently requires manual setup via bash script (no API endpoint available)
+- **Icons Directory Upload** (Step 11): Icons directory upload - currently requires manual setup (no API endpoint available)
 
 **Note**: This project uses **API-only approach** for all steps. All automation is done via REST API, GraphQL API, or Rancher REST API.
 
 ### 📋 Future Enhancements
-- **Translation File Upload** (Step 11): Currently requires manual bash script upload to service
-  - Future: Implement SSH/SCP upload or wait for API endpoint
 - **Icons Directory Upload** (Step 11): Currently requires manual setup
   - Future: Implement SSH/SCP upload or wait for API endpoint
 
@@ -54,17 +53,23 @@ Edit the `config.yaml` file with your settings:
    - Update `onwatch.ip_address` with your OnWatch system IP
    - Update credentials if different from defaults
 
-2. **Rancher Connection**:
+2. **SSH Connection** (for translation file upload):
+   - Update `ssh.ip_address` (usually same as onwatch IP)
+   - Update `ssh.username` and `ssh.password` if needed
+   - Update `ssh.translation_util_path` if script is in different location
+
+3. **Rancher Connection**:
    - Update `rancher.ip_address` and `port` if needed
    - Update credentials if different
 
-3. **KV Parameters**: Add/modify key-value pairs as needed
+4. **KV Parameters**: Add/modify key-value pairs as needed
 
-4. **System Settings**: Configure all system settings sections
+5. **System Settings**: Configure all system settings sections
+   - Set `system_interface.translation_file` to path of translation file (e.g., "assets/Polski-updated3.json.json")
 
-5. **Devices**: Add/modify camera configurations
+6. **Devices**: Add/modify camera configurations
 
-6. **Watch List**: 
+7. **Watch List**: 
    - Add subject names
    - Specify image file paths
    - Set group IDs or leave null for default group
@@ -119,6 +124,8 @@ The automation uses **API-only approach**:
    - Mass import status queries (query `getMassImportLists`) (Step 9)
 3. **Rancher REST API**: 
    - For setting Kubernetes pod environment variables (Step 10) - uses Rancher v3 API to update workload configurations
+4. **SSH/SCP**: 
+   - For uploading translation files (Step 11) - uses SSH to copy file to device and run translation-util script
 
 ## Customization
 
@@ -201,9 +208,10 @@ For issues or questions:
 - **Inquiries (Step 8)**: Inquiry case creation with file uploads, priority setting, and custom file configuration (ROI, threshold)
 - **Mass Import (Step 9)**: Mass import file upload (processing continues in background; check UI for status and manually resolve any issues if needed)
 - **Rancher (Step 10)**: Kubernetes pod environment variables configuration via Rancher REST API
+- **Translation File Upload (Step 11)**: Translation file upload via SSH/SCP to device
 
 ### 🚧 Steps Waiting for API Endpoints
-- **File Uploads (Step 11)**: Translation file and icons directory uploads - will log warning and skip (requires manual setup or future API endpoint)
+- **Icons Directory Upload (Step 11)**: Icons directory upload - will log warning and skip (requires manual setup or future API endpoint)
 
 **Note**: These steps will be implemented once API endpoints are available.
 
@@ -211,11 +219,11 @@ For issues or questions:
 - **Privacy/GDPR Settings**: `privacyMode` and `gdprMode` are intentionally NOT modified
 - **Mask Classifier**: `maskClassifier.access` is intentionally NOT modified
 - **Logo Source**: Automatically uses `assets/images/me.jpg` from "Yonatan" subject in watch_list
-- **Translation Files**: Currently requires manual upload via bash script (no API endpoint)
+- **Translation Files**: Uploaded via SSH/SCP (Step 11)
 
 ## Future Enhancements
 
-- Translation file upload via API or SSH/SCP
+- Icons directory upload via SSH/SCP (translation file upload already implemented)
 - Support for multiple environments (dev, staging, prod)
 - Dry-run mode to preview changes
 - Rollback functionality

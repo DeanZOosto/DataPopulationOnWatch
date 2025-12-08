@@ -12,6 +12,7 @@ import time
 from pathlib import Path
 from client_api import ClientApi
 from rancher_api import RancherApi
+from ssh_util import SSHUtil
 
 logging.basicConfig(
     level=logging.INFO,
@@ -1094,12 +1095,14 @@ class OnWatchAutomation:
     
     async def upload_files(self):
         """
-        Upload general files (translation files, icons directory).
+        Upload translation files via SSH/SCP (Step 11).
         
-        Note: This step is for translation files and icons directory uploads.
-        Currently, translation files are loaded via bash script to the service
-        as no API endpoint is available. This step will be implemented once
-        an API endpoint becomes available or SSH/SCP upload is added.
+        This method uploads translation files to the OnWatch device using:
+        1. SCP to copy file to /tmp/ on the device
+        2. SSH to run translation-util upload script
+        3. Provides file path when prompted by the script
+        
+        Icons directory upload is not yet implemented (requires API endpoint or additional SSH setup).
         """
         translation_file = self.config.get('system_settings', {}).get('system_interface', {}).get('translation_file', '')
         icons = self.config.get('system_settings', {}).get('system_interface', {}).get('icons', '')
@@ -1108,12 +1111,72 @@ class OnWatchAutomation:
             logger.info("No translation file or icons directory specified in config")
             return
         
-        logger.warning("File uploads (translation files, icons) require API endpoint - not yet implemented")
+        # Handle translation file upload
         if translation_file:
-            logger.info(f"Translation file configured: {translation_file} (requires manual upload via bash script)")
+            logger.info(f"Uploading translation file: {translation_file}")
+            
+            # Get SSH configuration
+            ssh_config = self.config.get('ssh', {})
+            if not ssh_config:
+                logger.error("SSH configuration not found in config.yaml")
+                logger.error("Translation file upload requires SSH configuration")
+                return
+            
+            # Validate SSH config
+            required_ssh_fields = ['ip_address', 'username', 'translation_util_path']
+            missing_fields = [field for field in required_ssh_fields if not ssh_config.get(field)]
+            if missing_fields:
+                logger.error(f"Missing required SSH configuration fields: {', '.join(missing_fields)}")
+                return
+            
+            # Get project root for resolving relative paths
+            project_root = os.path.dirname(os.path.abspath(__file__))
+            
+            # Resolve translation file path
+            if os.path.isabs(translation_file):
+                local_file_path = translation_file
+            else:
+                local_file_path = os.path.join(project_root, translation_file)
+            
+            if not os.path.exists(local_file_path):
+                logger.error(f"Translation file not found: {local_file_path}")
+                return
+            
+            try:
+                # Initialize SSH utility
+                ssh_util = SSHUtil(
+                    ip_address=ssh_config['ip_address'],
+                    username=ssh_config['username'],
+                    password=ssh_config.get('password'),
+                    ssh_key_path=ssh_config.get('ssh_key_path')
+                )
+                
+                # Upload translation file
+                # Use sudo_password if specified, otherwise fall back to SSH password
+                sudo_password = ssh_config.get('sudo_password')
+                if not sudo_password:
+                    sudo_password = ssh_config.get('password')
+                
+                success = ssh_util.upload_translation_file(
+                    local_file_path=local_file_path,
+                    translation_util_path=ssh_config['translation_util_path'],
+                    sudo_password=sudo_password
+                )
+                
+                if success:
+                    logger.info(f"✓ Successfully uploaded translation file: {translation_file}")
+                else:
+                    logger.error("Failed to upload translation file")
+                    raise Exception("Translation file upload failed")
+                    
+            except Exception as e:
+                logger.error(f"Error uploading translation file: {e}")
+                raise
+        
+        # Handle icons directory (not yet implemented)
         if icons:
-            logger.info(f"Icons directory configured: {icons} (requires manual upload)")
-        logger.info("See config.yaml comments for manual setup instructions")
+            logger.warning("Icons directory upload is not yet implemented")
+            logger.info(f"Icons directory configured: {icons} (requires manual upload or future implementation)")
     
     async def run(self):
         """Run the complete automation process."""
