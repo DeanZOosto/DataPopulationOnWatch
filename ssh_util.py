@@ -1,12 +1,10 @@
 """
 SSH utility for uploading translation files to OnWatch device.
 """
-import subprocess
 import os
 import logging
 import time
 import paramiko
-from io import StringIO
 
 logger = logging.getLogger(__name__)
 
