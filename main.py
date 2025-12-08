@@ -484,8 +484,8 @@ class OnWatchAutomation:
                     logger.info(f"Created default group with ID: {default_group_id}")
                     # Update group_map with the newly created group
                     group_map["Default Group"] = default_group_id
-        except Exception as e:
-                logger.warning(f"Could not create default group: {e}")
+                except Exception as e:
+                    logger.warning(f"Could not create default group: {e}")
         
         for subject in watch_list:
             try:
