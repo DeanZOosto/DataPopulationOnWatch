@@ -273,17 +273,17 @@ class SSHUtil:
             time.sleep(1)
             shell.recv(1024)  # Clear any output
             
-            # Step 4: Run translation-util upload (no sudo needed, we're already root)
-            logger.info(f"Running: {script_name} upload (as root)")
-            shell.send(f"{script_name} upload\n")
+            # Step 4: Run ./translation-util upload (no sudo needed, we're already root)
+            logger.info(f"Running: ./{script_name} upload (as root)")
+            shell.send(f"./{script_name} upload\n")
             time.sleep(1)
             
-            # Step 5: Wait for script to show available files and prompt for file input
-            logger.info("Waiting for translation-util script to start and show file prompt...")
-            prompt_found = False
+            # Step 5: Wait for script to show "Current Translation Files Available" and "Please Enter Translation File To Upload:"
+            logger.info("Waiting for translation-util script output...")
             output = ""  # Reset output buffer for script output
+            prompt_found = False
             
-            # Continue reading output until we see the file input prompt
+            # Continue reading output until we see the exact prompt
             for attempt in range(20):
                 time.sleep(0.5)
                 chunk = shell.recv(4096).decode('utf-8', errors='ignore')
@@ -291,22 +291,15 @@ class SSHUtil:
                     output += chunk
                     logger.debug(f"Reading script output (attempt {attempt+1}): {chunk[:200]}")
                 
-                # Look for the specific prompt - user said "provide the file"
-                # Check for various possible prompts
-                if any(phrase in output for phrase in [
-                    "Please Enter Translation File To Upload",
-                    "Please Enter",
-                    "provide the file",
-                    "Enter Translation File",
-                    "Enter file"
-                ]):
+                # Look for the exact prompt: "Please Enter Translation File To Upload:"
+                if "Please Enter Translation File To Upload" in output:
                     logger.info("File input prompt detected!")
                     logger.info(f"Full script output:\n{output}")
                     prompt_found = True
                     break
                 
                 # Also check if script has started showing available files
-                if "Current Translation Files Available" in output or "Translation Files Available" in output:
+                if "Current Translation Files Available" in output:
                     logger.info("Script is showing available files, waiting for input prompt...")
                     # Continue waiting for the prompt
             
@@ -315,10 +308,11 @@ class SSHUtil:
                 logger.info(f"Script output before sending file path:\n{output}")
             
             if not prompt_found:
-                logger.warning("File input prompt not found, but proceeding anyway...")
+                logger.warning("File input prompt 'Please Enter Translation File To Upload:' not found")
+                logger.warning("Proceeding anyway, but upload may fail...")
             
-            # Step 6: Provide the entire file path from /tmp/ to .json.json
-            logger.info(f"Providing full file path: {remote_tmp_path}")
+            # Step 6: Provide the exact file path: /tmp/Polski-updated3.json.json
+            logger.info(f"Providing file path: {remote_tmp_path}")
             shell.send(f"{remote_tmp_path}\n")
             time.sleep(3)  # Wait for processing
             
