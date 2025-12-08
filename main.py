@@ -782,20 +782,20 @@ class OnWatchAutomation:
                         filename = os.path.basename(file_path)
                         
                         # Resolve file path - always relative to project root
-                        # Supports paths like: "videos/Neo.mp4", "Neo.mp4", or absolute paths
+                        # Supports paths like: "assets/videos/Neo.mp4", "Neo.mp4", or absolute paths
                         full_file_path = None
                         if os.path.isabs(file_path):
                             # Absolute path provided
                             full_file_path = file_path
                         else:
                             # Relative path - resolve from project root
-                            # Try the path as-is first (e.g., "videos/Neo.mp4")
+                            # Try the path as-is first (e.g., "assets/videos/Neo.mp4")
                             relative_path = os.path.join(project_root, file_path)
                             if os.path.exists(relative_path):
                                 full_file_path = relative_path
                             else:
-                                # Try in videos directory (e.g., just "Neo.mp4" -> "videos/Neo.mp4")
-                                videos_path = os.path.join(project_root, 'videos', filename)
+                                # Try in assets/videos directory (e.g., just "Neo.mp4" -> "assets/videos/Neo.mp4")
+                                videos_path = os.path.join(project_root, 'assets', 'videos', filename)
                                 if os.path.exists(videos_path):
                                     full_file_path = videos_path
                                 else:

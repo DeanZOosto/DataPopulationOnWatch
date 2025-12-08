@@ -210,7 +210,7 @@ For issues or questions:
 ### Configuration Notes
 - **Privacy/GDPR Settings**: `privacyMode` and `gdprMode` are intentionally NOT modified
 - **Mask Classifier**: `maskClassifier.access` is intentionally NOT modified
-- **Logo Source**: Automatically uses `images/me.jpg` from "Yonatan" subject in watch_list
+- **Logo Source**: Automatically uses `assets/images/me.jpg` from "Yonatan" subject in watch_list
 - **Translation Files**: Currently requires manual upload via bash script (no API endpoint)
 
 ## Future Enhancements

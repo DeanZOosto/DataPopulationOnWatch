@@ -8,5 +8,5 @@ watch_list:
   subjects:
     - name: "Yonatan"
       images:
-        - path: "images/me.jpg"
+        - path: "assets/images/me.jpg"
       group: "Default Group"

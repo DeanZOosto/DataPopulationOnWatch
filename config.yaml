@@ -212,48 +212,48 @@ accounts:
 inquiries:
   - name: "upgrade test"
     files:
-      - path: "videos/Neo.mp4"
+      - path: "assets/videos/Neo.mp4"
         settings: "DEFAULT VALUES"
-      - path: "videos/Neo.webm"
+      - path: "assets/videos/Neo.webm"
         settings: "custom"  # Special config: ROI (Top:15, Right:15, Bottom:22, Left:0), Threshold: 0.37
-      - path: "videos/regular_avi_1.avi"
+      - path: "assets/videos/regular_avi_1.avi"
         settings: "DEFAULT VALUES"
-      - path: "videos/regular_avi_2.avi"
+      - path: "assets/videos/regular_avi_2.avi"
         settings: "DEFAULT VALUES"
     priority: "Medium"
 
 # Mass Import
 mass_import:
   name: "mass import 43 subjects"
-  file_path: "mass-import/mass-import-43.tar"
+  file_path: "assets/mass-import/mass-import-43.tar"
 
 # Watch List - 5 subjects
 watch_list:
   subjects:
     - name: "Yonatan"
       images:
-        - path: "images/me.jpg"
-        - path: "images/me2.jpg"
+        - path: "assets/images/me.jpg"
+        - path: "assets/images/me2.jpg"
       group: "Default Group"
     
     - name: "crop 1"
       images:
-        - path: "images/Crop 1.jpg"
+        - path: "assets/images/Crop 1.jpg"
       group: "Default Group"
     
     - name: "crop 2"
       images:
-        - path: "images/Crop 2.jpg"
+        - path: "assets/images/Crop 2.jpg"
       group: "Default Group"
     
     - name: "women 1"
       images:
-        - path: "images/A05131_2025-02-02T14_45_36.jpg"
+        - path: "assets/images/A05131_2025-02-02T14_45_36.jpg"
       group: "Default Group"
     
     - name: "moderate 1"
       images:
-        - path: "images/image (3).jpg"
+        - path: "assets/images/image (3).jpg"
       group: "Default Group"
 
 # Future Enhancements (Not Yet Implemented)

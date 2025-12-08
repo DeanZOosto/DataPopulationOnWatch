@@ -50,19 +50,26 @@ automation.log
 # config.yaml
 # config-test-simple.yaml
 
-# Test files
-*.png
-*.jpg
-*.jpeg
-*.gif
-*.ico
-*.webm
-*.mp4
-*.avi
-*.tar
+# Debug screenshots (ignore debug PNGs)
+rancher_*.png
+kv_page_debug.png
+*_debug.png
+*_initial.png
+*_no_*.png
+*_error_*.png
+*_save_debug.png
 
-# But keep the images directory structure for reference
-!images/.gitkeep
+# Allow assets directory (images, videos, mass-import for default data)
+!assets/
+!assets/**/*.jpg
+!assets/**/*.jpeg
+!assets/**/*.png
+!assets/**/*.gif
+!assets/**/*.ico
+!assets/**/*.webm
+!assets/**/*.mp4
+!assets/**/*.avi
+!assets/**/*.tar
 
 # Temporary files
 *.tmp
