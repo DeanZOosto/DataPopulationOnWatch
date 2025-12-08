@@ -11,9 +11,9 @@ Automated data population script for OnWatch on-premise software. This tool auto
 - **Logo Uploads**: Company, sidebar, and favicon logos (two-step upload process)
 - **Watch List**: Add subjects with multiple images via API
 - **Groups Configuration** (Step 4): Subject groups creation via POST API
+- **Accounts Configuration** (Step 5): User creation via POST API with role and user group mapping
 
 ### 🚧 Not Yet Implemented (Requires API Endpoints)
-- **Accounts Configuration** (Step 5): Waiting for API endpoint
 - **Devices/Cameras Configuration** (Step 7): Waiting for API endpoint
 - **Inquiries Configuration** (Step 8): Waiting for API endpoint
 - **Mass Import Upload** (Step 9): Waiting for API endpoint
