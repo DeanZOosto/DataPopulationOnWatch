@@ -233,7 +233,7 @@ inquiries:
 
 # Mass Import
 mass_import:
-  name: "mass import 43 subjects"
+  name: "mass-import 43"
   file_path: "assets/mass-import/mass-import-43.tar"
 
 # Watch List - 5 subjects
