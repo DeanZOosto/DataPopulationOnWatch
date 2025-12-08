@@ -390,12 +390,23 @@ class ClientApi:
                 group_type = 0
             
             # Get alertLevel UUID based on visibility
+            # Try to fetch from existing groups first, but if none exist (clean system), use defaults
             alert_level = self._get_alert_level_by_visibility(visibility)
             if not alert_level:
-                # Use a default alertLevel UUID if we can't find one
-                # This is a fallback - ideally we'd have the UUID
-                logger.warning(f"Using default alertLevel for visibility '{visibility}'")
-                alert_level = "00000000-0200-48f3-b728-10de4c0a906f"  # Default from example
+                # Use default alertLevel UUIDs based on visibility for clean system
+                # These are common defaults - may need adjustment based on your system
+                visibility_lower = visibility.lower() if visibility else ""
+                if visibility_lower == 'silent':
+                    alert_level = "00000000-0200-48f3-b728-10de4c0a906f"  # Default Silent
+                elif visibility_lower == 'visible':
+                    alert_level = "00000000-0200-40e7-a33e-5f290f69366e"  # Default Visible
+                elif visibility_lower == 'loud':
+                    alert_level = "00000000-0200-4a4b-a663-8a64251b0437"  # Default Loud
+                else:
+                    # Fallback to Silent if unknown
+                    alert_level = "00000000-0200-48f3-b728-10de4c0a906f"
+                    logger.warning(f"Unknown visibility '{visibility}', using default Silent alertLevel")
+                logger.info(f"Using default alertLevel for visibility '{visibility}' (clean system)")
             
             # If priority > 0, camera groups are required
             # If no camera groups provided and priority > 0, set priority to 0

@@ -214,14 +214,23 @@ class OnWatchAutomation:
         except Exception as e:
             logger.warning(f"Could not get groups: {e}")
         
-        # Try to create default group if none found
+        # Try to create default group if none found (for clean system)
         if not group_map and not default_group_id:
             try:
-                logger.info("No groups found, attempting to create default group...")
-                group_response = self.client_api.create_group("Default Group")
+                logger.info("No groups found, attempting to create default group for clean system...")
+                # Use create_subject_group with proper defaults for clean system
+                group_response = self.client_api.create_subject_group(
+                    name="Default Group",
+                    authorization="Always Unauthorized",
+                    visibility="Silent",
+                    priority=0,
+                    description="Default group created automatically"
+                )
                 if isinstance(group_response, dict):
                     default_group_id = group_response.get('id')
                     logger.info(f"Created default group with ID: {default_group_id}")
+                    # Update group_map with the newly created group
+                    group_map["Default Group"] = default_group_id
             except Exception as e:
                 logger.warning(f"Could not create default group: {e}")
         
