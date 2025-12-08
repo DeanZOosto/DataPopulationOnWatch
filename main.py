@@ -11,7 +11,7 @@ import logging
 import time
 from pathlib import Path
 from client_api import ClientApi
-from rancher_automation import RancherAutomation
+from rancher_api import RancherApi
 
 logging.basicConfig(
     level=logging.INFO,
@@ -1016,26 +1016,104 @@ class OnWatchAutomation:
         
         logger.info("Mass import configuration complete")
     
-    async def configure_rancher(self):
-        """Configure Rancher environment variables."""
+    def configure_rancher(self):
+        """
+        Configure Rancher environment variables via REST API (Step 10).
+        
+        This method uses the Rancher v3 REST API to update Kubernetes workload
+        environment variables. It:
+        1. Validates Rancher configuration from config.yaml
+        2. Authenticates with Rancher API
+        3. Extracts workload ID and project ID from config
+        4. Updates environment variables in the main container
+        
+        The workload_path in config.yaml can be used to automatically extract
+        the workload_id and project_id, or defaults are used.
+        
+        Raises:
+            Exception: If configuration is missing or API calls fail
+        """
         env_vars = self.config.get('env_vars', {})
         if not env_vars:
             logger.info("No Rancher environment variables to set")
             return
         
-        logger.info("Configuring Rancher environment variables...")
-        rancher_config = self.config['rancher']
-        async with RancherAutomation(
-            base_url=rancher_config.get('base_url', f"https://{rancher_config['ip_address']}:{rancher_config['port']}"),
-            username=rancher_config['username'],
-            password=rancher_config['password'],
-            headless=False
-        ) as rancher:
-            await rancher.set_environment_variables(env_vars)
+        rancher_config = self.config.get('rancher', {})
+        if not rancher_config:
+            logger.warning("Rancher configuration not found in config.yaml")
+            logger.warning("Skipping Rancher environment variable configuration")
+            return
+        
+        # Validate required Rancher config fields
+        required_fields = ['ip_address', 'port', 'username', 'password']
+        missing_fields = [field for field in required_fields if not rancher_config.get(field)]
+        if missing_fields:
+            logger.error(f"Missing required Rancher configuration fields: {', '.join(missing_fields)}")
+            logger.error("Skipping Rancher environment variable configuration")
+            return
+        
+        logger.info("Configuring Rancher environment variables via API...")
+        base_url = rancher_config.get('base_url') or f"https://{rancher_config['ip_address']}:{rancher_config['port']}"
+        
+        try:
+            # Initialize Rancher API client
+            rancher_api = RancherApi(
+                base_url=base_url,
+                username=rancher_config['username'],
+                password=rancher_config['password']
+            )
+            rancher_api.login()
+            
+            # Extract workload_id and project_id from workload_path if provided
+            # Default values for cv-engine workload
+            workload_id = "statefulset:default:cv-engine"
+            project_id = "local:p-p6l45"
+            
+            workload_path = rancher_config.get('workload_path', '')
+            if workload_path:
+                # Parse workload_path URL to extract IDs
+                # Format: /p/local:p-p6l45/workloads/run?launchConfigIndex=-1&namespaceId=default&upgrade=true&workloadId=statefulset%3Adefault%3Acv-engine
+                if 'workloadId=' in workload_path:
+                    import urllib.parse
+                    parsed = urllib.parse.parse_qs(urllib.parse.urlparse(workload_path).query)
+                    if 'workloadId' in parsed:
+                        workload_id = urllib.parse.unquote(parsed['workloadId'][0])
+                    if '/p/' in workload_path:
+                        project_id = workload_path.split('/p/')[1].split('/')[0]
+            
+            # Update environment variables in the workload
+            rancher_api.update_workload_environment_variables(
+                env_vars=env_vars,
+                workload_id=workload_id,
+                project_id=project_id
+            )
+            logger.info(f"✓ Successfully configured {len(env_vars)} environment variables in Rancher")
+        except Exception as e:
+            logger.error(f"Failed to configure Rancher environment variables: {e}")
+            raise
     
     async def upload_files(self):
-        """Upload files - API not yet available."""
-        logger.warning("File uploads require API endpoint - not yet implemented")
+        """
+        Upload general files (translation files, icons directory).
+        
+        Note: This step is for translation files and icons directory uploads.
+        Currently, translation files are loaded via bash script to the service
+        as no API endpoint is available. This step will be implemented once
+        an API endpoint becomes available or SSH/SCP upload is added.
+        """
+        translation_file = self.config.get('system_settings', {}).get('system_interface', {}).get('translation_file', '')
+        icons = self.config.get('system_settings', {}).get('system_interface', {}).get('icons', '')
+        
+        if not translation_file and not icons:
+            logger.info("No translation file or icons directory specified in config")
+            return
+        
+        logger.warning("File uploads (translation files, icons) require API endpoint - not yet implemented")
+        if translation_file:
+            logger.info(f"Translation file configured: {translation_file} (requires manual upload via bash script)")
+        if icons:
+            logger.info(f"Icons directory configured: {icons} (requires manual upload)")
+        logger.info("See config.yaml comments for manual setup instructions")
     
     async def run(self):
         """Run the complete automation process."""
@@ -1133,7 +1211,7 @@ def main():
             7: lambda: asyncio.run(automation.configure_devices()),
             8: lambda: asyncio.run(automation.configure_inquiries()),
             9: lambda: asyncio.run(automation.configure_mass_import()),
-            10: lambda: asyncio.run(automation.configure_rancher()),
+            10: lambda: automation.configure_rancher(),
             11: lambda: asyncio.run(automation.upload_files()),
         }
         if args.step in steps:

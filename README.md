@@ -15,23 +15,24 @@ Automated data population script for OnWatch on-premise software. This tool auto
 - **Devices/Cameras Configuration** (Step 7): Camera creation via GraphQL mutation with full configuration support
 - **Inquiries Configuration** (Step 8): Inquiry case creation with file uploads and custom file configuration (ROI, threshold)
 - **Mass Import** (Step 9): Mass import file upload (processing continues in background; issues may need manual resolution)
+- **Rancher Configuration** (Step 10): Kubernetes pod environment variables via Rancher REST API
 
 ### 🚧 Not Yet Implemented (Requires API Endpoints)
-- **Mass Import Upload** (Step 9): Waiting for API endpoint
-- **File Uploads** (Step 11): Waiting for API endpoint
+- **File Uploads** (Step 11): Translation file and icons directory uploads - currently requires manual setup via bash script (no API endpoint available)
 
-**Note**: This project uses **API-only approach**. UI automation has been removed. Once API endpoints are available, those steps will be implemented.
+**Note**: This project uses **API-only approach** for all steps. All automation is done via REST API, GraphQL API, or Rancher REST API.
 
 ### 📋 Future Enhancements
-- **Translation File Upload**: Currently requires manual bash script upload to service
-  - Translation file: `/Users/deanzion/Downloads/Polski-updated3.json.json`
+- **Translation File Upload** (Step 11): Currently requires manual bash script upload to service
+  - Future: Implement SSH/SCP upload or wait for API endpoint
+- **Icons Directory Upload** (Step 11): Currently requires manual setup
   - Future: Implement SSH/SCP upload or wait for API endpoint
 
 ## Prerequisites
 
 - Python 3.9 or higher
-- Access to OnWatch system
-- Access to Rancher UI (for Step 10 - when implemented)
+- Access to OnWatch system (REST API and GraphQL API)
+- Access to Rancher API (for Step 10 - Kubernetes workload configuration)
 
 ## Installation
 
@@ -116,8 +117,8 @@ The automation uses **API-only approach**:
    - Camera creation (mutation `createCamera`) (Step 7)
    - File media data updates (mutation `updateFileMediaData`) (Step 8)
    - Mass import status queries (query `getMassImportLists`) (Step 9)
-3. **Rancher Automation**: 
-   - For setting Kubernetes pod environment variables (Step 10 - when implemented)
+3. **Rancher REST API**: 
+   - For setting Kubernetes pod environment variables (Step 10) - uses Rancher v3 API to update workload configurations
 
 ## Customization
 
@@ -129,9 +130,9 @@ If your OnWatch API endpoints differ from the defaults, update them in `client_a
 - Face extraction endpoint
 - Groups endpoint
 
-### Rancher UI
+### Rancher API
 
-Rancher UI structure may vary by version. Update selectors in `rancher_automation.py` if needed.
+Rancher API (Step 10) uses the Rancher v3 REST API to update workload environment variables. Ensure Rancher credentials and environment variables are configured in `config.yaml`. The API client supports both token-based and basic authentication.
 
 ## Troubleshooting
 
@@ -168,7 +169,7 @@ python3 main.py 2>&1 | tee automation.log
 ## Notes
 
 - The script disables SSL verification for self-signed certificates
-- All automation is done via API calls (REST and GraphQL)
+- All automation is done via API calls (REST API, GraphQL API, and Rancher REST API)
 - Steps without API endpoints will log warnings and skip configuration
 - **Mass Import**: After uploading, processing continues in the background. You may need to manually resolve issues in the mass import report via the UI after processing completes.
 
@@ -199,9 +200,10 @@ For issues or questions:
 - **Devices (Step 7)**: Camera creation via GraphQL with full configuration (threshold, location, calibration, security access)
 - **Inquiries (Step 8)**: Inquiry case creation with file uploads, priority setting, and custom file configuration (ROI, threshold)
 - **Mass Import (Step 9)**: Mass import file upload (processing continues in background; check UI for status and manually resolve any issues if needed)
+- **Rancher (Step 10)**: Kubernetes pod environment variables configuration via Rancher REST API
 
 ### 🚧 Steps Waiting for API Endpoints
-- **File Uploads (Step 11)**: Will log warning and skip
+- **File Uploads (Step 11)**: Translation file and icons directory uploads - will log warning and skip (requires manual setup or future API endpoint)
 
 **Note**: These steps will be implemented once API endpoints are available.
 

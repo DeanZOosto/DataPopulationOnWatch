@@ -13,6 +13,9 @@ rancher:
   username: "admin"
   password: "admin"
   base_url: "https://10.1.71.14:9443"
+  # Workload URL path (relative to base_url) - update workloadId if needed
+  # Format: /p/local:p-p6l45/workloads/run?launchConfigIndex=-1&namespaceId=default&upgrade=true&workloadId=statefulset%3Adefault%3Acv-engine
+  workload_path: "/p/local:p-p6l45/workloads/run?launchConfigIndex=-1&namespaceId=default&upgrade=true&workloadId=statefulset%3Adefault%3Acv-engine"
 
 # KV Parameters (key-value settings)
 kv_parameters:
