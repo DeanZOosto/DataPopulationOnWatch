@@ -367,7 +367,7 @@ python3 main.py --list-steps
 
 **Error:** `Missing required section: 'onwatch'`
 
-**Solution:** Check that `config.yaml` exists and contains all required sections. Compare with `config.example.yaml`.
+**Solution:** Check that `config.yaml` exists and contains all required sections.
 
 ### Login Failed
 

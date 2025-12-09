@@ -60,7 +60,6 @@ onwatch:
   password: "${ONWATCH_PASSWORD}"  # Set: export ONWATCH_PASSWORD="your-password"
 ```
 
-See `config.example.yaml` for complete configuration template.
 
 ## What It Does
 
