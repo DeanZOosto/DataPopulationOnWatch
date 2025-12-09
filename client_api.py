@@ -270,6 +270,25 @@ class ClientApi:
             # Get existing images
             existing_images = current_subject.get("images", [])
             
+            # Ensure exactly one existing image is marked as primary
+            # Count how many existing images have isPrimary: True
+            primary_count = sum(1 for img in existing_images if img.get("isPrimary", False))
+            
+            if existing_images:
+                if primary_count == 0:
+                    # No primary image found - mark the first one as primary
+                    logger.debug(f"No primary image found in existing images, marking first image as primary")
+                    existing_images[0]["isPrimary"] = True
+                elif primary_count > 1:
+                    # Multiple primary images found - keep only the first one as primary
+                    logger.warning(f"Found {primary_count} primary images, keeping only the first one as primary")
+                    for i, img in enumerate(existing_images):
+                        img["isPrimary"] = (i == 0)
+                else:
+                    # Exactly one primary image - log for debugging
+                    primary_url = next((img.get("url", "unknown") for img in existing_images if img.get("isPrimary", False)), "unknown")
+                    logger.debug(f"Found existing primary image: {primary_url}")
+            
             # Build new image in the format expected by API
             # Based on user's example: includes backup, attributes, etc.
             new_image = {
@@ -298,6 +317,19 @@ class ClientApi:
                 new_image["feNetwork"] = data["feNetwork"]
             
             existing_images.append(new_image)
+            
+            # Validate that exactly one image is marked as primary before sending
+            final_primary_count = sum(1 for img in existing_images if img.get("isPrimary", False))
+            if final_primary_count != 1:
+                error_msg = f"Invalid primary image configuration: found {final_primary_count} primary images, expected exactly 1"
+                logger.error(error_msg)
+                logger.error(f"Images status: {[(img.get('url', 'unknown'), img.get('isPrimary', False)) for img in existing_images]}")
+                raise ValueError(error_msg)
+            
+            # Log which image is primary for debugging
+            primary_image = next((img for img in existing_images if img.get("isPrimary", False)), None)
+            if primary_image:
+                logger.debug(f"Primary image: {primary_image.get('url', 'unknown')}")
             
             # Update subject with all images - use update_subject pattern
             payload = {

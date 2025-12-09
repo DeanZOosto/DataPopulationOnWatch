@@ -62,6 +62,13 @@ class RunSummary:
         """Record a skipped item."""
         self.skipped.append(f"{item_type}: {item_name}" + (f" ({reason})" if reason else ""))
     
+    def add_error(self, item_type, item_name, error_detail=""):
+        """Record an error for an individual item (not a step-level error)."""
+        error_msg = f"{item_type}: {item_name}"
+        if error_detail:
+            error_msg += f" - {error_detail}"
+        self.errors.append(error_msg)
+    
     def print_summary(self):
         """Print a comprehensive summary of the run."""
         logger.info("\n" + "=" * 80)
@@ -93,19 +100,21 @@ class RunSummary:
         logger.info(f"  Total Steps: {total_steps}")
         logger.info(f"  ✅ Successful: {successful}")
         logger.info(f"  ❌ Failed: {failed}")
-        logger.info(f"  ⏭️  Skipped: {skipped_steps}")
+        logger.info(f"  ⏭️  Skipped Steps: {skipped_steps}")
+        logger.info(f"  ⏭️  Skipped Items: {len(self.skipped)}")
+        logger.info(f"  ❌ Errors: {len(self.errors)}")
         
-        # Skipped items
+        # Skipped items details
         if self.skipped:
-            logger.info(f"\n⏭️  Skipped Items ({len(self.skipped)}):")
+            logger.info(f"\n⏭️  Skipped Items Details ({len(self.skipped)}):")
             for item in self.skipped[:20]:  # Show first 20
                 logger.info(f"  - {item}")
             if len(self.skipped) > 20:
                 logger.info(f"  ... and {len(self.skipped) - 20} more")
         
-        # Errors
+        # Errors details
         if self.errors:
-            logger.error(f"\n❌ ERRORS ({len(self.errors)}):")
+            logger.error(f"\n❌ ERROR Details ({len(self.errors)}):")
             for error in self.errors:
                 logger.error(f"  • {error}")
         
@@ -696,6 +705,7 @@ class OnWatchAutomation:
                 logger.error(f"❌ Failed to create camera '{camera_name}': {error_detail}")
                 logger.warning(f"⚠️  Camera '{camera_name}' was not created. You may need to create it manually in the UI.")
                 self.summary.add_warning(f"Camera '{camera_name}' was not created - manual action may be needed")
+                self.summary.add_error("Camera", camera_name, error_detail)
                 skipped_count += 1
         
         logger.info(f"Devices configuration complete: {created_count} created, {skipped_count} skipped")
@@ -888,8 +898,8 @@ class OnWatchAutomation:
                                         logger.warning(f"Additional image file not found: {additional_img_path}")
                                 else:
                                     logger.warning(f"Additional image path is empty for {name}")
-                            else:
-                                logger.warning(f"Could not get subject ID to add additional images for {name}")
+                        else:
+                            logger.warning(f"Could not get subject ID to add additional images for {name}")
                     except Exception as e:
                         logger.warning(f"Could not process additional images for {name}: {e}")
                 
@@ -899,6 +909,7 @@ class OnWatchAutomation:
                 logger.error(f"❌ Failed to add subject '{subject_name}': {error_detail}")
                 logger.warning(f"⚠️  Subject '{subject_name}' was not added. You may need to add it manually in the UI.")
                 self.summary.add_warning(f"Subject '{subject_name}' was not added - manual action may be needed")
+                self.summary.add_error("Subject", subject_name, error_detail)
                 failed_count += 1
         
         # Log summary
@@ -1200,6 +1211,7 @@ class OnWatchAutomation:
                     logger.error(f"❌ Failed to create user '{username}': {error_detail}")
                     logger.warning(f"⚠️  User '{username}' was not created. You may need to create it manually in the UI.")
                     self.summary.add_warning(f"User '{username}' was not created - manual action may be needed")
+                    self.summary.add_error("User", username, error_detail)
         
         # User groups - create user groups
         user_groups_config = accounts.get('user_groups', [])
@@ -1287,6 +1299,7 @@ class OnWatchAutomation:
                     logger.error(f"❌ Failed to create user group '{title}': {error_detail}")
                     logger.warning(f"⚠️  User group '{title}' was not created. You may need to create it manually in the UI.")
                     self.summary.add_warning(f"User group '{title}' was not created - manual action may be needed")
+                    self.summary.add_error("User Group", title, error_detail)
     
     async def configure_inquiries(self):
         """
