@@ -230,13 +230,14 @@ class ClientApi:
             logger.error(f"Unexpected error adding subject: {e}")
             raise
     
-    def add_image_to_subject(self, subject_id, image_path):
+    def add_image_to_subject(self, subject_id, image_path, first_image_data=None):
         """
         Add an additional image to an existing subject.
         
         Args:
             subject_id: ID of the subject
             image_path: Path to the image file
+            first_image_data: Optional first image data from subject creation (to avoid losing it)
             
         Returns:
             Response object
@@ -269,6 +270,14 @@ class ClientApi:
             
             # Get existing images
             existing_images = current_subject.get("images", [])
+            
+            # If no existing images found but we have first_image_data, use it
+            if not existing_images and first_image_data:
+                logger.info("No images found in API response, using first image data from creation")
+                # Ensure first image is marked as primary
+                first_image = first_image_data.copy()
+                first_image["isPrimary"] = True
+                existing_images = [first_image]
             
             # Log existing images status for debugging
             logger.debug(f"Fetched existing images: {len(existing_images)} image(s)")
