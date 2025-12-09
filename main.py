@@ -860,26 +860,105 @@ class OnWatchAutomation:
                 
                 # Check if subject already exists
                 if name.lower() in existing_subject_names:
-                    logger.info(f"⏭️  Subject '{name}' already exists, skipping")
-                    self.summary.add_skipped("Subject", name, "already exists")
-                    skipped_count += 1
-                    continue
+                    # Get the actual subject to check images
+                    try:
+                        existing_subjects_list = existing_subjects if isinstance(existing_subjects, list) else (existing_subjects.get('items', []) if isinstance(existing_subjects, dict) else [])
+                        existing_subject = next((s for s in existing_subjects_list if isinstance(s, dict) and s.get('name', '').lower() == name.lower()), None)
+                        
+                        if existing_subject:
+                            existing_images = existing_subject.get('images', [])
+                            existing_image_count = len(existing_images)
+                            required_image_count = len(images)
+                            
+                            if existing_image_count >= required_image_count:
+                                logger.info(f"⏭️  Subject '{name}' already exists with {existing_image_count} image(s) (required: {required_image_count}), skipping")
+                                self.summary.add_skipped("Subject", name, "already exists with all images")
+                                skipped_count += 1
+                                continue
+                            else:
+                                # Subject exists but missing images - add missing ones
+                                logger.info(f"⚠️  Subject '{name}' exists but has {existing_image_count} image(s), needs {required_image_count}. Adding missing images...")
+                                subject_id = existing_subject.get('id')
+                                if subject_id:
+                                    # Get existing image URLs to avoid duplicates
+                                    existing_urls = {img.get('url', '') for img in existing_images if img.get('url')}
+                                    
+                                    # Add missing images
+                                    for img_info in images[existing_image_count:]:
+                                        img_path = img_info.get('path') if isinstance(img_info, dict) else img_info
+                                        if img_path:
+                                            if not os.path.isabs(img_path):
+                                                img_path = os.path.join(project_root, img_path)
+                                            
+                                            if os.path.exists(img_path):
+                                                try:
+                                                    # Extract to get URL for duplicate check
+                                                    extract_response = self.client_api.extract_faces_from_image(img_path)
+                                                    extract_data = extract_response.json()
+                                                    items = extract_data.get("items", []) if "items" in extract_data else (extract_data if isinstance(extract_data, list) else [extract_data])
+                                                    if items and items[0].get('url') not in existing_urls:
+                                                        # Get first image data from existing subject for fallback
+                                                        first_img_data = existing_images[0] if existing_images else None
+                                                        self.client_api.add_image_to_subject(subject_id, img_path, first_img_data)
+                                                        logger.info(f"✓ Added missing image to existing subject '{name}': {os.path.basename(img_path)}")
+                                                    else:
+                                                        logger.debug(f"Image already exists for {name}: {os.path.basename(img_path)}")
+                                                except Exception as e:
+                                                    logger.warning(f"Could not add missing image to {name}: {e}")
+                                    self.summary.add_skipped("Subject", name, f"existed, added {required_image_count - existing_image_count} missing image(s)")
+                                    skipped_count += 1
+                                    continue
+                    except Exception as e:
+                        logger.debug(f"Could not check existing subject images: {e}, skipping duplicate check")
+                        # Fall back to simple skip
+                        logger.info(f"⏭️  Subject '{name}' already exists, skipping")
+                        self.summary.add_skipped("Subject", name, "already exists")
+                        skipped_count += 1
+                        continue
+                
+                # Extract face data from first image BEFORE creating subject
+                # This ensures we have first_image_data even if API response doesn't include it
+                first_image_data = None
+                try:
+                    extract_response = self.client_api.extract_faces_from_image(image_path)
+                    extract_data = extract_response.json()
+                    
+                    # Handle different response formats
+                    if "items" in extract_data:
+                        items = extract_data["items"]
+                    elif isinstance(extract_data, list):
+                        items = extract_data
+                    else:
+                        items = [extract_data]
+                    
+                    if items:
+                        data = items[0]
+                        # Construct first_image_data in the same format as add_subject_from_image uses
+                        first_image_data = {
+                            "objectType": data.get("objectType", 1),
+                            "isPrimary": True,
+                            "featuresQuality": data.get("featuresQuality", 0),
+                            "url": data.get("url"),
+                            "features": data.get("features", []),
+                            "landmarkScore": data.get("landmarkScore", 0)
+                        }
+                        # Add optional fields if present
+                        if "featuresId" in data:
+                            first_image_data["featuresId"] = data["featuresId"]
+                        if "backup" in data:
+                            first_image_data["backup"] = data["backup"]
+                        if "attributes" in data:
+                            first_image_data["attributes"] = data["attributes"]
+                        if "feNetwork" in data:
+                            first_image_data["feNetwork"] = data["feNetwork"]
+                        logger.debug(f"Extracted first image data from extract response for {name}")
+                except Exception as e:
+                    logger.debug(f"Could not extract first image data: {e}")
                 
                 # Add subject with first image
                 response = self.client_api.add_subject_from_image(name, image_path, group_id)
                 logger.info(f"✓ Added subject to watch list: {name} (image: {os.path.basename(image_path)})")
                 success_count += 1
-                
-                # Extract first image data from creation response for use when adding additional images
-                first_image_data = None
-                try:
-                    subject_data = response.json() if hasattr(response, 'json') else {}
-                    subject_images = subject_data.get('images', [])
-                    if subject_images and len(subject_images) > 0:
-                        first_image_data = subject_images[0]
-                        logger.debug(f"Extracted first image data from creation response for {name}")
-                except Exception as e:
-                    logger.debug(f"Could not extract first image from response: {e}")
                 
                 # Add additional images immediately if any (e.g., Yonatan has 2 images)
                 if len(images) > 1:

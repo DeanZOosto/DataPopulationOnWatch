@@ -302,11 +302,13 @@ class ClientApi:
             
             # If no existing images found but we have first_image_data, use it
             if not existing_images and first_image_data:
-                logger.info("No images found in API response, using first image data from creation")
+                logger.info("Using first_image_data fallback: API didn't return images yet")
                 # Ensure first image is marked as primary
                 first_image = first_image_data.copy()
                 first_image["isPrimary"] = True
                 existing_images = [first_image]
+            elif not existing_images and not first_image_data:
+                logger.warning("No existing images found and no first_image_data provided - first image may be lost!")
             
             # Log existing images status for debugging
             logger.debug(f"Fetched existing images: {len(existing_images)} image(s)")
