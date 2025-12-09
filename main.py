@@ -1981,7 +1981,7 @@ Examples:
   python3 main.py --config my-config.yaml
   
   # Run specific step
-  python3 main.py --step 6
+  python3 main.py --step populate-watchlist
   
   # Dry-run mode (validate and show what would be executed)
   python3 main.py --dry-run
@@ -2001,8 +2001,13 @@ Examples:
     )
     parser.add_argument(
         '--step',
-        type=int,
-        help='Run only a specific step (1-11)'
+        type=str,
+        choices=[
+            'init-api', 'set-kv-params', 'configure-system', 'configure-groups',
+            'configure-accounts', 'populate-watchlist', 'configure-devices',
+            'configure-inquiries', 'upload-mass-import', 'configure-rancher', 'upload-files'
+        ],
+        help='Run only a specific step. Use --list-steps to see descriptions.'
     )
     parser.add_argument(
         '--validate',
@@ -2045,23 +2050,23 @@ Examples:
     # Handle list-steps
     if args.list_steps:
         steps = [
-            (1, "Initialize API Client", "Initialize connection to OnWatch API"),
-            (2, "Set KV Parameters", "Configure key-value parameters"),
-            (3, "Configure System Settings", "Set general, map, engine, and interface settings"),
-            (4, "Configure Groups", "Create subject groups"),
-            (5, "Configure Accounts", "Create user accounts and user groups"),
-            (6, "Populate Watch List", "Add subjects to watch list with images"),
-            (7, "Configure Devices", "Create cameras/devices"),
-            (8, "Configure Inquiries", "Create inquiry cases with file uploads"),
-            (9, "Upload Mass Import", "Upload mass import file"),
-            (10, "Configure Rancher", "Set Kubernetes environment variables"),
-            (11, "Upload Files", "Upload translation file via SSH")
+            ("init-api", "Initialize API Client", "Connect and authenticate with OnWatch API"),
+            ("set-kv-params", "Set KV Parameters", "Configure key-value system parameters"),
+            ("configure-system", "Configure System Settings", "Set general, map, engine, and interface settings"),
+            ("configure-groups", "Configure Groups", "Create subject groups with authorization and visibility"),
+            ("configure-accounts", "Configure Accounts", "Create user accounts and user groups"),
+            ("populate-watchlist", "Populate Watch List", "Add subjects to watch list with images"),
+            ("configure-devices", "Configure Devices", "Create cameras/devices with thresholds and calibration"),
+            ("configure-inquiries", "Configure Inquiries", "Create inquiry cases with file uploads and ROI settings"),
+            ("upload-mass-import", "Upload Mass Import", "Upload mass import file for bulk subject import"),
+            ("configure-rancher", "Configure Rancher", "Set Kubernetes environment variables via Rancher API"),
+            ("upload-files", "Upload Files", "Upload translation file to device via SSH")
         ]
         print("\nAvailable Automation Steps:")
-        print("=" * 60)
-        for step_num, step_name, description in steps:
-            print(f"  Step {step_num}: {step_name}")
-            print(f"    {description}\n")
+        print("=" * 70)
+        for step_id, step_name, description in steps:
+            print(f"  --step {step_id:20s}  {step_name}")
+            print(f"  {'':22s}  {description}\n")
         sys.exit(0)
     
     # Configure logging
@@ -2077,6 +2082,33 @@ Examples:
         logging.getLogger().addHandler(file_handler)
     
     automation = OnWatchAutomation(config_path=args.config)
+    
+    # Handle step execution
+    if args.step:
+        step_mapping = {
+            'init-api': lambda: automation.initialize_api_client(),
+            'set-kv-params': lambda: asyncio.run(automation.set_kv_parameters()),
+            'configure-system': lambda: asyncio.run(automation.configure_system_settings()),
+            'configure-groups': lambda: asyncio.run(automation.configure_groups()),
+            'configure-accounts': lambda: asyncio.run(automation.configure_accounts()),
+            'populate-watchlist': lambda: automation.populate_watch_list(),
+            'configure-devices': lambda: asyncio.run(automation.configure_devices()),
+            'configure-inquiries': lambda: asyncio.run(automation.configure_inquiries()),
+            'upload-mass-import': lambda: asyncio.run(automation.configure_mass_import()),
+            'configure-rancher': lambda: automation.configure_rancher(),
+            'upload-files': lambda: asyncio.run(automation.upload_files())
+        }
+        
+        # Some steps need API client initialized first
+        if args.step in ['set-kv-params', 'populate-watchlist']:
+            automation.initialize_api_client()
+        
+        if args.step in step_mapping:
+            step_mapping[args.step]()
+        else:
+            logger.error(f"Invalid step: {args.step}. Use --list-steps to see available steps.")
+            sys.exit(1)
+        return
     
     # Handle validate-only mode
     if args.validate:
@@ -2112,30 +2144,71 @@ Examples:
         logger.info("\n✓ Dry-run completed - no actual changes were made")
         sys.exit(0)
     
+    automation = OnWatchAutomation(config_path=args.config)
+    
+    # Handle step execution
     if args.step:
-        # Steps that need API client initialized first
-        if args.step in [2, 6]:  # KV parameters and watch list need API client
+        step_mapping = {
+            'init-api': lambda: automation.initialize_api_client(),
+            'set-kv-params': lambda: asyncio.run(automation.set_kv_parameters()),
+            'configure-system': lambda: asyncio.run(automation.configure_system_settings()),
+            'configure-groups': lambda: asyncio.run(automation.configure_groups()),
+            'configure-accounts': lambda: asyncio.run(automation.configure_accounts()),
+            'populate-watchlist': lambda: automation.populate_watch_list(),
+            'configure-devices': lambda: asyncio.run(automation.configure_devices()),
+            'configure-inquiries': lambda: asyncio.run(automation.configure_inquiries()),
+            'upload-mass-import': lambda: asyncio.run(automation.configure_mass_import()),
+            'configure-rancher': lambda: automation.configure_rancher(),
+            'upload-files': lambda: asyncio.run(automation.upload_files())
+        }
+        
+        # Some steps need API client initialized first
+        if args.step in ['set-kv-params', 'populate-watchlist']:
             automation.initialize_api_client()
         
-        steps = {
-            1: lambda: automation.initialize_api_client(),
-            2: lambda: asyncio.run(automation.set_kv_parameters()),
-            3: lambda: asyncio.run(automation.configure_system_settings()),
-            4: lambda: asyncio.run(automation.configure_groups()),
-            5: lambda: asyncio.run(automation.configure_accounts()),
-            6: lambda: automation.populate_watch_list(),
-            7: lambda: asyncio.run(automation.configure_devices()),
-            8: lambda: asyncio.run(automation.configure_inquiries()),
-            9: lambda: asyncio.run(automation.configure_mass_import()),
-            10: lambda: automation.configure_rancher(),
-            11: lambda: asyncio.run(automation.upload_files()),
-        }
-        if args.step in steps:
-            steps[args.step]()
+        if args.step in step_mapping:
+            step_mapping[args.step]()
         else:
-            logger.error(f"Invalid step number: {args.step}. Must be 1-11.")
-    else:
-        asyncio.run(automation.run())
+            logger.error(f"Invalid step: {args.step}. Use --list-steps to see available steps.")
+            sys.exit(1)
+        return
+    
+    # Handle validate-only mode
+    if args.validate:
+        is_valid, errors = automation.validate_config(verbose=True)
+        if is_valid:
+            logger.info("\n✓ Configuration is valid")
+            sys.exit(0)
+        else:
+            logger.error(f"\n❌ Configuration validation failed with {len(errors)} error(s)")
+            sys.exit(1)
+    
+    # Handle dry-run mode
+    if args.dry_run:
+        is_valid, errors = automation.validate_config(verbose=True)
+        if not is_valid:
+            logger.error(f"\n❌ Configuration validation failed. Cannot proceed with dry-run.")
+            sys.exit(1)
+        logger.info("\n" + "=" * 80)
+        logger.info("DRY-RUN MODE: Showing what would be executed")
+        logger.info("=" * 80)
+        logger.info("\nThe following steps would be executed:")
+        logger.info("  1. Initialize API client")
+        logger.info("  2. Set KV parameters")
+        logger.info("  3. Configure system settings")
+        logger.info("  4. Configure groups")
+        logger.info("  5. Configure accounts")
+        logger.info("  6. Populate watch list")
+        logger.info("  7. Configure devices")
+        logger.info("  8. Configure inquiries")
+        logger.info("  9. Upload mass import")
+        logger.info("  10. Configure Rancher")
+        logger.info("  11. Upload files")
+        logger.info("\n✓ Dry-run completed - no actual changes were made")
+        sys.exit(0)
+    
+    # Run full automation
+    asyncio.run(automation.run())
 
 
 if __name__ == "__main__":
