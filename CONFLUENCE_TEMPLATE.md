@@ -20,7 +20,7 @@ This is the most common use case: populate OnWatch with the pre-configured basel
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/DeanZOosto/DataPopulationOnWatch.git
 cd DataPopulationOnWatch
 
 # Install Python dependencies
