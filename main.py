@@ -4,16 +4,16 @@ Main automation script for populating OnWatch system with data.
 This script orchestrates automation tasks via REST API, GraphQL API, and Rancher configuration.
 """
 import asyncio
-import yaml
 import os
 import sys
 import logging
 import time
-import re
 from pathlib import Path
 from client_api import ClientApi
 from rancher_api import RancherApi
 from ssh_util import SSHUtil
+from run_summary import RunSummary
+from config_manager import ConfigManager
 
 logging.basicConfig(
     level=logging.INFO,
@@ -22,128 +22,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-class RunSummary:
-    """Track and report automation run summary."""
-    
-    def __init__(self):
-        self.steps = {}
-        self.errors = []
-        self.warnings = []
-        self.skipped = []
-        self.manual_actions_needed = []
-    
-    def record_step(self, step_num, step_name, status, message="", manual_action=False):
-        """
-        Record step execution result.
-        
-        Args:
-            step_num: Step number (1-11)
-            step_name: Step name
-            status: 'success', 'failed', 'skipped', 'partial'
-            message: Additional message
-            manual_action: Whether manual action is needed
-        """
-        self.steps[step_num] = {
-            'name': step_name,
-            'status': status,
-            'message': message,
-            'manual_action': manual_action
-        }
-        if status == 'failed':
-            self.errors.append(f"Step {step_num}: {step_name} - {message}")
-        if manual_action:
-            self.manual_actions_needed.append(f"Step {step_num}: {step_name} - {message}")
-    
-    def add_warning(self, message):
-        """Add a warning message."""
-        self.warnings.append(message)
-    
-    def add_skipped(self, item_type, item_name, reason=""):
-        """Record a skipped item."""
-        self.skipped.append(f"{item_type}: {item_name}" + (f" ({reason})" if reason else ""))
-    
-    def add_error(self, item_type, item_name, error_detail=""):
-        """Record an error for an individual item (not a step-level error)."""
-        error_msg = f"{item_type}: {item_name}"
-        if error_detail:
-            error_msg += f" - {error_detail}"
-        self.errors.append(error_msg)
-    
-    def print_summary(self):
-        """Print a comprehensive summary of the run."""
-        logger.info("\n" + "=" * 80)
-        logger.info("AUTOMATION RUN SUMMARY")
-        logger.info("=" * 80)
-        
-        # Step-by-step status
-        logger.info("\n📋 Step Status:")
-        for step_num in sorted(self.steps.keys()):
-            step = self.steps[step_num]
-            status_icon = {
-                'success': '✅',
-                'failed': '❌',
-                'skipped': '⏭️',
-                'partial': '⚠️'
-            }.get(step['status'], '❓')
-            
-            logger.info(f"  {status_icon} Step {step_num}: {step['name']} - {step['status'].upper()}")
-            if step['message']:
-                logger.info(f"     {step['message']}")
-        
-        # Statistics
-        total_steps = len(self.steps)
-        successful = sum(1 for s in self.steps.values() if s['status'] == 'success')
-        failed = sum(1 for s in self.steps.values() if s['status'] == 'failed')
-        skipped_steps = sum(1 for s in self.steps.values() if s['status'] == 'skipped')
-        
-        logger.info(f"\n📊 Statistics:")
-        logger.info(f"  Total Steps: {total_steps}")
-        logger.info(f"  ✅ Successful: {successful}")
-        logger.info(f"  ❌ Failed: {failed}")
-        logger.info(f"  ⏭️  Skipped Steps: {skipped_steps}")
-        logger.info(f"  ⏭️  Skipped Items: {len(self.skipped)}")
-        logger.info(f"  ❌ Errors: {len(self.errors)}")
-        
-        # Skipped items details
-        if self.skipped:
-            logger.info(f"\n⏭️  Skipped Items Details ({len(self.skipped)}):")
-            for item in self.skipped[:20]:  # Show first 20
-                logger.info(f"  - {item}")
-            if len(self.skipped) > 20:
-                logger.info(f"  ... and {len(self.skipped) - 20} more")
-        
-        # Errors details
-        if self.errors:
-            logger.error(f"\n❌ ERROR Details ({len(self.errors)}):")
-            for error in self.errors:
-                logger.error(f"  • {error}")
-        
-        # Manual actions needed
-        if self.manual_actions_needed:
-            logger.warning(f"\n⚠️  MANUAL ACTION REQUIRED ({len(self.manual_actions_needed)}):")
-            for action in self.manual_actions_needed:
-                logger.warning(f"  ⚠️  {action}")
-            logger.warning("\n⚠️  Please review the items above and complete them manually in the UI.")
-        
-        # Warnings
-        if self.warnings:
-            logger.warning(f"\n⚠️  WARNINGS ({len(self.warnings)}):")
-            for warning in self.warnings[:10]:  # Show first 10
-                logger.warning(f"  • {warning}")
-            if len(self.warnings) > 10:
-                logger.warning(f"  ... and {len(self.warnings) - 10} more warnings")
-        
-        # Final status
-        logger.info("\n" + "=" * 80)
-        if failed == 0 and not self.manual_actions_needed:
-            logger.info("✅ AUTOMATION COMPLETED SUCCESSFULLY")
-        elif failed > 0:
-            logger.error(f"❌ AUTOMATION COMPLETED WITH {failed} FAILED STEP(S)")
-            logger.error("Please review the errors above and take manual action if needed.")
-        else:
-            logger.warning("⚠️  AUTOMATION COMPLETED WITH WARNINGS")
-            logger.warning("Please review the warnings and manual actions needed above.")
-        logger.info("=" * 80 + "\n")
+# RunSummary class moved to run_summary.py
 
 
 class OnWatchAutomation:
@@ -157,95 +36,11 @@ class OnWatchAutomation:
             config_path: Path to YAML configuration file
         """
         self.config_path = config_path
-        self.config = self.load_config()
+        self.config_manager = ConfigManager(config_path)
+        self.config = self.config_manager.load_config()
         self.client_api = None
         self.rancher_automation = None
         self.summary = RunSummary()
-    
-    def _substitute_env_vars(self, value):
-        """Substitute environment variables in config values."""
-        if not isinstance(value, str):
-            return value
-        
-        # Handle ${VAR_NAME} format
-        def replace_env(match):
-            var_name = match.group(1)
-            return os.getenv(var_name, match.group(0))
-        
-        # Replace ${VAR_NAME} patterns
-        value = re.sub(r'\$\{([^}]+)\}', replace_env, value)
-        
-        # Handle $VAR_NAME format (simple, no braces)
-        def replace_simple_env(match):
-            var_name = match.group(1)
-            return os.getenv(var_name, match.group(0))
-        
-        # Only replace $VAR if it's not part of ${VAR} and followed by non-alphanumeric
-        value = re.sub(r'\$([A-Z_][A-Z0-9_]*)', replace_simple_env, value)
-        
-        return value
-    
-    def _recursive_substitute_env(self, obj):
-        """Recursively substitute environment variables in config structure."""
-        if isinstance(obj, dict):
-            return {k: self._recursive_substitute_env(v) for k, v in obj.items()}
-        elif isinstance(obj, list):
-            return [self._recursive_substitute_env(item) for item in obj]
-        elif isinstance(obj, str):
-            return self._substitute_env_vars(obj)
-        else:
-            return obj
-    
-    def load_config(self):
-        """Load configuration from YAML file with environment variable substitution."""
-        try:
-            with open(self.config_path, 'r') as f:
-                config = yaml.safe_load(f)
-            
-            # Substitute environment variables
-            config = self._recursive_substitute_env(config)
-            
-            logger.info(f"Configuration loaded from {self.config_path}")
-            return config
-        except FileNotFoundError:
-            logger.error(f"Configuration file not found: {self.config_path}")
-            sys.exit(1)
-        except yaml.YAMLError as e:
-            logger.error(f"Error parsing YAML: {e}")
-            sys.exit(1)
-    
-    def _validate_ip_address(self, ip_str, field_name):
-        """Validate IP address format."""
-        if not ip_str or not isinstance(ip_str, str):
-            return False
-        # IPv4 pattern
-        ipv4_pattern = r'^(\d{1,3}\.){3}\d{1,3}$'
-        if re.match(ipv4_pattern, ip_str):
-            parts = ip_str.split('.')
-            return all(0 <= int(part) <= 255 for part in parts)
-        return False
-    
-    def _validate_file_path(self, file_path, field_name, required=True):
-        """Validate file path exists (if not using env var)."""
-        if not file_path:
-            if required:
-                return False, f"{field_name}: File path is required"
-            return True, None
-        
-        # Check if it's an environment variable placeholder
-        if isinstance(file_path, str) and (file_path.startswith('${') or file_path.startswith('$')):
-            return True, None
-        
-        # Resolve relative paths
-        project_root = os.path.dirname(os.path.abspath(__file__))
-        if not os.path.isabs(file_path):
-            full_path = os.path.join(project_root, file_path)
-        else:
-            full_path = file_path
-        
-        if not os.path.exists(full_path):
-            return False, f"{field_name}: File not found: {file_path} (resolved: {full_path})"
-        return True, None
     
     def validate_config(self, verbose=False):
         """
@@ -257,149 +52,7 @@ class OnWatchAutomation:
         Returns:
             tuple: (is_valid, errors_list)
         """
-        errors = []
-        warnings = []
-        config = self.config
-        
-        if not config:
-            errors.append("Configuration file is empty or invalid")
-            return False, errors
-        
-        # Validate required sections
-        required_sections = {
-            'onwatch': ['ip_address', 'username', 'password'],
-            'ssh': ['ip_address', 'username', 'password', 'translation_util_path'],
-            'rancher': ['ip_address', 'port', 'username', 'password', 'base_url', 'workload_path']
-        }
-        
-        for section, required_fields in required_sections.items():
-            if section not in config:
-                errors.append(f"Missing required section: '{section}'")
-                continue
-            
-            section_config = config[section]
-            if not isinstance(section_config, dict):
-                errors.append(f"Section '{section}' must be a dictionary")
-                continue
-            
-            # Validate required fields in section
-            for field in required_fields:
-                if field not in section_config:
-                    errors.append(f"Section '{section}': Missing required field '{field}'")
-                elif not section_config[field]:
-                    # Check if it's an env var placeholder
-                    field_value = section_config[field]
-                    if isinstance(field_value, str) and (field_value.startswith('${') or field_value.startswith('$')):
-                        continue  # Env var placeholder is OK
-                    warnings.append(f"Section '{section}': Field '{field}' is empty (may cause errors)")
-        
-        # Validate IP addresses
-        ip_fields = [
-            ('onwatch', 'ip_address'),
-            ('ssh', 'ip_address'),
-            ('rancher', 'ip_address')
-        ]
-        
-        for section, field in ip_fields:
-            if section in config and field in config[section]:
-                ip_value = config[section][field]
-                # Skip if it's an env var
-                if isinstance(ip_value, str) and (ip_value.startswith('${') or ip_value.startswith('$')):
-                    continue
-                if not self._validate_ip_address(ip_value, f"{section}.{field}"):
-                    errors.append(f"Section '{section}': Invalid IP address format for '{field}': {ip_value}")
-        
-        # Validate file paths (if specified)
-        project_root = os.path.dirname(os.path.abspath(__file__))
-        
-        # Validate translation file path
-        if 'system_settings' in config and 'system_interface' in config['system_settings']:
-            translation_file = config['system_settings']['system_interface'].get('translation_file')
-            if translation_file:
-                is_valid, error_msg = self._validate_file_path(translation_file, 'system_settings.system_interface.translation_file', required=False)
-                if not is_valid:
-                    errors.append(error_msg)
-        
-        # Validate watch list image paths
-        if 'watch_list' in config:
-            watch_list = config.get('watch_list', {})
-            subjects = watch_list.get('subjects', []) if isinstance(watch_list, dict) else watch_list
-            
-            for idx, subject in enumerate(subjects):
-                if not isinstance(subject, dict):
-                    continue
-                name = subject.get('name', f'subject_{idx}')
-                images = subject.get('images', [])
-                for img_idx, img in enumerate(images):
-                    if isinstance(img, dict):
-                        img_path = img.get('path', '')
-                    else:
-                        img_path = img if isinstance(img, str) else ''
-                    
-                    if img_path:
-                        is_valid, error_msg = self._validate_file_path(img_path, f'watch_list.subjects[{idx}].images[{img_idx}]', required=False)
-                        if not is_valid:
-                            warnings.append(f"Subject '{name}': {error_msg}")
-        
-        # Validate mass import file path
-        if 'mass_import' in config:
-            mass_import_file = config['mass_import'].get('file_path')
-            if mass_import_file:
-                is_valid, error_msg = self._validate_file_path(mass_import_file, 'mass_import.file_path', required=False)
-                if not is_valid:
-                    warnings.append(error_msg)
-        
-        # Validate inquiry file paths
-        if 'inquiries' in config:
-            for idx, inquiry in enumerate(config['inquiries']):
-                if not isinstance(inquiry, dict):
-                    continue
-                files = inquiry.get('files', {})
-                # Handle both dict format and list format
-                if isinstance(files, dict):
-                    for filename, file_config in files.items():
-                        if isinstance(file_config, dict):
-                            file_path = file_config.get('path', '')
-                        else:
-                            file_path = file_config if isinstance(file_config, str) else ''
-                        
-                        if file_path:
-                            is_valid, error_msg = self._validate_file_path(file_path, f'inquiries[{idx}].files.{filename}', required=False)
-                            if not is_valid:
-                                warnings.append(error_msg)
-                elif isinstance(files, list):
-                    for file_idx, file_item in enumerate(files):
-                        if isinstance(file_item, dict):
-                            file_path = file_item.get('path', '')
-                        else:
-                            file_path = file_item if isinstance(file_item, str) else ''
-                        
-                        if file_path:
-                            is_valid, error_msg = self._validate_file_path(file_path, f'inquiries[{idx}].files[{file_idx}]', required=False)
-                            if not is_valid:
-                                warnings.append(error_msg)
-        
-        # Validate Rancher port
-        if 'rancher' in config and 'port' in config['rancher']:
-            port = config['rancher']['port']
-            if not isinstance(port, int) or port < 1 or port > 65535:
-                errors.append(f"Section 'rancher': Invalid port number: {port} (must be 1-65535)")
-        
-        if verbose:
-            if errors:
-                logger.error("Configuration Validation - ERRORS:")
-                for error in errors:
-                    logger.error(f"  ❌ {error}")
-            if warnings:
-                logger.warning("Configuration Validation - WARNINGS:")
-                for warning in warnings:
-                    logger.warning(f"  ⚠️  {warning}")
-            if not errors and not warnings:
-                logger.info("✓ Configuration validation passed with no errors or warnings")
-            elif not errors:
-                logger.info("✓ Configuration validation passed (warnings present but non-critical)")
-        
-        return len(errors) == 0, errors
+        return self.config_manager.validate_config(verbose=verbose)
     
     def initialize_api_client(self):
         """

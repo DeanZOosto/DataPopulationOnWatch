@@ -1,0 +1,278 @@
+#!/usr/bin/env python3
+"""
+Configuration management for OnWatch automation.
+
+Handles loading, validation, and environment variable substitution
+for YAML configuration files.
+"""
+import yaml
+import os
+import sys
+import re
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+class ConfigManager:
+    """Manages configuration loading, validation, and environment variable substitution."""
+    
+    def __init__(self, config_path="config.yaml"):
+        """
+        Initialize configuration manager.
+        
+        Args:
+            config_path: Path to YAML configuration file
+        """
+        self.config_path = config_path
+        self.config = None
+    
+    def _substitute_env_vars(self, value):
+        """Substitute environment variables in config values."""
+        if not isinstance(value, str):
+            return value
+        
+        # Handle ${VAR_NAME} format
+        def replace_env(match):
+            var_name = match.group(1)
+            return os.getenv(var_name, match.group(0))
+        
+        # Replace ${VAR_NAME} patterns
+        value = re.sub(r'\$\{([^}]+)\}', replace_env, value)
+        
+        # Handle $VAR_NAME format (simple, no braces)
+        def replace_simple_env(match):
+            var_name = match.group(1)
+            return os.getenv(var_name, match.group(0))
+        
+        # Only replace $VAR if it's not part of ${VAR} and followed by non-alphanumeric
+        value = re.sub(r'\$([A-Z_][A-Z0-9_]*)', replace_simple_env, value)
+        
+        return value
+    
+    def _recursive_substitute_env(self, obj):
+        """Recursively substitute environment variables in config structure."""
+        if isinstance(obj, dict):
+            return {k: self._recursive_substitute_env(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [self._recursive_substitute_env(item) for item in obj]
+        elif isinstance(obj, str):
+            return self._substitute_env_vars(obj)
+        else:
+            return obj
+    
+    def load_config(self):
+        """Load configuration from YAML file with environment variable substitution."""
+        try:
+            with open(self.config_path, 'r') as f:
+                config = yaml.safe_load(f)
+            
+            # Substitute environment variables
+            config = self._recursive_substitute_env(config)
+            
+            logger.info(f"Configuration loaded from {self.config_path}")
+            self.config = config
+            return config
+        except FileNotFoundError:
+            logger.error(f"Configuration file not found: {self.config_path}")
+            sys.exit(1)
+        except yaml.YAMLError as e:
+            logger.error(f"Error parsing YAML: {e}")
+            sys.exit(1)
+    
+    def _validate_ip_address(self, ip_str, field_name):
+        """Validate IP address format."""
+        if not ip_str or not isinstance(ip_str, str):
+            return False
+        # IPv4 pattern
+        ipv4_pattern = r'^(\d{1,3}\.){3}\d{1,3}$'
+        if re.match(ipv4_pattern, ip_str):
+            parts = ip_str.split('.')
+            return all(0 <= int(part) <= 255 for part in parts)
+        return False
+    
+    def _validate_file_path(self, file_path, field_name, required=True, project_root=None):
+        """Validate file path exists (if not using env var)."""
+        if not file_path:
+            if required:
+                return False, f"{field_name}: File path is required"
+            return True, None
+        
+        # Check if it's an environment variable placeholder
+        if isinstance(file_path, str) and (file_path.startswith('${') or file_path.startswith('$')):
+            return True, None
+        
+        # Resolve relative paths
+        # Use provided project_root (from main.py) or fall back to config file directory
+        if project_root is None:
+            project_root = os.path.dirname(os.path.abspath(self.config_path))
+        
+        if not os.path.isabs(file_path):
+            full_path = os.path.join(project_root, file_path)
+        else:
+            full_path = file_path
+        
+        if not os.path.exists(full_path):
+            return False, f"{field_name}: File not found: {file_path} (resolved: {full_path})"
+        return True, None
+    
+    def validate_config(self, verbose=False):
+        """
+        Validate configuration file structure and values.
+        
+        Args:
+            verbose: If True, print detailed validation report
+            
+        Returns:
+            tuple: (is_valid, errors_list)
+        """
+        if self.config is None:
+            self.load_config()
+        
+        errors = []
+        warnings = []
+        config = self.config
+        
+        if not config:
+            errors.append("Configuration file is empty or invalid")
+            return False, errors
+        
+        # Validate required sections
+        required_sections = {
+            'onwatch': ['ip_address', 'username', 'password'],
+            'ssh': ['ip_address', 'username', 'password', 'translation_util_path'],
+            'rancher': ['ip_address', 'port', 'username', 'password', 'base_url', 'workload_path']
+        }
+        
+        for section, required_fields in required_sections.items():
+            if section not in config:
+                errors.append(f"Missing required section: '{section}'")
+                continue
+            
+            section_config = config[section]
+            if not isinstance(section_config, dict):
+                errors.append(f"Section '{section}' must be a dictionary")
+                continue
+            
+            # Validate required fields in section
+            for field in required_fields:
+                if field not in section_config:
+                    errors.append(f"Section '{section}': Missing required field '{field}'")
+                elif not section_config[field]:
+                    # Check if it's an env var placeholder
+                    field_value = section_config[field]
+                    if isinstance(field_value, str) and (field_value.startswith('${') or field_value.startswith('$')):
+                        continue  # Env var placeholder is OK
+                    warnings.append(f"Section '{section}': Field '{field}' is empty (may cause errors)")
+        
+        # Validate IP addresses
+        ip_fields = [
+            ('onwatch', 'ip_address'),
+            ('ssh', 'ip_address'),
+            ('rancher', 'ip_address')
+        ]
+        
+        for section, field in ip_fields:
+            if section in config and field in config[section]:
+                ip_value = config[section][field]
+                # Skip if it's an env var
+                if isinstance(ip_value, str) and (ip_value.startswith('${') or ip_value.startswith('$')):
+                    continue
+                if not self._validate_ip_address(ip_value, f"{section}.{field}"):
+                    errors.append(f"Section '{section}': Invalid IP address format for '{field}': {ip_value}")
+        
+        # Validate file paths (if specified)
+        # Resolve paths relative to the project root (where main.py is located)
+        # We'll use the config file's directory as a fallback, but ideally project_root should be passed
+        # For now, assume config.yaml is in the project root
+        project_root = os.path.dirname(os.path.abspath(self.config_path))
+        
+        # Validate translation file path
+        if 'system_settings' in config and 'system_interface' in config['system_settings']:
+            translation_file = config['system_settings']['system_interface'].get('translation_file')
+            if translation_file:
+                is_valid, error_msg = self._validate_file_path(translation_file, 'system_settings.system_interface.translation_file', required=False, project_root=project_root)
+                if not is_valid:
+                    errors.append(error_msg)
+        
+        # Validate watch list image paths
+        if 'watch_list' in config:
+            watch_list = config.get('watch_list', {})
+            subjects = watch_list.get('subjects', []) if isinstance(watch_list, dict) else watch_list
+            
+            for idx, subject in enumerate(subjects):
+                if not isinstance(subject, dict):
+                    continue
+                name = subject.get('name', f'subject_{idx}')
+                images = subject.get('images', [])
+                for img_idx, img in enumerate(images):
+                    if isinstance(img, dict):
+                        img_path = img.get('path', '')
+                    else:
+                        img_path = img if isinstance(img, str) else ''
+                    
+                    if img_path:
+                        is_valid, error_msg = self._validate_file_path(img_path, f'watch_list.subjects[{idx}].images[{img_idx}]', required=False, project_root=project_root)
+                        if not is_valid:
+                            warnings.append(f"Subject '{name}': {error_msg}")
+        
+        # Validate mass import file path
+        if 'mass_import' in config:
+            mass_import_file = config['mass_import'].get('file_path')
+            if mass_import_file:
+                is_valid, error_msg = self._validate_file_path(mass_import_file, 'mass_import.file_path', required=False, project_root=project_root)
+                if not is_valid:
+                    warnings.append(error_msg)
+        
+        # Validate inquiry file paths
+        if 'inquiries' in config:
+            for idx, inquiry in enumerate(config['inquiries']):
+                if not isinstance(inquiry, dict):
+                    continue
+                files = inquiry.get('files', {})
+                # Handle both dict format and list format
+                if isinstance(files, dict):
+                    for filename, file_config in files.items():
+                        if isinstance(file_config, dict):
+                            file_path = file_config.get('path', '')
+                        else:
+                            file_path = file_config if isinstance(file_config, str) else ''
+                        
+                        if file_path:
+                            is_valid, error_msg = self._validate_file_path(file_path, f'inquiries[{idx}].files.{filename}', required=False, project_root=project_root)
+                            if not is_valid:
+                                warnings.append(error_msg)
+                elif isinstance(files, list):
+                    for file_idx, file_item in enumerate(files):
+                        if isinstance(file_item, dict):
+                            file_path = file_item.get('path', '')
+                        else:
+                            file_path = file_item if isinstance(file_item, str) else ''
+                        
+                        if file_path:
+                            is_valid, error_msg = self._validate_file_path(file_path, f'inquiries[{idx}].files[{file_idx}]', required=False, project_root=project_root)
+                            if not is_valid:
+                                warnings.append(error_msg)
+        
+        # Validate Rancher port
+        if 'rancher' in config and 'port' in config['rancher']:
+            port = config['rancher']['port']
+            if not isinstance(port, int) or port < 1 or port > 65535:
+                errors.append(f"Section 'rancher': Invalid port number: {port} (must be 1-65535)")
+        
+        if verbose:
+            if errors:
+                logger.error("Configuration Validation - ERRORS:")
+                for error in errors:
+                    logger.error(f"  ❌ {error}")
+            if warnings:
+                logger.warning("Configuration Validation - WARNINGS:")
+                for warning in warnings:
+                    logger.warning(f"  ⚠️  {warning}")
+            if not errors and not warnings:
+                logger.info("✓ Configuration validation passed with no errors or warnings")
+            elif not errors:
+                logger.info("✓ Configuration validation passed (warnings present but non-critical)")
+        
+        return len(errors) == 0, errors
+
