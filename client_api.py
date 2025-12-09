@@ -230,6 +230,35 @@ class ClientApi:
             logger.error(f"Unexpected error adding subject: {e}")
             raise
     
+    def update_subject(self, subject_id, **kwargs):
+        """
+        Update a subject with provided fields.
+        
+        Args:
+            subject_id: ID of the subject
+            **kwargs: Fields to update (e.g., images, name, description)
+            
+        Returns:
+            Response object
+        """
+        payload = {
+            "isProduceSocket": True,
+        }
+        payload.update(kwargs)
+        
+        response = self.session.patch(
+            f"{self.url}/subjects/{subject_id}",
+            headers=self.headers,
+            json=payload
+        )
+        
+        if response.status_code != 200:
+            logger.error(f"Failed to update subject. Status: {response.status_code}, Response: {response.text}")
+            logger.error(f"Payload sent: {payload}")
+        
+        response.raise_for_status()
+        return response
+    
     def add_image_to_subject(self, subject_id, image_path, first_image_data=None):
         """
         Add an additional image to an existing subject.

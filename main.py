@@ -865,54 +865,29 @@ class OnWatchAutomation:
                     skipped_count += 1
                     continue
                 
-                # Add subject with first image
+                # Add subject with first image only (additional images will be added separately)
                 response = self.client_api.add_subject_from_image(name, image_path, group_id)
                 logger.info(f"✓ Added subject to watch list: {name} (image: {os.path.basename(image_path)})")
                 success_count += 1
                 
-                # Extract first image data from creation response for use when adding additional images
-                first_image_data = None
-                try:
-                    subject_data = response.json() if hasattr(response, 'json') else {}
-                    subject_images = subject_data.get('images', [])
-                    if subject_images and len(subject_images) > 0:
-                        first_image_data = subject_images[0]
-                        logger.debug(f"Extracted first image data from creation response")
-                except Exception as e:
-                    logger.debug(f"Could not extract first image from response: {e}")
-                
-                # Add additional images if any (e.g., Yonatan has 2 images)
+                # Store subject info for later update if it has additional images (e.g., Yonatan)
                 if len(images) > 1:
                     try:
                         subject_data = response.json() if hasattr(response, 'json') else {}
                         subject_id = subject_data.get('id')
-                        
                         if subject_id:
-                            for additional_img_info in images[1:]:
-                                additional_img_path = additional_img_info.get('path') if isinstance(additional_img_info, dict) else additional_img_info
-                                
-                                if additional_img_path:
-                                    # Resolve relative paths to absolute paths (relative to project root)
-                                    if not os.path.isabs(additional_img_path):
-                                        additional_img_path = os.path.join(project_root, additional_img_path)
-                                    
-                                    if os.path.exists(additional_img_path):
-                                        try:
-                                            self.client_api.add_image_to_subject(subject_id, additional_img_path, first_image_data)
-                                            logger.info(f"✓ Added additional image to {name}: {os.path.basename(additional_img_path)}")
-                                        except Exception as e:
-                                            error_detail = str(e)
-                                            logger.error(f"❌ Failed to add additional image '{additional_img_path}' to subject '{name}': {error_detail}")
-                                            logger.warning(f"⚠️  Subject '{name}' was created but additional image was not added. You may need to add it manually in the UI.")
-                                            self.summary.add_warning(f"Subject '{name}': Additional image '{os.path.basename(additional_img_path)}' not added - manual action may be needed")
-                                    else:
-                                        logger.warning(f"Additional image file not found: {additional_img_path}")
-                                else:
-                                    logger.warning(f"Additional image path is empty for {name}")
-                        else:
-                            logger.warning(f"Could not get subject ID to add additional images for {name}")
+                            # Store for later update after all subjects are added
+                            if not hasattr(self, '_subjects_to_update'):
+                                self._subjects_to_update = []
+                            self._subjects_to_update.append({
+                                'subject_id': subject_id,
+                                'name': name,
+                                'additional_images': images[1:],  # All images except the first
+                                'project_root': project_root
+                            })
+                            logger.debug(f"Stored {name} for later update with {len(images) - 1} additional image(s)")
                     except Exception as e:
-                        logger.warning(f"Could not process additional images for {name}: {e}")
+                        logger.warning(f"Could not store subject info for additional images update: {e}")
                 
             except Exception as e:
                 subject_name = subject.get('name', 'unknown') if isinstance(subject, dict) else 'unknown'
@@ -932,6 +907,104 @@ class OnWatchAutomation:
             logger.warning(f"⚠️  Watch list population partial: {success_count} succeeded, {failed_count} failed, {skipped_count} skipped")
         else:
             logger.error(f"❌ Watch list population failed: all {failed_count} subjects failed, {skipped_count} skipped")
+        
+        # Update subjects with additional images (e.g., Yonatan) - do this after all subjects are added
+        if hasattr(self, '_subjects_to_update') and self._subjects_to_update:
+            logger.info(f"\nUpdating {len(self._subjects_to_update)} subject(s) with additional images...")
+            for subject_info in self._subjects_to_update:
+                subject_id = subject_info['subject_id']
+                name = subject_info['name']
+                additional_images = subject_info['additional_images']
+                project_root = subject_info['project_root']
+                
+                try:
+                    # Get current subject to get existing images
+                    subject_response = self.client_api.session.get(
+                        f"{self.client_api.url}/subjects/{subject_id}",
+                        headers=self.client_api.headers
+                    )
+                    subject_response.raise_for_status()
+                    current_subject = subject_response.json()
+                    existing_images = current_subject.get("images", [])
+                    initial_image_count = len(existing_images)
+                    
+                    # Ensure first image is marked as primary
+                    if existing_images:
+                        primary_count = sum(1 for img in existing_images if img.get("isPrimary", False) is True)
+                        if primary_count == 0:
+                            existing_images[0]["isPrimary"] = True
+                            logger.debug(f"Set first image as primary for {name}")
+                        elif primary_count > 1:
+                            for i, img in enumerate(existing_images):
+                                img["isPrimary"] = (i == 0)
+                    
+                    # Extract and add additional images
+                    for additional_img_info in additional_images:
+                        additional_img_path = additional_img_info.get('path') if isinstance(additional_img_info, dict) else additional_img_info
+                        
+                        if additional_img_path:
+                            # Resolve relative paths
+                            if not os.path.isabs(additional_img_path):
+                                additional_img_path = os.path.join(project_root, additional_img_path)
+                            
+                            if os.path.exists(additional_img_path):
+                                try:
+                                    # Extract face features from the additional image
+                                    extract_response = self.client_api.extract_faces_from_image(additional_img_path)
+                                    extract_data = extract_response.json()
+                                    
+                                    # Handle different response formats
+                                    if "items" in extract_data:
+                                        items = extract_data["items"]
+                                    elif isinstance(extract_data, list):
+                                        items = extract_data
+                                    else:
+                                        items = [extract_data]
+                                    
+                                    if items:
+                                        data = items[0]
+                                        # Build new image
+                                        new_image = {
+                                            "url": data.get("url"),
+                                            "featuresQuality": data.get("featuresQuality", 0),
+                                            "features": data.get("features", []),
+                                            "isPrimary": False,
+                                            "featuresId": data.get("featuresId", ""),
+                                            "objectType": data.get("objectType", 1)
+                                        }
+                                        
+                                        # Add optional fields
+                                        if "backup" in data:
+                                            new_image["backup"] = data["backup"]
+                                        if "attributes" in data:
+                                            new_image["attributes"] = data["attributes"]
+                                        if "landmarkScore" in data:
+                                            new_image["landmarkScore"] = data["landmarkScore"]
+                                        if "feNetwork" in data:
+                                            new_image["feNetwork"] = data["feNetwork"]
+                                        
+                                        # Add to existing images
+                                        existing_images.append(new_image)
+                                        logger.debug(f"Prepared additional image for {name}: {os.path.basename(additional_img_path)}")
+                                except Exception as e:
+                                    logger.warning(f"Could not extract features from additional image '{additional_img_path}' for {name}: {e}")
+                            else:
+                                logger.warning(f"Additional image file not found: {additional_img_path}")
+                    
+                    # Update subject with all images if we added any
+                    if len(existing_images) > initial_image_count:
+                        self.client_api.update_subject(subject_id, images=existing_images)
+                        logger.info(f"✓ Updated {name} with {len(existing_images)} image(s) (added {len(existing_images) - initial_image_count} additional)")
+                    else:
+                        logger.warning(f"No new images to add for {name}")
+                        
+                except Exception as e:
+                    error_detail = str(e)
+                    logger.error(f"❌ Failed to update {name} with additional images: {error_detail}")
+                    self.summary.add_warning(f"Subject '{name}': Additional images not added - manual action may be needed")
+            
+            # Clear the list
+            self._subjects_to_update = []
     
     async def configure_groups(self):
         """
@@ -1904,7 +1977,7 @@ class OnWatchAutomation:
             # Step 6: Populate watch list
             logger.info("\n[Step 6/11] Populating watch list...")
             try:
-                await self.populate_watch_list()
+                self.populate_watch_list()
                 # Check if there were any failures (tracked in populate_watch_list)
                 # If warnings exist for subjects, mark as partial
                 subject_warnings = [w for w in self.summary.warnings if "Subject" in w and "was not added" in w]
