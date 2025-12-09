@@ -8,9 +8,9 @@ Automated tool for populating OnWatch on-premise systems with configuration and 
 # Install dependencies
 pip install -r requirements.txt
 
-# Copy and configure
-cp config.example.yaml config.yaml
-# Edit config.yaml with your system details
+# Configure
+# Edit config.yaml with your system details (IP addresses and credentials)
+# The file already contains baseline data - just update connection details
 
 # Validate configuration
 python3 main.py --validate

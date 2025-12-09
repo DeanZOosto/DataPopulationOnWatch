@@ -20,23 +20,23 @@ pip install -r requirements.txt
 ### 2. Configure
 
 ```bash
-# Copy example configuration
-cp config.example.yaml config.yaml
-
 # Edit config.yaml with your system details
+# The file already contains baseline data - just update IP addresses and credentials
 nano config.yaml  # or use your preferred editor
 ```
 
-**Required Configuration:**
+**What to Update in config.yaml:**
 - `onwatch.ip_address` - Your OnWatch system IP
-- `onwatch.username` - OnWatch admin username
-- `onwatch.password` - OnWatch admin password (or use `${ONWATCH_PASSWORD}` env var)
+- `onwatch.username` - Your OnWatch admin username  
+- `onwatch.password` - Your OnWatch admin password
 - `ssh.ip_address` - SSH IP (usually same as onwatch)
 - `ssh.username` - SSH username
-- `ssh.password` - SSH password (or use `${SSH_PASSWORD}` env var)
+- `ssh.password` - SSH password
 - `rancher.ip_address` - Rancher server IP
 - `rancher.username` - Rancher username
-- `rancher.password` - Rancher password (or use `${RANCHER_PASSWORD}` env var)
+- `rancher.password` - Rancher password
+
+**Note:** All other data (subjects, cameras, groups, etc.) is already pre-configured. You only need to update connection details.
 
 ### 3. Validate Configuration
 
