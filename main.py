@@ -443,11 +443,11 @@ class OnWatchAutomation:
         if not self.client_api:
             self.initialize_api_client()
         
-        for key, value in kv_params.items():
-            try:
-                self.client_api.set_kv_parameter(key, value)
-            except Exception as e:
-                logger.error(f"Failed to set KV parameter {key}: {e}")
+            for key, value in kv_params.items():
+                try:
+                    self.client_api.set_kv_parameter(key, value)
+                except Exception as e:
+                    logger.error(f"Failed to set KV parameter {key}: {e}")
                 raise
     
     async def configure_system_settings(self):
@@ -870,6 +870,17 @@ class OnWatchAutomation:
                 logger.info(f"✓ Added subject to watch list: {name} (image: {os.path.basename(image_path)})")
                 success_count += 1
                 
+                # Extract first image data from creation response for use when adding additional images
+                first_image_data = None
+                try:
+                    subject_data = response.json() if hasattr(response, 'json') else {}
+                    subject_images = subject_data.get('images', [])
+                    if subject_images and len(subject_images) > 0:
+                        first_image_data = subject_images[0]
+                        logger.debug(f"Extracted first image data from creation response")
+                except Exception as e:
+                    logger.debug(f"Could not extract first image from response: {e}")
+                
                 # Add additional images if any (e.g., Yonatan has 2 images)
                 if len(images) > 1:
                     try:
@@ -887,7 +898,7 @@ class OnWatchAutomation:
                                     
                                     if os.path.exists(additional_img_path):
                                         try:
-                                            self.client_api.add_image_to_subject(subject_id, additional_img_path)
+                                            self.client_api.add_image_to_subject(subject_id, additional_img_path, first_image_data)
                                             logger.info(f"✓ Added additional image to {name}: {os.path.basename(additional_img_path)}")
                                         except Exception as e:
                                             error_detail = str(e)
@@ -1893,7 +1904,7 @@ class OnWatchAutomation:
             # Step 6: Populate watch list
             logger.info("\n[Step 6/11] Populating watch list...")
             try:
-                self.populate_watch_list()
+                await self.populate_watch_list()
                 # Check if there were any failures (tracked in populate_watch_list)
                 # If warnings exist for subjects, mark as partial
                 subject_warnings = [w for w in self.summary.warnings if "Subject" in w and "was not added" in w]
