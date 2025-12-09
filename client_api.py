@@ -270,15 +270,25 @@ class ClientApi:
             # Get existing images
             existing_images = current_subject.get("images", [])
             
+            # Log existing images status for debugging
+            logger.debug(f"Fetched existing images: {len(existing_images)} image(s)")
+            for i, img in enumerate(existing_images):
+                logger.debug(f"  Image {i}: isPrimary={img.get('isPrimary', 'NOT SET')}, url={img.get('url', 'unknown')[:50]}...")
+            
             # Ensure exactly one existing image is marked as primary
             # Count how many existing images have isPrimary: True
-            primary_count = sum(1 for img in existing_images if img.get("isPrimary", False))
+            primary_count = sum(1 for img in existing_images if img.get("isPrimary", False) is True)
             
             if existing_images:
                 if primary_count == 0:
                     # No primary image found - mark the first one as primary
-                    logger.debug(f"No primary image found in existing images, marking first image as primary")
-                    existing_images[0]["isPrimary"] = True
+                    logger.info(f"No primary image found in existing images, marking first image as primary")
+                    # Ensure the key exists and set it to True
+                    if "isPrimary" not in existing_images[0]:
+                        existing_images[0]["isPrimary"] = True
+                    else:
+                        existing_images[0]["isPrimary"] = True
+                    logger.debug(f"Set first image isPrimary to: {existing_images[0].get('isPrimary')}")
                 elif primary_count > 1:
                     # Multiple primary images found - keep only the first one as primary
                     logger.warning(f"Found {primary_count} primary images, keeping only the first one as primary")
@@ -286,8 +296,10 @@ class ClientApi:
                         img["isPrimary"] = (i == 0)
                 else:
                     # Exactly one primary image - log for debugging
-                    primary_url = next((img.get("url", "unknown") for img in existing_images if img.get("isPrimary", False)), "unknown")
+                    primary_url = next((img.get("url", "unknown") for img in existing_images if img.get("isPrimary", False) is True), "unknown")
                     logger.debug(f"Found existing primary image: {primary_url}")
+            else:
+                logger.warning("No existing images found when trying to add additional image")
             
             # Build new image in the format expected by API
             # Based on user's example: includes backup, attributes, etc.
@@ -319,12 +331,39 @@ class ClientApi:
             existing_images.append(new_image)
             
             # Validate that exactly one image is marked as primary before sending
-            final_primary_count = sum(1 for img in existing_images if img.get("isPrimary", False))
+            # Use explicit True check to avoid issues with truthy values
+            final_primary_count = sum(1 for img in existing_images if img.get("isPrimary", False) is True)
+            
+            # Log all images before validation for debugging
+            logger.debug(f"Final images before validation: {len(existing_images)} image(s)")
+            for i, img in enumerate(existing_images):
+                logger.debug(f"  Image {i}: isPrimary={img.get('isPrimary', 'NOT SET')}, url={img.get('url', 'unknown')[:50]}...")
+            
             if final_primary_count != 1:
-                error_msg = f"Invalid primary image configuration: found {final_primary_count} primary images, expected exactly 1"
-                logger.error(error_msg)
-                logger.error(f"Images status: {[(img.get('url', 'unknown'), img.get('isPrimary', False)) for img in existing_images]}")
-                raise ValueError(error_msg)
+                # Last attempt: if no primary, force first one to be primary
+                if final_primary_count == 0 and existing_images:
+                    logger.warning("No primary image found in final list, forcing first image to be primary")
+                    existing_images[0]["isPrimary"] = True
+                    # Verify it was set
+                    if existing_images[0].get("isPrimary") is True:
+                        logger.info("Successfully set first image as primary")
+                        final_primary_count = 1
+                    else:
+                        error_msg = f"Failed to set primary image: found {final_primary_count} primary images, expected exactly 1"
+                        logger.error(error_msg)
+                        logger.error(f"Images status: {[(img.get('url', 'unknown')[:50], img.get('isPrimary', 'NOT SET')) for img in existing_images]}")
+                        raise ValueError(error_msg)
+                elif final_primary_count > 1:
+                    # Multiple primaries - keep only first
+                    logger.warning(f"Found {final_primary_count} primary images, keeping only the first one")
+                    for i, img in enumerate(existing_images):
+                        img["isPrimary"] = (i == 0)
+                    final_primary_count = 1
+                else:
+                    error_msg = f"Invalid primary image configuration: found {final_primary_count} primary images, expected exactly 1"
+                    logger.error(error_msg)
+                    logger.error(f"Images status: {[(img.get('url', 'unknown')[:50], img.get('isPrimary', 'NOT SET')) for img in existing_images]}")
+                    raise ValueError(error_msg)
             
             # Log which image is primary for debugging
             primary_image = next((img for img in existing_images if img.get("isPrimary", False)), None)
