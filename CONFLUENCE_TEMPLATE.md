@@ -60,6 +60,109 @@ python3 main.py --dry-run
 python3 main.py
 ```
 
+## Default Baseline Data Setup (Most Common)
+
+**Use Case:** Populate OnWatch system with the default baseline data provided in the repository.
+
+This is the simplest and most common use case - running the automation with the pre-configured baseline data from machine 10.1.71.14.
+
+### Quick Setup
+
+```bash
+# 1. Clone repository
+git clone <repository-url>
+cd DataPopulationOnWatch
+
+# 2. Install dependencies
+pip install -r requirements.txt
+
+# 3. Update only IP addresses and credentials in config.yaml
+# (The rest of the data is already configured)
+nano config.yaml
+```
+
+**What to Update in config.yaml:**
+- `onwatch.ip_address` - Your OnWatch system IP
+- `onwatch.username` - Your OnWatch admin username  
+- `onwatch.password` - Your OnWatch admin password
+- `ssh.ip_address` - SSH IP (usually same as onwatch)
+- `ssh.username` - SSH username
+- `ssh.password` - SSH password
+- `rancher.ip_address` - Rancher server IP
+- `rancher.username` - Rancher username
+- `rancher.password` - Rancher password
+
+**Everything else is pre-configured:**
+- ✓ 5 KV parameters
+- ✓ System settings (thresholds, retention, map settings)
+- ✓ 3 subject groups (OnPatrol subject, Cardholders, Default Group)
+- ✓ 2 user accounts (Test, Administrator)
+- ✓ 2 user groups
+- ✓ 5 watch list subjects with images
+- ✓ 4 cameras/devices
+- ✓ 1 inquiry case with 4 files
+- ✓ Mass import file
+- ✓ Environment variables for Rancher
+- ✓ Translation file
+
+### Run Automation
+
+```bash
+# Validate configuration
+python3 main.py --validate
+
+# Preview what will be executed
+python3 main.py --dry-run
+
+# Run full automation
+python3 main.py
+```
+
+### What to Expect
+
+**Execution Time:** Approximately 5-10 minutes depending on file sizes and network speed.
+
+**Output Example:**
+```
+[Step 1/11] Initializing API client...
+✓ Successfully logged in to the OnWatch server at IP: 10.1.71.14
+
+[Step 2/11] Setting KV parameters...
+✓ Set KV parameter: applicationSettings/watchVideo/secondsAfterDetection = 6
+✓ Set KV parameter: applicationSettings/watchVideo/secondsBeforeDetection = 6
+...
+
+[Step 6/11] Populating watch list...
+✓ Added subject 'Yonatan' with 2 images
+✓ Added subject 'crop 1' with 1 image
+✓ Added subject 'crop 2' with 1 image
+✓ Added subject 'women 1' with 1 image
+✓ Added subject 'moderate 1' with 1 image
+
+...
+
+✓ Automation completed successfully
+
+=== Automation Summary ===
+Steps Completed: 11/11
+Items Created: 45
+Items Skipped: 2 (already existed)
+Warnings: 0
+Errors: 0
+```
+
+**After Completion:**
+- All system settings configured
+- Subject groups created
+- 5 subjects added to watch list
+- 4 cameras configured
+- Inquiry case created with files
+- Mass import uploaded (processing in background)
+- Rancher environment variables set
+- Translation file uploaded
+
+**Note:** If you run this multiple times on the same system, existing items will be automatically skipped (⏭️). This is safe and expected behavior.
+
 ## Example Use Cases
 
 ### Example 1: Initial System Setup
