@@ -194,7 +194,6 @@ class OnWatchAutomation:
         for key, value in kv_params.items():
             try:
                 self.client_api.set_kv_parameter(key, value)
-                logger.info(f"✓ Set KV parameter: {key} = {value}")
             except Exception as e:
                 logger.error(f"Failed to set KV parameter {key}: {e}")
                 raise
@@ -229,8 +228,13 @@ class OnWatchAutomation:
                 
                 if 'action_title' in map_settings and map_settings['action_title']:
                     try:
-                        self.client_api.create_acknowledge_action(map_settings['action_title'], description="")
-                        logger.info(f"✓ Created acknowledge action: {map_settings['action_title']}")
+                        from client_api import AcknowledgeActionAlreadyExists
+                        try:
+                            self.client_api.create_acknowledge_action(map_settings['action_title'], description="")
+                            logger.info(f"✓ Created acknowledge action: {map_settings['action_title']}")
+                        except AcknowledgeActionAlreadyExists:
+                            logger.info(f"⏭️  Acknowledge action '{map_settings['action_title']}' already exists, skipping")
+                            self.summary.add_skipped("Acknowledge Action", map_settings['action_title'], "already exists")
                     except Exception as e:
                         logger.warning(f"Could not create acknowledge action: {e}")
                         logger.warning("Continuing with other settings...")
@@ -308,7 +312,7 @@ class OnWatchAutomation:
                         cg_id = cg.get('id')
                         if title and cg_id:
                             camera_group_map[title.lower()] = cg_id
-            logger.info(f"Found {len(camera_group_map)} existing camera groups")
+            logger.debug(f"Found {len(camera_group_map)} existing camera groups")
         except Exception as e:
             logger.warning(f"Could not get camera groups: {e}")
         
@@ -357,13 +361,13 @@ class OnWatchAutomation:
                         title = cam.get('title', '').strip()
                         if title:
                             existing_camera_names.add(title.lower())
-            logger.info(f"Found {len(existing_camera_names)} existing cameras")
+            logger.debug(f"Found {len(existing_camera_names)} existing cameras")
         except Exception as e:
             logger.warning(f"Could not fetch existing cameras: {e}")
             existing_camera_names = set()
         
         # Create each camera
-        logger.info(f"Creating {len(devices)} cameras...")
+            logger.debug(f"Creating {len(devices)} cameras...")
         created_count = 0
         skipped_count = 0
         
@@ -463,7 +467,7 @@ class OnWatchAutomation:
                 if items and isinstance(items[0], dict):
                     default_group_id = items[0].get('id')
             
-            logger.info(f"Found {len(group_map)} groups")
+            logger.debug(f"Found {len(group_map)} groups")
         except Exception as e:
             logger.warning(f"Could not get groups: {e}")
         
@@ -486,6 +490,34 @@ class OnWatchAutomation:
                     group_map["Default Group"] = default_group_id
             except Exception as e:
                 logger.warning(f"Could not create default group: {e}")
+        
+        # Track success/failure counts
+        success_count = 0
+        failed_count = 0
+        skipped_count = 0
+        
+        # Get existing subjects to check for duplicates
+        existing_subject_names = set()
+        try:
+            existing_subjects = self.client_api.get_subjects()
+            # Handle different response formats
+            if isinstance(existing_subjects, list):
+                subjects_list = existing_subjects
+            elif isinstance(existing_subjects, dict) and 'items' in existing_subjects:
+                subjects_list = existing_subjects['items']
+            else:
+                subjects_list = []
+            
+            for subj in subjects_list:
+                if isinstance(subj, dict):
+                    subj_name = subj.get('name', '')
+                    if subj_name:
+                        existing_subject_names.add(subj_name.lower())
+            
+            logger.debug(f"Found {len(existing_subject_names)} existing subjects")
+        except Exception as e:
+            logger.debug(f"Could not fetch existing subjects for duplicate check: {e}")
+            # Continue anyway - will try to add and handle errors if duplicate
         
         for subject in watch_list:
             try:
@@ -526,6 +558,13 @@ class OnWatchAutomation:
                     logger.warning(f"Image file not found: {image_path}")
                     continue
                 
+                # Check if subject already exists
+                if name.lower() in existing_subject_names:
+                    logger.info(f"⏭️  Subject '{name}' already exists, skipping")
+                    self.summary.add_skipped("Subject", name, "already exists")
+                    skipped_count += 1
+                    continue
+                
                 # Add subject with first image
                 response = self.client_api.add_subject_from_image(name, image_path, group_id)
                 logger.info(f"✓ Added subject to watch list: {name} (image: {os.path.basename(image_path)})")
@@ -559,8 +598,8 @@ class OnWatchAutomation:
                                         logger.warning(f"Additional image file not found: {additional_img_path}")
                                 else:
                                     logger.warning(f"Additional image path is empty for {name}")
-                        else:
-                            logger.warning(f"Could not get subject ID to add additional images for {name}")
+                            else:
+                                logger.warning(f"Could not get subject ID to add additional images for {name}")
                     except Exception as e:
                         logger.warning(f"Could not process additional images for {name}: {e}")
                 
@@ -573,12 +612,14 @@ class OnWatchAutomation:
                 failed_count += 1
         
         # Log summary
-        if failed_count == 0:
+        if failed_count == 0 and skipped_count == 0:
             logger.info(f"✓ Watch list population complete: {success_count} subjects added")
+        elif failed_count == 0:
+            logger.info(f"✓ Watch list population complete: {success_count} added, {skipped_count} skipped")
         elif success_count > 0:
-            logger.warning(f"⚠️  Watch list population partial: {success_count} succeeded, {failed_count} failed")
+            logger.warning(f"⚠️  Watch list population partial: {success_count} succeeded, {failed_count} failed, {skipped_count} skipped")
         else:
-            logger.error(f"❌ Watch list population failed: all {failed_count} subjects failed")
+            logger.error(f"❌ Watch list population failed: all {failed_count} subjects failed, {skipped_count} skipped")
     
     async def configure_groups(self):
         """Configure groups and profiles via API."""
@@ -596,7 +637,7 @@ class OnWatchAutomation:
         # Process subject groups
         subject_groups = groups.get('subject_groups', [])
         if subject_groups:
-            logger.info(f"Creating {len(subject_groups)} subject groups...")
+            logger.debug(f"Creating {len(subject_groups)} subject groups...")
             
             # Helper function to check if two names are similar (handles plural/singular, case differences)
             def names_match(name1, name2):
@@ -637,7 +678,7 @@ class OnWatchAutomation:
                             if title:
                                 existing_group_list.append(title)
                 
-                logger.info(f"Found {len(existing_group_list)} existing groups")
+                logger.debug(f"Found {len(existing_group_list)} existing groups")
             except Exception as e:
                 logger.warning(f"Could not fetch existing groups: {e}")
                 existing_group_list = []
@@ -717,7 +758,7 @@ class OnWatchAutomation:
                         role_id = role.get('id')
                         if title and role_id:
                             role_map[title.lower()] = role_id
-            logger.info(f"Found {len(role_map)} roles")
+            logger.debug(f"Found {len(role_map)} roles")
         except Exception as e:
             logger.warning(f"Could not get roles: {e}")
         
@@ -730,14 +771,14 @@ class OnWatchAutomation:
                         ug_id = ug.get('id')
                         if title and ug_id:
                             user_group_map[title.lower()] = ug_id
-            logger.info(f"Found {len(user_group_map)} user groups")
+            logger.debug(f"Found {len(user_group_map)} user groups")
         except Exception as e:
             logger.warning(f"Could not get user groups: {e}")
         
         # Process users
         users = accounts.get('users', [])
         if users:
-            logger.info(f"Creating {len(users)} users...")
+            logger.debug(f"Creating {len(users)} users...")
             
             # Get existing users to check for duplicates
             try:
@@ -755,7 +796,7 @@ class OnWatchAutomation:
                             username = u.get('username', '')
                             if username:
                                 existing_usernames.add(username.lower())
-                logger.info(f"Found {len(existing_usernames)} existing users")
+                logger.debug(f"Found {len(existing_usernames)} existing users")
             except Exception as e:
                 logger.warning(f"Could not fetch existing users: {e}")
                 existing_usernames = set()
@@ -859,7 +900,7 @@ class OnWatchAutomation:
         # User groups - create user groups
         user_groups_config = accounts.get('user_groups', [])
         if user_groups_config:
-            logger.info(f"Creating {len(user_groups_config)} user groups...")
+            logger.debug(f"Creating {len(user_groups_config)} user groups...")
             
             # Get existing user groups to check for duplicates
             try:
@@ -871,7 +912,7 @@ class OnWatchAutomation:
                             title = ug.get('title', '')
                             if title:
                                 existing_titles.add(title.lower())
-                logger.info(f"Found {len(existing_titles)} existing user groups")
+                logger.debug(f"Found {len(existing_titles)} existing user groups")
             except Exception as e:
                 logger.warning(f"Could not fetch existing user groups: {e}")
                 existing_titles = set()
@@ -950,7 +991,7 @@ class OnWatchAutomation:
             logger.info("No inquiries to configure")
             return
         
-        logger.info(f"Configuring {len(inquiries)} inquiry cases...")
+        logger.debug(f"Configuring {len(inquiries)} inquiry cases...")
         
         # Initialize API client if needed
         if not self.client_api:
@@ -974,11 +1015,16 @@ class OnWatchAutomation:
                 priority = inquiry_config.get('priority', 'Medium')
                 
                 # Create inquiry case
-                logger.info(f"Creating inquiry case: {inquiry_name}")
-                case_result = self.client_api.create_inquiry_case(inquiry_name)
-                case_id = case_result.get('id')
-                if not case_id:
-                    logger.error(f"Failed to get case ID for '{inquiry_name}'")
+                from client_api import InquiryCaseAlreadyExists
+                try:
+                    case_result = self.client_api.create_inquiry_case(inquiry_name)
+                    case_id = case_result.get('id')
+                    if not case_id:
+                        logger.error(f"Failed to get case ID for '{inquiry_name}'")
+                        continue
+                except InquiryCaseAlreadyExists:
+                    logger.info(f"⏭️  Inquiry case '{inquiry_name}' already exists, skipping")
+                    self.summary.add_skipped("Inquiry Case", inquiry_name, "already exists")
                     continue
                 
                 # Update priority if specified
@@ -990,7 +1036,7 @@ class OnWatchAutomation:
                         logger.warning(f"Could not set priority for inquiry '{inquiry_name}': {e}")
                 
                 # Process each file
-                logger.info(f"Adding {len(files_config)} files to inquiry case...")
+                logger.debug(f"Adding {len(files_config)} files to inquiry case...")
                 file_ids_map = {}  # filename -> file_id (uploadId)
                 
                 for file_config in files_config:
@@ -1029,7 +1075,7 @@ class OnWatchAutomation:
                             continue
                         
                         # Step 1: Prepare forensic upload
-                        logger.info(f"Preparing upload for: {filename}")
+                        logger.debug(f"Preparing upload for: {filename}")
                         prepare_result = self.client_api.prepare_forensic_upload(filename, with_analysis=True)
                         upload_id = prepare_result.get('id') or prepare_result.get('uploadId')
                         if not upload_id:
@@ -1037,7 +1083,7 @@ class OnWatchAutomation:
                             continue
                         
                         # Step 2: Upload file
-                        logger.info(f"Uploading file: {filename}")
+                        logger.debug(f"Uploading file: {filename}")
                         self.client_api.upload_forensic_file(full_file_path, upload_id)
                         
                         # Step 3: Add file to case
@@ -1046,7 +1092,7 @@ class OnWatchAutomation:
                         if filename.lower() == 'neo.webm' and settings.lower() == 'custom':
                             threshold = 0.37  # Will be updated via GraphQL later
                         
-                        logger.info(f"Adding file to case: {filename}")
+                        logger.debug(f"Adding file to case: {filename}")
                         add_result = self.client_api.add_file_to_inquiry_case(
                             case_id, upload_id, filename, threshold=threshold
                         )
@@ -1067,7 +1113,7 @@ class OnWatchAutomation:
                 # Configure Neo.webm ROI and threshold, then restart analysis
                 if 'neo_webm_configure' in file_ids_map:
                     neo_webm_upload_id = file_ids_map['neo_webm_configure']
-                    logger.info("Configuring Neo.webm ROI and threshold...")
+                    logger.debug("Configuring Neo.webm ROI and threshold...")
                     
                     # Wait a moment for files to be registered
                     time.sleep(2)

@@ -19,6 +19,21 @@ logger = logging.getLogger(__name__)
 mimetypes.add_type('image/jpeg', '.jfif')
 
 
+class MassImportAlreadyExists(Exception):
+    """Exception raised when mass import with same name already exists."""
+    pass
+
+
+class AcknowledgeActionAlreadyExists(Exception):
+    """Exception raised when acknowledge action with same title already exists."""
+    pass
+
+
+class InquiryCaseAlreadyExists(Exception):
+    """Exception raised when inquiry case with same name already exists."""
+    pass
+
+
 class ClientApi:
     """Client API for interacting with OnWatch system."""
     
@@ -785,6 +800,9 @@ class ClientApi:
         Args:
             title: Action title
             description: Action description (optional)
+        
+        Raises:
+            AcknowledgeActionAlreadyExists: If action with same title already exists (409)
         """
         try:
             payload = {
@@ -796,10 +814,22 @@ class ClientApi:
                 headers=self.headers,
                 json=payload
             )
+            
+            # Check if action already exists (409 Conflict)
+            if response.status_code == 409:
+                try:
+                    error_data = response.json()
+                    if error_data.get('code') == 'ERR_ACTION_ALREADY_EXISTS':
+                        raise AcknowledgeActionAlreadyExists(f"Acknowledge action '{title}' already exists: {error_data.get('message', '')}")
+                except ValueError:
+                    pass  # Not JSON, continue with normal error handling
+            
             response.raise_for_status()
             result = response.json()
             logger.info(f"Created acknowledge action: {title} (id: {result.get('id')})")
             return result
+        except AcknowledgeActionAlreadyExists:
+            raise  # Re-raise as-is
         except requests.exceptions.RequestException as e:
             # Log the response body for debugging
             if hasattr(e, 'response') and e.response is not None:
@@ -1255,6 +1285,9 @@ class ClientApi:
         
         Returns:
             Created inquiry case data with 'id'
+        
+        Raises:
+            InquiryCaseAlreadyExists: If case with same name already exists (409)
         """
         try:
             payload = {"name": case_name}
@@ -1263,6 +1296,16 @@ class ClientApi:
                 headers=self.headers,
                 json=payload
             )
+            
+            # Check if case already exists (409 Conflict)
+            if response.status_code == 409:
+                try:
+                    error_data = response.json()
+                    if error_data.get('code') == 'ERR_CASE_NAME_ALREADY_EXISTS':
+                        raise InquiryCaseAlreadyExists(f"Inquiry case '{case_name}' already exists: {error_data.get('message', '')}")
+                except ValueError:
+                    pass  # Not JSON, continue with normal error handling
+            
             response.raise_for_status()
             result = response.json()
             inquiry_id = result.get("id")
@@ -1270,6 +1313,8 @@ class ClientApi:
                 raise ValueError(f"No 'id' returned in response: {result}")
             logger.info(f"Created inquiry case: {case_name} (id: {inquiry_id})")
             return result
+        except InquiryCaseAlreadyExists:
+            raise  # Re-raise as-is
         except requests.exceptions.RequestException as e:
             if hasattr(e, 'response') and e.response is not None:
                 logger.error(f"Failed to create inquiry case '{case_name}': {e}")
