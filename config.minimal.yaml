@@ -1,0 +1,41 @@
+# Minimal OnWatch Configuration - Quick Start Example
+# This is a minimal working configuration for testing
+
+onwatch:
+  ip_address: "10.1.71.14"
+  username: "Administrator"
+  password: "your-password-here"
+  base_url: "https://10.1.71.14"
+
+ssh:
+  ip_address: "10.1.71.14"
+  username: "user"
+  password: "user1!"
+  sudo_password: "user1!"
+  translation_util_path: "/opt/ansible-installer-1.4.0-8/support-scripts/translation-util"
+
+rancher:
+  ip_address: "10.1.71.14"
+  port: 9443
+  username: "admin"
+  password: "admin"
+  base_url: "https://10.1.71.14:9443"
+  workload_path: "/p/local:p-p6l45/workloads/run?launchConfigIndex=-1&namespaceId=default&upgrade=true&workloadId=statefulset%3Adefault%3Acv-engine"
+
+kv_parameters:
+  "applicationSettings/watchVideo/secondsAfterDetection": 6
+
+system_settings:
+  general:
+    blur_all_faces_except_selected: false
+    default_face_threshold: 0.61
+  map:
+    seed_location:
+      lat: 34.01993376317111
+      long: -118.50479101075484
+  system_interface:
+    product_name: "metropolis"
+
+env_vars:
+  ENABLE_DVR: "True"
+

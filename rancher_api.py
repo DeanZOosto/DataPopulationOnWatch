@@ -97,7 +97,7 @@ class RancherApi:
             
         except requests.exceptions.RequestException as e:
             # Token-based login failed, try basic auth as fallback
-            logger.info("Token-based login failed, trying basic auth...")
+            logger.debug(f"Token-based login failed: {e}, trying basic auth...")
             try:
                 self.session.auth = auth
                 test_url = f"{self.base_url}/v3/projects"
@@ -108,10 +108,21 @@ class RancherApi:
                 else:
                     raise ValueError(f"Both token and basic auth failed: {test_response.text}")
             except Exception as e2:
-                logger.error(f"Rancher login failed: {e}")
+                error_msg = f"Rancher login failed for {self.base_url}"
                 if hasattr(e, 'response') and e.response is not None:
-                    logger.error(f"Response: {e.response.text}")
-                raise
+                    status_code = e.response.status_code
+                    if status_code == 401:
+                        error_msg += ": Authentication failed (401 Unauthorized)"
+                        error_msg += "\n  → Check username and password in config.yaml (rancher section)"
+                        error_msg += "\n  → Verify credentials are correct for this Rancher instance"
+                    else:
+                        error_msg += f": HTTP {status_code} - {e.response.text[:200]}"
+                else:
+                    error_msg += f": {str(e)}"
+                    error_msg += "\n  → Check network connectivity to Rancher"
+                    error_msg += f"\n  → Verify Rancher is accessible at {self.base_url}"
+                logger.error(error_msg)
+                raise Exception(error_msg) from e
     
     def get_workload(self, workload_id="statefulset:default:cv-engine", project_id="local:p-p6l45"):
         """
@@ -133,10 +144,20 @@ class RancherApi:
             logger.info(f"Successfully retrieved workload: {workload_id}")
             return workload
         except requests.exceptions.RequestException as e:
-            logger.error(f"Failed to get workload: {e}")
+            error_msg = f"Failed to get Rancher workload: {workload_id}"
             if hasattr(e, 'response') and e.response is not None:
-                logger.error(f"Response: {e.response.text}")
-            raise
+                status_code = e.response.status_code
+                if status_code == 404:
+                    error_msg += ": Workload not found (404)"
+                    error_msg += f"\n  → Check workload_id '{workload_id}' is correct"
+                    error_msg += f"\n  → Verify project_id '{project_id}' is correct"
+                else:
+                    error_msg += f": HTTP {status_code} - {e.response.text[:200]}"
+            else:
+                error_msg += f": {str(e)}"
+            error_msg += f"\n  → URL: {url}"
+            logger.error(error_msg)
+            raise Exception(error_msg) from e
     
     def update_workload_environment_variables(self, env_vars, workload_id="statefulset:default:cv-engine", project_id="local:p-p6l45"):
         """
@@ -195,8 +216,20 @@ class RancherApi:
             logger.info(f"Successfully updated workload environment variables")
             return updated_workload
         except requests.exceptions.RequestException as e:
-            logger.error(f"Failed to update workload: {e}")
+            error_msg = f"Failed to update Rancher workload environment variables: {workload_id}"
             if hasattr(e, 'response') and e.response is not None:
-                logger.error(f"Response: {e.response.text}")
-            raise
+                status_code = e.response.status_code
+                if status_code == 404:
+                    error_msg += ": Workload not found (404)"
+                    error_msg += f"\n  → Check workload_id '{workload_id}' is correct"
+                elif status_code == 403:
+                    error_msg += ": Permission denied (403)"
+                    error_msg += "\n  → Verify Rancher user has permissions to update workloads"
+                else:
+                    error_msg += f": HTTP {status_code} - {e.response.text[:200]}"
+            else:
+                error_msg += f": {str(e)}"
+            error_msg += f"\n  → Environment variables attempted: {list(env_vars.keys())}"
+            logger.error(error_msg)
+            raise Exception(error_msg) from e
 

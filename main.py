@@ -9,6 +9,7 @@ import os
 import sys
 import logging
 import time
+import re
 from pathlib import Path
 from client_api import ClientApi
 from rancher_api import RancherApi
@@ -151,13 +152,50 @@ class OnWatchAutomation:
         self.client_api = None
         self.rancher_automation = None
         self.summary = RunSummary()
-        self.summary = RunSummary()
+    
+    def _substitute_env_vars(self, value):
+        """Substitute environment variables in config values."""
+        if not isinstance(value, str):
+            return value
+        
+        # Handle ${VAR_NAME} format
+        def replace_env(match):
+            var_name = match.group(1)
+            return os.getenv(var_name, match.group(0))
+        
+        # Replace ${VAR_NAME} patterns
+        value = re.sub(r'\$\{([^}]+)\}', replace_env, value)
+        
+        # Handle $VAR_NAME format (simple, no braces)
+        def replace_simple_env(match):
+            var_name = match.group(1)
+            return os.getenv(var_name, match.group(0))
+        
+        # Only replace $VAR if it's not part of ${VAR} and followed by non-alphanumeric
+        value = re.sub(r'\$([A-Z_][A-Z0-9_]*)', replace_simple_env, value)
+        
+        return value
+    
+    def _recursive_substitute_env(self, obj):
+        """Recursively substitute environment variables in config structure."""
+        if isinstance(obj, dict):
+            return {k: self._recursive_substitute_env(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [self._recursive_substitute_env(item) for item in obj]
+        elif isinstance(obj, str):
+            return self._substitute_env_vars(obj)
+        else:
+            return obj
     
     def load_config(self):
-        """Load configuration from YAML file."""
+        """Load configuration from YAML file with environment variable substitution."""
         try:
             with open(self.config_path, 'r') as f:
                 config = yaml.safe_load(f)
+            
+            # Substitute environment variables
+            config = self._recursive_substitute_env(config)
+            
             logger.info(f"Configuration loaded from {self.config_path}")
             return config
         except FileNotFoundError:
@@ -167,8 +205,203 @@ class OnWatchAutomation:
             logger.error(f"Error parsing YAML: {e}")
             sys.exit(1)
     
+    def _validate_ip_address(self, ip_str, field_name):
+        """Validate IP address format."""
+        if not ip_str or not isinstance(ip_str, str):
+            return False
+        # IPv4 pattern
+        ipv4_pattern = r'^(\d{1,3}\.){3}\d{1,3}$'
+        if re.match(ipv4_pattern, ip_str):
+            parts = ip_str.split('.')
+            return all(0 <= int(part) <= 255 for part in parts)
+        return False
+    
+    def _validate_file_path(self, file_path, field_name, required=True):
+        """Validate file path exists (if not using env var)."""
+        if not file_path:
+            if required:
+                return False, f"{field_name}: File path is required"
+            return True, None
+        
+        # Check if it's an environment variable placeholder
+        if isinstance(file_path, str) and (file_path.startswith('${') or file_path.startswith('$')):
+            return True, None
+        
+        # Resolve relative paths
+        project_root = os.path.dirname(os.path.abspath(__file__))
+        if not os.path.isabs(file_path):
+            full_path = os.path.join(project_root, file_path)
+        else:
+            full_path = file_path
+        
+        if not os.path.exists(full_path):
+            return False, f"{field_name}: File not found: {file_path} (resolved: {full_path})"
+        return True, None
+    
+    def validate_config(self, verbose=False):
+        """
+        Validate configuration file structure and values.
+        
+        Args:
+            verbose: If True, print detailed validation report
+            
+        Returns:
+            tuple: (is_valid, errors_list)
+        """
+        errors = []
+        warnings = []
+        config = self.config
+        
+        if not config:
+            errors.append("Configuration file is empty or invalid")
+            return False, errors
+        
+        # Validate required sections
+        required_sections = {
+            'onwatch': ['ip_address', 'username', 'password'],
+            'ssh': ['ip_address', 'username', 'password', 'translation_util_path'],
+            'rancher': ['ip_address', 'port', 'username', 'password', 'base_url', 'workload_path']
+        }
+        
+        for section, required_fields in required_sections.items():
+            if section not in config:
+                errors.append(f"Missing required section: '{section}'")
+                continue
+            
+            section_config = config[section]
+            if not isinstance(section_config, dict):
+                errors.append(f"Section '{section}' must be a dictionary")
+                continue
+            
+            # Validate required fields in section
+            for field in required_fields:
+                if field not in section_config:
+                    errors.append(f"Section '{section}': Missing required field '{field}'")
+                elif not section_config[field]:
+                    # Check if it's an env var placeholder
+                    field_value = section_config[field]
+                    if isinstance(field_value, str) and (field_value.startswith('${') or field_value.startswith('$')):
+                        continue  # Env var placeholder is OK
+                    warnings.append(f"Section '{section}': Field '{field}' is empty (may cause errors)")
+        
+        # Validate IP addresses
+        ip_fields = [
+            ('onwatch', 'ip_address'),
+            ('ssh', 'ip_address'),
+            ('rancher', 'ip_address')
+        ]
+        
+        for section, field in ip_fields:
+            if section in config and field in config[section]:
+                ip_value = config[section][field]
+                # Skip if it's an env var
+                if isinstance(ip_value, str) and (ip_value.startswith('${') or ip_value.startswith('$')):
+                    continue
+                if not self._validate_ip_address(ip_value, f"{section}.{field}"):
+                    errors.append(f"Section '{section}': Invalid IP address format for '{field}': {ip_value}")
+        
+        # Validate file paths (if specified)
+        project_root = os.path.dirname(os.path.abspath(__file__))
+        
+        # Validate translation file path
+        if 'system_settings' in config and 'system_interface' in config['system_settings']:
+            translation_file = config['system_settings']['system_interface'].get('translation_file')
+            if translation_file:
+                is_valid, error_msg = self._validate_file_path(translation_file, 'system_settings.system_interface.translation_file', required=False)
+                if not is_valid:
+                    errors.append(error_msg)
+        
+        # Validate watch list image paths
+        if 'watch_list' in config:
+            watch_list = config.get('watch_list', {})
+            subjects = watch_list.get('subjects', []) if isinstance(watch_list, dict) else watch_list
+            
+            for idx, subject in enumerate(subjects):
+                if not isinstance(subject, dict):
+                    continue
+                name = subject.get('name', f'subject_{idx}')
+                images = subject.get('images', [])
+                for img_idx, img in enumerate(images):
+                    if isinstance(img, dict):
+                        img_path = img.get('path', '')
+                    else:
+                        img_path = img if isinstance(img, str) else ''
+                    
+                    if img_path:
+                        is_valid, error_msg = self._validate_file_path(img_path, f'watch_list.subjects[{idx}].images[{img_idx}]', required=False)
+                        if not is_valid:
+                            warnings.append(f"Subject '{name}': {error_msg}")
+        
+        # Validate mass import file path
+        if 'mass_import' in config:
+            mass_import_file = config['mass_import'].get('file_path')
+            if mass_import_file:
+                is_valid, error_msg = self._validate_file_path(mass_import_file, 'mass_import.file_path', required=False)
+                if not is_valid:
+                    warnings.append(error_msg)
+        
+        # Validate inquiry file paths
+        if 'inquiries' in config:
+            for idx, inquiry in enumerate(config['inquiries']):
+                if not isinstance(inquiry, dict):
+                    continue
+                files = inquiry.get('files', {})
+                # Handle both dict format and list format
+                if isinstance(files, dict):
+                    for filename, file_config in files.items():
+                        if isinstance(file_config, dict):
+                            file_path = file_config.get('path', '')
+                        else:
+                            file_path = file_config if isinstance(file_config, str) else ''
+                        
+                        if file_path:
+                            is_valid, error_msg = self._validate_file_path(file_path, f'inquiries[{idx}].files.{filename}', required=False)
+                            if not is_valid:
+                                warnings.append(error_msg)
+                elif isinstance(files, list):
+                    for file_idx, file_item in enumerate(files):
+                        if isinstance(file_item, dict):
+                            file_path = file_item.get('path', '')
+                        else:
+                            file_path = file_item if isinstance(file_item, str) else ''
+                        
+                        if file_path:
+                            is_valid, error_msg = self._validate_file_path(file_path, f'inquiries[{idx}].files[{file_idx}]', required=False)
+                            if not is_valid:
+                                warnings.append(error_msg)
+        
+        # Validate Rancher port
+        if 'rancher' in config and 'port' in config['rancher']:
+            port = config['rancher']['port']
+            if not isinstance(port, int) or port < 1 or port > 65535:
+                errors.append(f"Section 'rancher': Invalid port number: {port} (must be 1-65535)")
+        
+        if verbose:
+            if errors:
+                logger.error("Configuration Validation - ERRORS:")
+                for error in errors:
+                    logger.error(f"  ❌ {error}")
+            if warnings:
+                logger.warning("Configuration Validation - WARNINGS:")
+                for warning in warnings:
+                    logger.warning(f"  ⚠️  {warning}")
+            if not errors and not warnings:
+                logger.info("✓ Configuration validation passed with no errors or warnings")
+            elif not errors:
+                logger.info("✓ Configuration validation passed (warnings present but non-critical)")
+        
+        return len(errors) == 0, errors
+    
     def initialize_api_client(self):
-        """Initialize the API client."""
+        """
+        Initialize the OnWatch API client and authenticate.
+        
+        Reads OnWatch connection details from config.yaml (onwatch section)
+        and establishes authenticated session with the OnWatch system.
+        
+        Raises:
+            Exception: If authentication fails or connection cannot be established
+        """
         onwatch_config = self.config['onwatch']
         self.client_api = ClientApi(
             ip_address=onwatch_config['ip_address'],
@@ -179,7 +412,17 @@ class OnWatchAutomation:
         logger.info("API client initialized and logged in")
     
     async def set_kv_parameters(self):
-        """Set KV parameters via API."""
+        """
+        Set key-value parameters via GraphQL API.
+        
+        Reads KV parameters from config.yaml (kv_parameters section) and
+        applies them to the OnWatch system using GraphQL mutations.
+        
+        Config Section: kv_parameters
+        Example:
+            kv_parameters:
+              "applicationSettings/watchVideo/secondsAfterDetection": 6
+        """
         kv_params = self.config.get('kv_parameters', {})
         if not kv_params:
             logger.info("No KV parameters to set")
@@ -199,7 +442,19 @@ class OnWatchAutomation:
                 raise
     
     async def configure_system_settings(self):
-        """Configure system settings via API."""
+        """
+        Configure system settings via REST API.
+        
+        Configures general, map, engine, and system interface settings.
+        Also handles acknowledge actions and logo uploads.
+        
+        Config Section: system_settings
+        Includes:
+            - General settings (thresholds, retention periods)
+            - Map settings (seed location, acknowledge actions)
+            - Engine settings (storage periods)
+            - System interface (product name, logos, favicon, translation file)
+        """
         system_settings = self.config.get('system_settings', {})
         if not system_settings:
             logger.info("No system settings to configure")
@@ -289,7 +544,25 @@ class OnWatchAutomation:
             raise
     
     async def configure_devices(self):
-        """Configure devices/cameras via GraphQL API."""
+        """
+        Configure cameras/devices via GraphQL API.
+        
+        Creates cameras with full configuration including thresholds, locations,
+        calibration settings, and security access settings.
+        Automatically skips cameras that already exist.
+        
+        Config Section: devices
+        Example:
+            devices:
+              - name: "face camera"
+                video_url: "rtsp://..."
+                details:
+                  threshold: 0.5
+                  location:
+                    name: "holon"
+                    lat: 32.007
+                    long: 34.800
+        """
         devices = self.config.get('devices', [])
         if not devices:
             logger.info("No devices to configure")
@@ -428,7 +701,24 @@ class OnWatchAutomation:
         logger.info(f"Devices configuration complete: {created_count} created, {skipped_count} skipped")
     
     def populate_watch_list(self):
-        """Populate watch list with subjects via API."""
+        """
+        Populate watch list with subjects via REST API.
+        
+        Adds subjects to the watch list with their images. Automatically
+        skips subjects that already exist (duplicate detection).
+        
+        Config Section: watch_list.subjects
+        Example:
+            watch_list:
+              subjects:
+                - name: "Yonatan"
+                  images:
+                    - path: "assets/images/me.jpg"
+                  group: "Default Group"
+        
+        Returns:
+            None (logs success/failure counts)
+        """
         watch_list_config = self.config.get('watch_list', {})
         # Handle both old format (list) and new format (dict with 'subjects')
         if isinstance(watch_list_config, dict):
@@ -622,7 +912,21 @@ class OnWatchAutomation:
             logger.error(f"❌ Watch list population failed: all {failed_count} subjects failed, {skipped_count} skipped")
     
     async def configure_groups(self):
-        """Configure groups and profiles via API."""
+        """
+        Configure subject groups via REST API.
+        
+        Creates subject groups with authorization, visibility, and priority settings.
+        Automatically skips groups that already exist (fuzzy matching).
+        
+        Config Section: groups.subject_groups
+        Example:
+            groups:
+              subject_groups:
+                - name: "Cardholders"
+                  authorization: "Always Authorized"
+                  visibility: "Visible"
+                  priority: 2
+        """
         groups = self.config.get('groups', {})
         if not groups:
             logger.info("No groups to configure")
@@ -985,7 +1289,23 @@ class OnWatchAutomation:
                     self.summary.add_warning(f"User group '{title}' was not created - manual action may be needed")
     
     async def configure_inquiries(self):
-        """Configure inquiries via API."""
+        """
+        Configure inquiry cases via REST API and GraphQL.
+        
+        Creates inquiry cases, uploads files, and configures file settings
+        (ROI, threshold). Automatically skips inquiry cases that already exist.
+        
+        Config Section: inquiries
+        Example:
+            inquiries:
+              - name: "upgrade test"
+                priority: "Medium"
+                files:
+                  - path: "assets/videos/Neo.mp4"
+                    settings: "default"
+                  - path: "assets/videos/Neo.webm"
+                    settings: "custom"  # Custom ROI and threshold
+        """
         inquiries = self.config.get('inquiries', [])
         if not inquiries:
             logger.info("No inquiries to configure")
@@ -1176,7 +1496,22 @@ class OnWatchAutomation:
         logger.info("Inquiries configuration complete")
     
     async def configure_mass_import(self):
-        """Upload mass import file and wait for completion."""
+        """
+        Upload mass import file via REST API.
+        
+        Prepares and uploads mass import file to OnWatch system.
+        Processing continues in background after upload.
+        Automatically skips if mass import with same name already exists.
+        
+        Config Section: mass_import
+        Example:
+            mass_import:
+              name: "mass-import 43"
+              file_path: "assets/mass-import/mass-import-43.tar"
+              group: "Cardholders"  # Subject group to attach import to
+        
+        Note: Check UI for processing status and manually resolve issues if needed.
+        """
         mass_import = self.config.get('mass_import', {})
         file_path = mass_import.get('file_path')
         if not file_path:
@@ -1372,7 +1707,20 @@ class OnWatchAutomation:
     
     async def upload_files(self):
         """
-        Upload translation files via SSH/SCP (Step 11).
+        Upload translation file via SSH/SCP.
+        
+        Copies translation file to device and runs translation-util script
+        to upload it to the OnWatch system.
+        
+        Config Sections: ssh, system_settings.system_interface.translation_file
+        Example:
+            ssh:
+              ip_address: "10.1.71.14"
+              username: "user"
+              password: "${SSH_PASSWORD}"
+            system_settings:
+              system_interface:
+                translation_file: "assets/Polski-updated3.json.json"
         
         This method uploads translation files to the OnWatch device using:
         1. SCP to copy file to /tmp/ on the device
@@ -1618,7 +1966,33 @@ def main():
     """Main entry point."""
     import argparse
     
-    parser = argparse.ArgumentParser(description='OnWatch Data Population Automation')
+    parser = argparse.ArgumentParser(
+        description='OnWatch Data Population Automation',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Validate configuration
+  python3 main.py --validate
+  
+  # Run full automation
+  python3 main.py
+  
+  # Run with custom config file
+  python3 main.py --config my-config.yaml
+  
+  # Run specific step
+  python3 main.py --step 6
+  
+  # Dry-run mode (validate and show what would be executed)
+  python3 main.py --dry-run
+  
+  # Verbose logging
+  python3 main.py --verbose
+  
+  # Quiet mode (errors only)
+  python3 main.py --quiet
+        """
+    )
     parser.add_argument(
         '--config',
         type=str,
@@ -1630,10 +2004,113 @@ def main():
         type=int,
         help='Run only a specific step (1-11)'
     )
+    parser.add_argument(
+        '--validate',
+        action='store_true',
+        help='Validate configuration file and exit (does not run automation)'
+    )
+    parser.add_argument(
+        '--dry-run',
+        action='store_true',
+        help='Validate config and show what would be executed without making API calls'
+    )
+    parser.add_argument(
+        '--verbose',
+        action='store_true',
+        help='Enable verbose logging (DEBUG level)'
+    )
+    parser.add_argument(
+        '--quiet',
+        action='store_true',
+        help='Enable quiet mode (ERROR level only)'
+    )
+    parser.add_argument(
+        '--log-file',
+        type=str,
+        help='Save logs to file (e.g., --log-file automation.log)'
+    )
+    parser.add_argument(
+        '--version',
+        action='version',
+        version='OnWatch Data Population Automation v1.0'
+    )
+    parser.add_argument(
+        '--list-steps',
+        action='store_true',
+        help='List all available automation steps and exit'
+    )
     
     args = parser.parse_args()
     
+    # Handle list-steps
+    if args.list_steps:
+        steps = [
+            (1, "Initialize API Client", "Initialize connection to OnWatch API"),
+            (2, "Set KV Parameters", "Configure key-value parameters"),
+            (3, "Configure System Settings", "Set general, map, engine, and interface settings"),
+            (4, "Configure Groups", "Create subject groups"),
+            (5, "Configure Accounts", "Create user accounts and user groups"),
+            (6, "Populate Watch List", "Add subjects to watch list with images"),
+            (7, "Configure Devices", "Create cameras/devices"),
+            (8, "Configure Inquiries", "Create inquiry cases with file uploads"),
+            (9, "Upload Mass Import", "Upload mass import file"),
+            (10, "Configure Rancher", "Set Kubernetes environment variables"),
+            (11, "Upload Files", "Upload translation file via SSH")
+        ]
+        print("\nAvailable Automation Steps:")
+        print("=" * 60)
+        for step_num, step_name, description in steps:
+            print(f"  Step {step_num}: {step_name}")
+            print(f"    {description}\n")
+        sys.exit(0)
+    
+    # Configure logging
+    if args.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+    elif args.quiet:
+        logging.getLogger().setLevel(logging.ERROR)
+    
+    # Setup log file if specified
+    if args.log_file:
+        file_handler = logging.FileHandler(args.log_file)
+        file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+        logging.getLogger().addHandler(file_handler)
+    
     automation = OnWatchAutomation(config_path=args.config)
+    
+    # Handle validate-only mode
+    if args.validate:
+        is_valid, errors = automation.validate_config(verbose=True)
+        if is_valid:
+            logger.info("\n✓ Configuration is valid")
+            sys.exit(0)
+        else:
+            logger.error(f"\n❌ Configuration validation failed with {len(errors)} error(s)")
+            sys.exit(1)
+    
+    # Handle dry-run mode
+    if args.dry_run:
+        is_valid, errors = automation.validate_config(verbose=True)
+        if not is_valid:
+            logger.error(f"\n❌ Configuration validation failed. Cannot proceed with dry-run.")
+            sys.exit(1)
+        logger.info("\n" + "=" * 80)
+        logger.info("DRY-RUN MODE: Showing what would be executed")
+        logger.info("=" * 80)
+        logger.info("\nThe following steps would be executed:")
+        logger.info("  1. Initialize API client")
+        logger.info("  2. Set KV parameters")
+        logger.info("  3. Configure system settings")
+        logger.info("  4. Configure groups")
+        logger.info("  5. Configure accounts")
+        logger.info("  6. Populate watch list")
+        logger.info("  7. Configure devices")
+        logger.info("  8. Configure inquiries")
+        logger.info("  9. Upload mass import")
+        logger.info("  10. Configure Rancher")
+        logger.info("  11. Upload files")
+        logger.info("\n✓ Dry-run completed - no actual changes were made")
+        sys.exit(0)
     
     if args.step:
         # Steps that need API client initialized first

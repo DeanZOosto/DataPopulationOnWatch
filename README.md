@@ -1,233 +1,279 @@
 # OnWatch Data Population Automation
 
-Automated data population script for OnWatch on-premise software. This tool automates the configuration and data setup process that was previously done manually through the UI.
+Automated data population tool for OnWatch on-premise systems. This script automates the configuration and data setup process via REST API, GraphQL API, and Rancher configuration.
 
-## Features
+## Quick Start
 
-### ✅ Fully Implemented (API-Based)
-- **KV Parameters**: GraphQL API mutation for key-value settings
-- **System Settings**: General, Map, Engine, and Interface settings via PATCH API
-- **Acknowledge Actions**: Enable/disable and create acknowledge actions
-- **Logo Uploads**: Company, sidebar, and favicon logos (two-step upload process)
-- **Watch List**: Add subjects with multiple images via API
-- **Groups Configuration** (Step 4): Subject groups creation via POST API
-- **Accounts Configuration** (Step 5): User creation via POST API with role and user group mapping
-- **Devices/Cameras Configuration** (Step 7): Camera creation via GraphQL mutation with full configuration support
-- **Inquiries Configuration** (Step 8): Inquiry case creation with file uploads and custom file configuration (ROI, threshold)
-- **Mass Import** (Step 9): Mass import file upload (processing continues in background; issues may need manual resolution)
-- **Rancher Configuration** (Step 10): Kubernetes pod environment variables via Rancher REST API
-- **Translation File Upload** (Step 11): Translation file upload via SSH/SCP to device
+### 1. Installation
 
-### 🚧 Not Yet Implemented (Requires API Endpoints)
-- **Icons Directory Upload** (Step 11): Icons directory upload - currently requires manual setup (no API endpoint available)
-
-**Note**: This project uses **API-only approach** for all steps. All automation is done via REST API, GraphQL API, or Rancher REST API.
-
-### 📋 Future Enhancements
-- **Icons Directory Upload** (Step 11): Currently requires manual setup
-  - Future: Implement SSH/SCP upload or wait for API endpoint
-
-## Prerequisites
-
-- Python 3.9 or higher
-- Access to OnWatch system (REST API and GraphQL API)
-- Access to Rancher API (for Step 10 - Kubernetes workload configuration)
-
-## Installation
-
-1. Clone or navigate to this directory:
 ```bash
-cd /Users/deanzion/Work/DataPopulationOnWatch
-```
-
-2. Install Python dependencies:
-```bash
+# Install Python dependencies
 pip install -r requirements.txt
 ```
 
+### 2. Configuration
+
+Copy the example config and update with your values:
+
+```bash
+cp config.example.yaml config.yaml
+# Edit config.yaml with your OnWatch system details
+```
+
+**Important**: Use environment variables for sensitive data:
+```yaml
+onwatch:
+  password: "${ONWATCH_PASSWORD}"  # Set ONWATCH_PASSWORD env var
+```
+
+### 3. Validate Configuration
+
+```bash
+python3 main.py --validate
+```
+
+### 4. Run Automation
+
+```bash
+# Full automation
+python3 main.py
+
+# Dry-run (preview without making changes)
+python3 main.py --dry-run
+
+# Run specific step
+python3 main.py --step 6
+```
+
+## Table of Contents
+
+- [Quick Start](#quick-start)
+- [Configuration](#configuration)
+- [Usage Examples](#usage-examples)
+- [Command-Line Options](#command-line-options)
+- [Troubleshooting](#troubleshooting)
+- [Configuration Reference](#configuration-reference)
+
 ## Configuration
 
-Edit the `config.yaml` file with your settings:
+### Environment Variables
 
-1. **OnWatch Connection**:
-   - Update `onwatch.ip_address` with your OnWatch system IP
-   - Update credentials if different from defaults
+For security, use environment variables for passwords and sensitive data:
 
-2. **SSH Connection** (for translation file upload):
-   - Update `ssh.ip_address` (usually same as onwatch IP)
-   - Update `ssh.username` and `ssh.password` (required - will prompt if not set)
-   - Update `ssh.translation_util_path` if script is in different location
-   - **Note**: If `ssh.password` is empty, the script will prompt you to enter it securely
+```bash
+export ONWATCH_PASSWORD="your-password"
+export SSH_PASSWORD="ssh-password"
+export RANCHER_PASSWORD="rancher-password"
+```
 
-3. **Rancher Connection**:
-   - Update `rancher.ip_address` and `port` if needed
-   - Update credentials if different
+Then in `config.yaml`:
+```yaml
+onwatch:
+  password: "${ONWATCH_PASSWORD}"
+ssh:
+  password: "${SSH_PASSWORD}"
+rancher:
+  password: "${RANCHER_PASSWORD}"
+```
 
-4. **KV Parameters**: Add/modify key-value pairs as needed
+### Required Configuration Sections
 
-5. **System Settings**: Configure all system settings sections
-   - Set `system_interface.translation_file` to path of translation file (e.g., "assets/Polski-updated3.json.json")
+- **onwatch**: OnWatch system connection (IP, username, password)
+- **ssh**: SSH connection for translation file upload
+- **rancher**: Rancher API connection for Kubernetes environment variables
 
-6. **Devices**: Add/modify camera configurations
+See `config.example.yaml` for complete configuration template.
 
-7. **Watch List**: 
-   - Add subject names
-   - Specify image file paths
-   - Set group IDs or leave null for default group
+## Usage Examples
 
-7. **Environment Variables**: Add Rancher environment variables if needed
+### Validate Configuration
+```bash
+python3 main.py --validate
+```
 
-## Usage
+### Dry-Run (Preview Changes)
+```bash
+python3 main.py --dry-run
+```
 
-### Basic Usage
-
-Run the automation script:
+### Run Full Automation
 ```bash
 python3 main.py
 ```
 
-### With Custom Config File
-
+### Run Specific Step
 ```bash
-python3 main.py --config my-config.yaml
+# Step 6: Populate Watch List
+python3 main.py --step 6
 ```
 
+### Verbose Logging
+```bash
+python3 main.py --verbose
+```
 
-## Configuration File Structure
+### Save Logs to File
+```bash
+python3 main.py --log-file automation.log
+```
 
-The `config.yaml` file contains all settings organized in sections:
+### List Available Steps
+```bash
+python3 main.py --list-steps
+```
 
-- `onwatch`: Connection details for OnWatch
-- `rancher`: Connection details for Rancher
-- `kv_parameters`: Key-value settings
-- `system_settings`: General, map, engine, and interface settings
-- `devices`: Camera/device configurations
-- `watch_list`: Subjects to add with image paths
-- `env_vars`: Rancher environment variables
-- `file_uploads`: File paths for uploads
+## Command-Line Options
 
-## How It Works
-
-The automation uses **API-only approach**:
-
-1. **REST API** (via `ClientApi`): 
-   - Watch list population (Step 6)
-   - System settings (PATCH `/bt/api/settings`) (Step 3)
-   - Acknowledge actions (Step 3)
-   - Logo uploads (Step 3)
-   - Camera groups (Step 7)
-   - Inquiry case creation and file uploads (Step 8)
-   - Mass import file uploads (Step 9)
-2. **GraphQL API**: 
-   - KV parameters (mutation `updateSingleSetting`) (Step 2)
-   - Camera creation (mutation `createCamera`) (Step 7)
-   - File media data updates (mutation `updateFileMediaData`) (Step 8)
-   - Mass import status queries (query `getMassImportLists`) (Step 9)
-3. **Rancher REST API**: 
-   - For setting Kubernetes pod environment variables (Step 10) - uses Rancher v3 API to update workload configurations
-4. **SSH/SCP**: 
-   - For uploading translation files (Step 11) - uses SSH to copy file to device and run translation-util script
-
-## Customization
-
-### API Endpoints
-
-If your OnWatch API endpoints differ from the defaults, update them in `client_api.py`:
-- Login endpoint
-- Subject creation endpoint
-- Face extraction endpoint
-- Groups endpoint
-
-### Rancher API
-
-Rancher API (Step 10) uses the Rancher v3 REST API to update workload environment variables. Ensure Rancher credentials and environment variables are configured in `config.yaml`. The API client supports both token-based and basic authentication.
+| Option | Description |
+|--------|-------------|
+| `--config FILE` | Use custom config file (default: `config.yaml`) |
+| `--validate` | Validate configuration and exit |
+| `--dry-run` | Preview changes without executing |
+| `--step N` | Run only step N (1-11) |
+| `--verbose` | Enable debug logging |
+| `--quiet` | Show errors only |
+| `--log-file FILE` | Save logs to file |
+| `--list-steps` | List all available steps |
+| `--version` | Show version information |
+| `--help` | Show help message |
 
 ## Troubleshooting
 
-### Login Issues
+### Common Issues
 
-- Verify IP address and credentials in `config.yaml`
+#### Configuration Validation Fails
+
+**Error**: `Missing required section: 'onwatch'`
+
+**Solution**: 
+- Check that `config.yaml` exists and is valid YAML
+- Verify all required sections are present (onwatch, ssh, rancher)
+- Run `python3 main.py --validate` for detailed validation report
+
+#### Login Failed (401 Unauthorized)
+
+**Error**: `Login failed: Authentication failed (401 Unauthorized)`
+
+**Solution**:
+- Verify username and password in `config.yaml` (onwatch section)
+- Check credentials are correct for this OnWatch system
+- Ensure password is not empty (use env var if needed)
+
+#### File Not Found
+
+**Error**: `Image file not found: assets/images/me.jpg`
+
+**Solution**:
+- Verify file paths in `config.yaml` are correct
+- Check if files exist (paths are relative to project root)
+- Use absolute paths if needed
+
+#### Network Connectivity Issues
+
+**Error**: `Connection error` or `404 Not Found`
+
+**Solution**:
+- Verify IP address in `config.yaml` is correct
 - Check network connectivity to OnWatch system
-- Ensure SSL certificate issues are handled (script disables SSL verification)
+- Ensure OnWatch API is accessible
+- Verify firewall rules allow connections
 
-### API Issues
+#### SSH Authentication Failed
 
-- Verify API endpoints match your OnWatch version
-- Check authentication mechanism (token vs cookie)
-- Review API response formats
+**Error**: `SFTP authentication failed`
 
-### Image Upload Issues
+**Solution**:
+- Check SSH username and password in `config.yaml` (ssh section)
+- Verify credentials are correct for the device
+- Ensure SSH service is running on the device
 
-- Ensure image file paths in `config.yaml` are absolute or relative to script location
-- Verify image files exist and are readable
-- Check image format compatibility
+### Getting Help
 
-## Logging
+1. **Validate Configuration**: `python3 main.py --validate`
+2. **Check Logs**: Review error messages for specific issues
+3. **Dry-Run First**: Use `--dry-run` to preview changes
+4. **Verbose Mode**: Use `--verbose` for detailed debugging
 
-The script provides detailed logging:
-- INFO: Normal operation messages
-- WARNING: Non-critical issues
-- ERROR: Critical failures
+## Configuration Reference
 
-Logs are printed to console. To save logs to file:
-```bash
-python3 main.py 2>&1 | tee automation.log
+### Configuration File Structure
+
+```yaml
+onwatch:              # OnWatch system connection
+  ip_address: "10.1.71.14"
+  username: "Administrator"
+  password: "${ONWATCH_PASSWORD}"
+
+ssh:                  # SSH for translation file upload
+  ip_address: "10.1.71.14"
+  username: "user"
+  password: "${SSH_PASSWORD}"
+
+rancher:              # Rancher API connection
+  ip_address: "10.1.71.14"
+  port: 9443
+  username: "admin"
+  password: "${RANCHER_PASSWORD}"
+
+kv_parameters:        # Key-value settings
+  "applicationSettings/watchVideo/secondsAfterDetection": 6
+
+system_settings:      # System configuration
+  general: {...}
+  map: {...}
+  engine: {...}
+
+devices:              # Camera/device configurations
+  - name: "face camera"
+    video_url: "rtsp://..."
+    ...
+
+watch_list:          # Subjects to add
+  subjects:
+    - name: "Yonatan"
+      images:
+        - path: "assets/images/me.jpg"
 ```
+
+See `config.example.yaml` for complete example.
+
+## Automation Steps
+
+1. **Initialize API Client** - Connect to OnWatch API
+2. **Set KV Parameters** - Configure key-value settings
+3. **Configure System Settings** - General, map, engine, interface settings
+4. **Configure Groups** - Create subject groups
+5. **Configure Accounts** - Create users and user groups
+6. **Populate Watch List** - Add subjects with images
+7. **Configure Devices** - Create cameras/devices
+8. **Configure Inquiries** - Create inquiry cases with files
+9. **Upload Mass Import** - Upload mass import file
+10. **Configure Rancher** - Set Kubernetes environment variables
+11. **Upload Files** - Upload translation file via SSH
+
+## Features
+
+- **API-Only Approach**: All automation via REST API, GraphQL API, and Rancher API
+- **Configuration Validation**: Validate config before running
+- **Dry-Run Mode**: Preview changes without executing
+- **Environment Variables**: Secure password handling
+- **Duplicate Detection**: Automatically skips existing items
+- **Comprehensive Logging**: Detailed progress and error reporting
+- **Error Recovery**: Clear error messages with troubleshooting hints
 
 ## Notes
 
 - The script disables SSL verification for self-signed certificates
-- All automation is done via API calls (REST API, GraphQL API, and Rancher REST API)
-- Steps without API endpoints will log warnings and skip configuration
-- **Mass Import**: After uploading, processing continues in the background. You may need to manually resolve issues in the mass import report via the UI after processing completes.
+- Mass import processing continues in background (check UI for status)
+- Some items may need manual resolution after automation completes
+- All file paths are relative to project root unless absolute
 
 ## Support
 
-For issues or questions:
-1. Check the logs for error messages
-2. Verify configuration file format (YAML syntax)
-3. Test individual components (API, UI, Rancher) separately
-4. Review and adjust selectors/endpoints as needed
+For detailed documentation, see `CONFLUENCE_TEMPLATE.md` for step-by-step guide.
 
-## Example Workflow
-
-1. Install fresh OnWatch system
-2. Update `config.yaml` with your settings and image paths
-3. Run `python3 main.py`
-4. Monitor console output for progress
-5. Verify settings in OnWatch UI after completion
-
-## Current Status
-
-### ✅ Working Features (API-Based)
-- **KV Parameters (Step 2)**: GraphQL API mutation
-- **System Settings (Step 3)**: REST API with acknowledge actions and logo uploads
-- **Groups (Step 4)**: Subject groups creation via POST API (works on clean system)
-- **Accounts (Step 5)**: User creation via POST API with role/user group mapping
-- **Watch List (Step 6)**: REST API with multiple images per subject
-- **Devices (Step 7)**: Camera creation via GraphQL with full configuration (threshold, location, calibration, security access)
-- **Inquiries (Step 8)**: Inquiry case creation with file uploads, priority setting, and custom file configuration (ROI, threshold)
-- **Mass Import (Step 9)**: Mass import file upload (processing continues in background; check UI for status and manually resolve any issues if needed)
-- **Rancher (Step 10)**: Kubernetes pod environment variables configuration via Rancher REST API
-- **Translation File Upload (Step 11)**: Translation file upload via SSH/SCP to device
-
-### 🚧 Steps Waiting for API Endpoints
-- **Icons Directory Upload (Step 11)**: Icons directory upload - will log warning and skip (requires manual setup or future API endpoint)
-
-**Note**: These steps will be implemented once API endpoints are available.
-
-### Configuration Notes
-- **Privacy/GDPR Settings**: `privacyMode` and `gdprMode` are intentionally NOT modified
-- **Mask Classifier**: `maskClassifier.access` is intentionally NOT modified
-- **Logo Source**: Automatically uses `assets/images/me.jpg` from "Yonatan" subject in watch_list
-- **Translation Files**: Uploaded via SSH/SCP (Step 11)
-
-## Future Enhancements
-
-- Icons directory upload via SSH/SCP (translation file upload already implemented)
-- Support for multiple environments (dev, staging, prod)
-- Dry-run mode to preview changes
-- Rollback functionality
-- More robust error handling and retry logic
-- API endpoints for Inquiries and Mass Import
-
+For issues:
+1. Run `python3 main.py --validate` to check configuration
+2. Review error messages (they include troubleshooting hints)
+3. Use `--verbose` for detailed debugging
+4. Check logs saved with `--log-file` option

@@ -82,8 +82,25 @@ class ClientApi:
             return response
             
         except requests.exceptions.RequestException as e:
-            print(f"Login failed: {e}")
-            raise
+            error_msg = f"Login failed to OnWatch system at {self.ip_address}"
+            if hasattr(e, 'response') and e.response is not None:
+                status_code = e.response.status_code
+                if status_code == 401:
+                    error_msg += ": Authentication failed (401 Unauthorized)"
+                    error_msg += "\n  → Check username and password in config.yaml (onwatch section)"
+                    error_msg += "\n  → Verify credentials are correct for this OnWatch system"
+                elif status_code == 404:
+                    error_msg += f": Login endpoint not found (404 Not Found)"
+                    error_msg += f"\n  → Check if OnWatch API is accessible at {login_url}"
+                    error_msg += "\n  → Verify IP address and network connectivity"
+                else:
+                    error_msg += f": HTTP {status_code} - {e.response.text[:200]}"
+            else:
+                error_msg += f": {str(e)}"
+                error_msg += "\n  → Check network connectivity to OnWatch system"
+                error_msg += f"\n  → Verify IP address {self.ip_address} is correct"
+            logger.error(error_msg)
+            raise Exception(error_msg) from e
     
     def extract_faces_from_image(self, image_path):
         """
@@ -111,11 +128,22 @@ class ClientApi:
                 response.raise_for_status()
                 return response
         except FileNotFoundError:
-            logger.error(f"Image file not found: {image_path}")
-            raise
+            error_msg = f"Image file not found: {image_path}"
+            error_msg += "\n  → Verify the file path in config.yaml is correct"
+            error_msg += "\n  → Check if file exists and is readable"
+            error_msg += "\n  → Ensure path is relative to project root or absolute"
+            logger.error(error_msg)
+            raise FileNotFoundError(error_msg)
         except requests.exceptions.RequestException as e:
-            logger.error(f"Failed to extract faces from {extract_url}: {e}")
-            raise
+            error_msg = f"Failed to extract faces from image: {os.path.basename(image_path)}"
+            if hasattr(e, 'response') and e.response is not None:
+                error_msg += f"\n  → API returned: {e.response.status_code} - {e.response.text[:200]}"
+            else:
+                error_msg += f"\n  → Error: {str(e)}"
+            error_msg += f"\n  → Endpoint: {extract_url}"
+            error_msg += "\n  → Check if OnWatch API is accessible and authentication is valid"
+            logger.error(error_msg)
+            raise Exception(error_msg) from e
     
     def add_subject_from_image(self, name, pic, group_id):
         """
@@ -173,8 +201,16 @@ class ClientApi:
             
             # Better error logging
             if response.status_code != 201:
-                logger.error(f"Failed to add subject. Status: {response.status_code}, Response: {response.text}")
-                logger.error(f"Payload sent: {payload}")
+                error_msg = f"Failed to add subject '{name}' to watch list"
+                error_msg += f"\n  → HTTP Status: {response.status_code}"
+                error_msg += f"\n  → Response: {response.text[:300]}"
+                if response.status_code == 400:
+                    error_msg += "\n  → Check subject name format and image file validity"
+                    error_msg += "\n  → Verify group_id is valid (or set to null)"
+                elif response.status_code == 409:
+                    error_msg += "\n  → Subject may already exist (this should be handled by duplicate check)"
+                logger.error(error_msg)
+                logger.debug(f"Payload sent: {payload}")
             
             response.raise_for_status()
             return response

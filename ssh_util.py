@@ -90,13 +90,23 @@ class SSHUtil:
             return True
             
         except paramiko.AuthenticationException:
-            logger.error("SFTP authentication failed")
+            error_msg = f"SFTP authentication failed for {self.username}@{self.ip_address}"
+            error_msg += "\n  → Check SSH username and password in config.yaml (ssh section)"
+            error_msg += "\n  → Verify credentials are correct for this device"
+            logger.error(error_msg)
             return False
         except paramiko.SSHException as e:
-            logger.error(f"SFTP error: {e}")
+            error_msg = f"SFTP connection error: {str(e)}"
+            error_msg += f"\n  → Target: {self.username}@{self.ip_address}:{remote_path}"
+            error_msg += "\n  → Check network connectivity and SSH service status"
+            logger.error(error_msg)
             return False
         except Exception as e:
-            logger.error(f"SFTP error: {e}")
+            error_msg = f"SFTP error copying file: {str(e)}"
+            error_msg += f"\n  → Local file: {local_path}"
+            error_msg += f"\n  → Remote path: {remote_path}"
+            error_msg += f"\n  → Target: {self.username}@{self.ip_address}"
+            logger.error(error_msg)
             return False
     
     def run_ssh_command(self, command, use_sudo=False, password=None):
