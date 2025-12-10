@@ -1414,8 +1414,8 @@ class OnWatchAutomation:
             logger.warning("Skipping Rancher environment variable configuration")
             return
         
-        # Validate required Rancher config fields
-        required_fields = ['ip_address', 'port', 'username', 'password']
+        # Validate required Rancher config fields (ip_address not needed - uses onwatch.ip_address)
+        required_fields = ['port', 'username', 'password']
         missing_fields = [field for field in required_fields if not rancher_config.get(field)]
         if missing_fields:
             logger.error(f"Missing required Rancher configuration fields: {', '.join(missing_fields)}")
@@ -1423,7 +1423,15 @@ class OnWatchAutomation:
             return
         
         logger.info("Configuring Rancher environment variables via API...")
-        base_url = rancher_config.get('base_url') or f"https://{rancher_config['ip_address']}:{rancher_config['port']}"
+        
+        # Use OnWatch IP address for Rancher base URL (Rancher runs on same machine as OnWatch)
+        onwatch_config = self.config.get('onwatch', {})
+        onwatch_ip = onwatch_config.get('ip_address')
+        if not onwatch_ip:
+            raise ValueError("onwatch.ip_address not found in config.yaml - required for Rancher API")
+        
+        rancher_port = rancher_config.get('port', 9443)
+        base_url = rancher_config.get('base_url') or f"https://{onwatch_ip}:{rancher_port}"
         
         try:
             # Initialize Rancher API client
@@ -1434,10 +1442,8 @@ class OnWatchAutomation:
             )
             rancher_api.login()
             
-            # Extract workload_id and project_id from workload_path if provided
-            # Default values for cv-engine workload
-            workload_id = "statefulset:default:cv-engine"
-            project_id = None  # Will be discovered dynamically if not found
+            # Extract workload_id from workload_path if provided (always discover project_id dynamically)
+            workload_id = "statefulset:default:cv-engine"  # Default
             
             workload_path = rancher_config.get('workload_path', '')
             if workload_path:
@@ -1453,7 +1459,7 @@ class OnWatchAutomation:
                     workload_path = parsed_url.path + ('?' + parsed_url.query if parsed_url.query else '')
                     logger.debug(f"Extracted path from full URL: {workload_path}")
                 
-                # Parse workload_path to extract IDs
+                # Parse workload_path to extract workload_id only (not project_id - always discover dynamically)
                 # Format: /p/local:p-p6l45/workloads/run?launchConfigIndex=-1&namespaceId=default&upgrade=true&workloadId=statefulset%3Adefault%3Acv-engine
                 if 'workloadId=' in workload_path:
                     import urllib.parse
@@ -1461,23 +1467,18 @@ class OnWatchAutomation:
                     if 'workloadId' in parsed:
                         workload_id = urllib.parse.unquote(parsed['workloadId'][0])
                         logger.info(f"Extracted workload_id from workload_path: {workload_id}")
-                
-                if '/p/' in workload_path:
-                    project_id = workload_path.split('/p/')[1].split('/')[0]
-                    logger.info(f"Extracted project_id from workload_path: {project_id}")
             
-            # If project_id not found, discover it dynamically from default namespace
+            # Always discover project_id dynamically from default namespace
+            logger.info("Discovering project_id from default namespace via Rancher API...")
+            project_id = rancher_api.get_project_id_from_namespace(namespace="default")
             if not project_id:
-                logger.info("Project ID not found in workload_path, discovering from default namespace...")
-                project_id = rancher_api.get_project_id_from_namespace(namespace="default")
-                if project_id:
-                    logger.info(f"✓ Discovered project_id: {project_id}")
-                else:
-                    error_msg = "Could not discover project_id from default namespace"
-                    error_msg += "\n  → Please provide workload_path in config.yaml (rancher section)"
-                    error_msg += "\n  → Format: /p/local:p-XXXXX/workloads/run?workloadId=..."
-                    logger.error(error_msg)
-                    raise ValueError(error_msg)
+                error_msg = "Could not discover project_id from default namespace"
+                error_msg += f"\n  → Verify Rancher API is accessible at {base_url}"
+                error_msg += "\n  → Verify namespace 'default' exists and has a projectId"
+                logger.error(error_msg)
+                raise ValueError(error_msg)
+            
+            logger.info(f"✓ Discovered project_id: {project_id}")
             
             # Log what we're using
             logger.info(f"Using workload_id: {workload_id}, project_id: {project_id}")

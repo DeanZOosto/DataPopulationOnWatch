@@ -278,14 +278,16 @@ class ConfigManager:
     
     def update_ip_address(self, new_ip, backup=True):
         """
-        Update all IP addresses in the configuration file.
+        Update connection IP addresses in the configuration file.
         
-        Updates:
+        Updates only connection-related IPs (not camera IPs):
         - onwatch.ip_address
         - onwatch.base_url (replaces IP in URL)
         - ssh.ip_address
-        - rancher.ip_address
         - rancher.base_url (replaces IP in URL)
+        
+        Does NOT update:
+        - Camera video_url IPs (devices[].video_url) - these are immutable
         
         Args:
             new_ip: New IP address to set
@@ -294,6 +296,8 @@ class ConfigManager:
         Returns:
             tuple: (success: bool, message: str)
         """
+        import yaml
+        
         # Validate IP address format
         if not self._validate_ip_address(new_ip, "new_ip"):
             return False, f"Invalid IP address format: {new_ip}"
@@ -313,36 +317,110 @@ class ConfigManager:
             except Exception as e:
                 logger.warning(f"Could not create backup: {e}")
         
-        # Read the file as text to preserve formatting and comments
+        # Update specific connection IPs in config dict (preserves camera IPs)
+        replacement_count = 0
+        
+        # Update onwatch.ip_address
+        if 'onwatch' in self.config and 'ip_address' in self.config['onwatch']:
+            old_ip = self.config['onwatch']['ip_address']
+            if old_ip != new_ip:
+                self.config['onwatch']['ip_address'] = new_ip
+                replacement_count += 1
+                logger.debug(f"Updated onwatch.ip_address: {old_ip} -> {new_ip}")
+        
+        # Update onwatch.base_url (IP in URL)
+        if 'onwatch' in self.config and 'base_url' in self.config['onwatch']:
+            base_url = self.config['onwatch']['base_url']
+            # Extract IP from URL and replace
+            ip_pattern = r'\b(\d{1,3}\.){3}\d{1,3}\b'
+            if re.search(ip_pattern, base_url):
+                new_base_url = re.sub(ip_pattern, new_ip, base_url)
+                if new_base_url != base_url:
+                    self.config['onwatch']['base_url'] = new_base_url
+                    replacement_count += 1
+                    logger.debug(f"Updated onwatch.base_url: {base_url} -> {new_base_url}")
+        
+        # Update ssh.ip_address
+        if 'ssh' in self.config and 'ip_address' in self.config['ssh']:
+            old_ip = self.config['ssh']['ip_address']
+            if old_ip != new_ip:
+                self.config['ssh']['ip_address'] = new_ip
+                replacement_count += 1
+                logger.debug(f"Updated ssh.ip_address: {old_ip} -> {new_ip}")
+        
+        # Update rancher.base_url (IP in URL)
+        if 'rancher' in self.config and 'base_url' in self.config['rancher']:
+            base_url = self.config['rancher']['base_url']
+            # Extract IP from URL and replace
+            ip_pattern = r'\b(\d{1,3}\.){3}\d{1,3}\b'
+            if re.search(ip_pattern, base_url):
+                new_base_url = re.sub(ip_pattern, new_ip, base_url)
+                if new_base_url != base_url:
+                    self.config['rancher']['base_url'] = new_base_url
+                    replacement_count += 1
+                    logger.debug(f"Updated rancher.base_url: {base_url} -> {new_base_url}")
+        
+        if replacement_count == 0:
+            return False, "No connection IP addresses found to update in config file"
+        
+        # Write back to file using targeted text replacement (preserves formatting and comments)
         try:
+            # Read file as text
             with open(self.config_path, 'r') as f:
                 content = f.read()
-        except Exception as e:
-            return False, f"Failed to read config file: {e}"
-        
-        # Find and replace IP addresses
-        # Pattern to match IP addresses in various contexts
-        ip_pattern = r'\b(\d{1,3}\.){3}\d{1,3}\b'
-        
-        # Count how many replacements we'll make
-        matches = list(re.finditer(ip_pattern, content))
-        if not matches:
-            return False, "No IP addresses found in config file"
-        
-        # Replace all IP addresses with the new one
-        updated_content = re.sub(ip_pattern, new_ip, content)
-        
-        # Write back to file
-        try:
+            
+            # Update specific lines only (preserves rest of file)
+            ip_pattern = r'\b(\d{1,3}\.){3}\d{1,3}\b'
+            
+            # Update onwatch.ip_address line
+            content = re.sub(
+                r'^(onwatch:\s*\n(?:\s*[^\n]*\n)*?\s*ip_address:\s*")' + ip_pattern + r'(")',
+                r'\1' + new_ip + r'\2',
+                content,
+                flags=re.MULTILINE
+            )
+            
+            # Update onwatch.base_url line (IP in URL)
+            content = re.sub(
+                r'^(onwatch:\s*\n(?:\s*[^\n]*\n)*?\s*base_url:\s*"https://)' + ip_pattern + r'(")',
+                r'\1' + new_ip + r'\2',
+                content,
+                flags=re.MULTILINE
+            )
+            
+            # Update ssh.ip_address line
+            content = re.sub(
+                r'^(ssh:\s*\n(?:\s*[^\n]*\n)*?\s*ip_address:\s*")' + ip_pattern + r'(")',
+                r'\1' + new_ip + r'\2',
+                content,
+                flags=re.MULTILINE
+            )
+            
+            # Update rancher.base_url line (IP in URL, with port)
+            content = re.sub(
+                r'^(rancher:\s*\n(?:\s*[^\n]*\n)*?\s*base_url:\s*"https://)' + ip_pattern + r'(:9443")',
+                r'\1' + new_ip + r'\2',
+                content,
+                flags=re.MULTILINE
+            )
+            
+            # Also handle rancher.base_url without explicit port
+            content = re.sub(
+                r'^(rancher:\s*\n(?:\s*[^\n]*\n)*?\s*base_url:\s*"https://)' + ip_pattern + r'(")',
+                r'\1' + new_ip + r'\2',
+                content,
+                flags=re.MULTILINE
+            )
+            
+            # Write back
             with open(self.config_path, 'w') as f:
-                f.write(updated_content)
+                f.write(content)
             
             # Reload config to reflect changes
             self.config = None
             self.load_config()
             
-            replacement_count = len(matches)
-            return True, f"Successfully updated {replacement_count} IP address(es) to {new_ip}"
+            return True, f"Successfully updated {replacement_count} connection IP address(es) to {new_ip} (camera IPs preserved)"
         except Exception as e:
             return False, f"Failed to write config file: {e}"
 
