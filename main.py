@@ -2124,24 +2124,29 @@ Examples:
                     email = user.get('email', '')
                     role = user.get('role', 'N/A')
                     user_group = user.get('user_group', 'N/A')
+                    password = user.get('password')
                     print(f"   • {username} ({first_name} {last_name}, {role}, group: {user_group})")
                     if email:
                         print(f"     Email: {email}")
+                    if password:
+                        print(f"     Password: {password}")
+                    elif password is None:
+                        print(f"     Password: (keep existing)")
                 if user_groups:
+                    # Count users per group
+                    user_group_counts = {}
+                    for user in users:
+                        user_group_name = user.get('user_group', '').lower()
+                        if user_group_name:
+                            user_group_counts[user_group_name] = user_group_counts.get(user_group_name, 0) + 1
+                    
                     print(f"\n   User Groups: {len(user_groups)}")
                     for ug in user_groups:
                         title = ug.get('title', 'Unknown')
-                        subject_groups = ug.get('subject_groups', [])
-                        camera_groups = ug.get('camera_groups', [])
-                        print(f"   • {title}")
-                        if subject_groups:
-                            print(f"     - Subject Groups: {', '.join(subject_groups)}")
-                        else:
-                            print(f"     - Subject Groups: none (⚠️  assignments not yet implemented)")
-                        if camera_groups:
-                            print(f"     - Camera Groups: {', '.join(camera_groups)}")
-                        else:
-                            print(f"     - Camera Groups: none (⚠️  assignments not yet implemented)")
+                        # Match user group title (case-insensitive) to count users
+                        title_lower = title.lower()
+                        user_count = user_group_counts.get(title_lower, 0)
+                        print(f"   • {title} (Users Count: {user_count})")
             
             # Missing/Not Implemented Features
             missing_features = []
