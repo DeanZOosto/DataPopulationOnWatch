@@ -363,58 +363,78 @@ class ConfigManager:
         if replacement_count == 0:
             return False, "No connection IP addresses found to update in config file"
         
-        # Write back to file using targeted text replacement (preserves formatting and comments)
+        # Write back to file using targeted line-by-line replacement (preserves formatting and comments)
         try:
-            # Read file as text
+            # Read file as lines
             with open(self.config_path, 'r') as f:
-                content = f.read()
+                lines = f.readlines()
             
             # Update specific lines only (preserves rest of file)
             ip_pattern = r'\b(\d{1,3}\.){3}\d{1,3}\b'
+            updated_lines = []
+            i = 0
+            in_onwatch_section = False
+            in_ssh_section = False
+            in_rancher_section = False
             
-            # Update onwatch.ip_address line
-            content = re.sub(
-                r'^(onwatch:\s*\n(?:\s*[^\n]*\n)*?\s*ip_address:\s*")' + ip_pattern + r'(")',
-                r'\1' + new_ip + r'\2',
-                content,
-                flags=re.MULTILINE
-            )
-            
-            # Update onwatch.base_url line (IP in URL)
-            content = re.sub(
-                r'^(onwatch:\s*\n(?:\s*[^\n]*\n)*?\s*base_url:\s*"https://)' + ip_pattern + r'(")',
-                r'\1' + new_ip + r'\2',
-                content,
-                flags=re.MULTILINE
-            )
-            
-            # Update ssh.ip_address line
-            content = re.sub(
-                r'^(ssh:\s*\n(?:\s*[^\n]*\n)*?\s*ip_address:\s*")' + ip_pattern + r'(")',
-                r'\1' + new_ip + r'\2',
-                content,
-                flags=re.MULTILINE
-            )
-            
-            # Update rancher.base_url line (IP in URL, with port)
-            content = re.sub(
-                r'^(rancher:\s*\n(?:\s*[^\n]*\n)*?\s*base_url:\s*"https://)' + ip_pattern + r'(:9443")',
-                r'\1' + new_ip + r'\2',
-                content,
-                flags=re.MULTILINE
-            )
-            
-            # Also handle rancher.base_url without explicit port
-            content = re.sub(
-                r'^(rancher:\s*\n(?:\s*[^\n]*\n)*?\s*base_url:\s*"https://)' + ip_pattern + r'(")',
-                r'\1' + new_ip + r'\2',
-                content,
-                flags=re.MULTILINE
-            )
+            while i < len(lines):
+                line = lines[i]
+                original_line = line
+                
+                # Track which section we're in
+                if re.match(r'^onwatch:\s*$', line):
+                    in_onwatch_section = True
+                    in_ssh_section = False
+                    in_rancher_section = False
+                elif re.match(r'^ssh:\s*$', line):
+                    in_onwatch_section = False
+                    in_ssh_section = True
+                    in_rancher_section = False
+                elif re.match(r'^rancher:\s*$', line):
+                    in_onwatch_section = False
+                    in_ssh_section = False
+                    in_rancher_section = True
+                elif line.strip() and not line.strip().startswith('#'):
+                    # If we hit a new top-level key, reset section flags
+                    if re.match(r'^[a-z_]+:\s*$', line):
+                        in_onwatch_section = False
+                        in_ssh_section = False
+                        in_rancher_section = False
+                
+                # Update onwatch.ip_address line
+                if in_onwatch_section and re.match(r'^\s*ip_address:\s*"' + ip_pattern, line):
+                    line = re.sub(ip_pattern, new_ip, line)
+                    replacement_count += 1
+                    logger.debug(f"Updated onwatch.ip_address line: {original_line.strip()} -> {line.strip()}")
+                
+                # Update onwatch.base_url line
+                elif in_onwatch_section and re.match(r'^\s*base_url:\s*"https://' + ip_pattern, line):
+                    line = re.sub(r'(https://)' + ip_pattern, r'\1' + new_ip, line)
+                    replacement_count += 1
+                    logger.debug(f"Updated onwatch.base_url line: {original_line.strip()} -> {line.strip()}")
+                
+                # Update ssh.ip_address line
+                elif in_ssh_section and re.match(r'^\s*ip_address:\s*"' + ip_pattern, line):
+                    line = re.sub(ip_pattern, new_ip, line)
+                    replacement_count += 1
+                    logger.debug(f"Updated ssh.ip_address line: {original_line.strip()} -> {line.strip()}")
+                
+                # Update rancher.base_url line
+                elif in_rancher_section and re.match(r'^\s*base_url:\s*"https://' + ip_pattern, line):
+                    # Handle with port
+                    if ':9443' in line:
+                        line = re.sub(r'(https://)' + ip_pattern + r'(:9443)', r'\1' + new_ip + r'\2', line)
+                    else:
+                        line = re.sub(r'(https://)' + ip_pattern, r'\1' + new_ip, line)
+                    replacement_count += 1
+                    logger.debug(f"Updated rancher.base_url line: {original_line.strip()} -> {line.strip()}")
+                
+                updated_lines.append(line)
+                i += 1
             
             # Write back
             with open(self.config_path, 'w') as f:
-                f.write(content)
+                f.writelines(updated_lines)
             
             # Reload config to reflect changes
             self.config = None
