@@ -338,6 +338,10 @@ class OnWatchAutomation:
                 calibration = device_config.get('calibration', {})
                 security_access = device_config.get('security_access', {})
                 
+                # Determine camera mode based on name
+                # camera_mode: 1 = face, 2 = body
+                camera_mode = 2 if "body" in name.lower() else 1
+                
                 # Create camera via GraphQL
                 self.client_api.create_camera(
                     name=name,
@@ -346,9 +350,10 @@ class OnWatchAutomation:
                     threshold=threshold,
                     location=location,
                     calibration=calibration,
-                    security_access=security_access
+                    security_access=security_access,
+                    camera_mode=camera_mode
                 )
-                logger.info(f"✓ Created camera: {name}")
+                logger.info(f"✓ Created camera: {name} (mode: {'body' if camera_mode == 2 else 'face'})")
                 created_count += 1
                 existing_camera_names.add(name.lower())  # Track created camera
                 
