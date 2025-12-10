@@ -1099,6 +1099,19 @@ class OnWatchAutomation:
                 
                 priority = inquiry_config.get('priority', 'Medium')
                 
+                # Check if case already exists before creating (prevent "case 2")
+                existing_cases = self.client_api.get_inquiry_cases()
+                existing_case_names = {case.get('name', '').lower() for case in existing_cases if case.get('name')}
+                
+                if inquiry_name.lower() in existing_case_names:
+                    # Find the existing case ID
+                    existing_case = next((c for c in existing_cases if c.get('name', '').lower() == inquiry_name.lower()), None)
+                    if existing_case:
+                        case_id = existing_case.get('id')
+                        logger.info(f"⏭️  Inquiry case '{inquiry_name}' already exists (id: {case_id}), skipping")
+                        self.summary.add_skipped("Inquiry Case", inquiry_name, "already exists")
+                        continue
+                
                 # Create inquiry case
                 from client_api import InquiryCaseAlreadyExists
                 try:
@@ -1112,20 +1125,32 @@ class OnWatchAutomation:
                     self.summary.add_skipped("Inquiry Case", inquiry_name, "already exists")
                     continue
                 
-                # Update priority if specified
+                # Set priority immediately after creation (ensure it's "Medium" by default)
                 if priority:
                     try:
                         self.client_api.update_inquiry_case(case_id, priority=priority)
-                        logger.info(f"Set inquiry priority to: {priority}")
+                        logger.info(f"✓ Set inquiry priority to: {priority}")
                     except Exception as e:
                         logger.warning(f"Could not set priority for inquiry '{inquiry_name}': {e}")
+                else:
+                    # Default to Medium if not specified
+                    try:
+                        self.client_api.update_inquiry_case(case_id, priority='Medium')
+                        logger.info(f"✓ Set inquiry priority to: Medium (default)")
+                    except Exception as e:
+                        logger.warning(f"Could not set default priority for inquiry '{inquiry_name}': {e}")
                 
                 # Process each file
-                logger.debug(f"Adding {len(files_config)} files to inquiry case...")
+                logger.info(f"Adding {len(files_config)} files to inquiry case...")
                 file_ids_map = {}  # filename -> file_id (uploadId)
+                successful_uploads = []  # Track successfully uploaded files
                 
-                for file_config in files_config:
+                for idx, file_config in enumerate(files_config):
                     try:
+                        # Add small delay between file uploads to prevent queue issues (except first file)
+                        if idx > 0:
+                            time.sleep(1)  # Small delay between uploads
+                        
                         file_path = file_config.get('path', '').strip()
                         if not file_path:
                             logger.warning(f"File entry missing path: {file_config}")
@@ -1182,8 +1207,18 @@ class OnWatchAutomation:
                             case_id, upload_id, filename, threshold=threshold
                         )
                         
+                        # Verify file was added successfully
+                        time.sleep(0.5)  # Wait a moment for file to be registered
+                        case_files = self.client_api.get_inquiry_case_files(case_id)
+                        uploaded_file = next((f for f in case_files if f.get('fileName', '').lower() == filename.lower()), None)
+                        if not uploaded_file:
+                            logger.warning(f"⚠️  File '{filename}' may not have been added successfully - verify in UI")
+                        else:
+                            logger.debug(f"Verified file '{filename}' was added (status: {uploaded_file.get('status', 'unknown')})")
+                        
                         # Store upload_id for potential configuration update
                         file_ids_map[filename] = upload_id
+                        successful_uploads.append(filename)
                         
                         logger.info(f"✓ Added file to inquiry: {filename}")
                         
@@ -1192,63 +1227,94 @@ class OnWatchAutomation:
                             file_ids_map['neo_webm_configure'] = upload_id
                         
                     except Exception as e:
-                        logger.error(f"Failed to process file '{file_config.get('path', 'unknown')}': {e}")
+                        logger.error(f"❌ Failed to process file '{file_config.get('path', 'unknown')}': {e}")
+                        self.summary.add_error(f"Inquiry File Upload", file_config.get('path', 'unknown'), str(e))
                         continue
                 
-                # Configure Neo.webm ROI and threshold, then restart analysis
-                if 'neo_webm_configure' in file_ids_map:
-                    neo_webm_upload_id = file_ids_map['neo_webm_configure']
-                    logger.debug("Configuring Neo.webm ROI and threshold...")
-                    
-                    # Wait a moment for files to be registered
+                if not successful_uploads:
+                    logger.warning(f"⚠️  No files were successfully uploaded for inquiry '{inquiry_name}'")
+                    continue
+                
+                # Wait a moment for all files to be registered before configuring
+                if file_ids_map:
                     time.sleep(2)
                     
+                    # Get all files from the case
                     try:
-                        # Get the file from the case to get its actual ID
                         case_files = self.client_api.get_inquiry_case_files(case_id)
-                        neo_webm_file_id = None
-                        neo_webm_status = None
                         
-                        for case_file in case_files:
-                            if case_file.get('fileName', '').lower() == 'neo.webm':
-                                # Use cameraId for GraphQL mutations (updateFileMediaData and startAnalyzeFilesCase)
-                                neo_webm_file_id = case_file.get('cameraId', '')
-                                neo_webm_status = case_file.get('status', '')
-                                logger.info(f"Neo.webm cameraId: {neo_webm_file_id}, status: {neo_webm_status}")
-                                break
-                        
-                        if neo_webm_file_id:
-                            # Update ROI and threshold configuration
-                            try:
-                                self.client_api.update_file_media_data(
-                                    file_id=neo_webm_file_id,
-                                    threshold=0.37,
-                                    camera_padding={
-                                        'top': 15,
-                                        'right': 15,
-                                        'bottom': 22,
-                                        'left': 0
-                                    }
-                                )
-                                logger.info(f"✓ Updated Neo.webm configuration (ROI: top=15, right=15, bottom=22, left=0, threshold=0.37)")
-                                
-                                # Restart analysis with new configuration
-                                logger.info("Restarting analysis for Neo.webm with new configuration...")
+                        # Configure Neo.webm ROI and threshold if needed
+                        if 'neo_webm_configure' in file_ids_map:
+                            neo_webm_upload_id = file_ids_map['neo_webm_configure']
+                            logger.debug("Configuring Neo.webm ROI and threshold...")
+                            
+                            neo_webm_file_id = None
+                            neo_webm_status = None
+                            
+                            for case_file in case_files:
+                                if case_file.get('fileName', '').lower() == 'neo.webm':
+                                    # Use cameraId for GraphQL mutations (updateFileMediaData and startAnalyzeFilesCase)
+                                    neo_webm_file_id = case_file.get('cameraId', '')
+                                    neo_webm_status = case_file.get('status', '')
+                                    logger.info(f"Neo.webm cameraId: {neo_webm_file_id}, status: {neo_webm_status}")
+                                    break
+                            
+                            if neo_webm_file_id:
+                                # Update ROI and threshold configuration
                                 try:
-                                    self.client_api.start_analyze_files_case(case_id, [neo_webm_file_id])
-                                    logger.info("✓ Restarted analysis for Neo.webm")
+                                    self.client_api.update_file_media_data(
+                                        file_id=neo_webm_file_id,
+                                        threshold=0.37,
+                                        camera_padding={
+                                            'top': 15,
+                                            'right': 15,
+                                            'bottom': 22,
+                                            'left': 0
+                                        }
+                                    )
+                                    logger.info(f"✓ Updated Neo.webm configuration (ROI: top=15, right=15, bottom=22, left=0, threshold=0.37)")
+                                except Exception as update_error:
+                                    logger.error(f"Failed to update Neo.webm configuration: {update_error}")
+                                    logger.warning("You may need to manually update the ROI configuration in the UI")
+                            else:
+                                logger.warning("Could not find Neo.webm file in case to configure")
+                        
+                        # Check file analysis status and start analysis if needed
+                        # Note: Files are typically already analyzing due to with_analysis=True in prepare_forensic_upload
+                        all_file_ids = [f.get('cameraId') for f in case_files if f.get('cameraId')]
+                        if all_file_ids:
+                            # Check which files are not already analyzing
+                            files_not_analyzing = []
+                            for case_file in case_files:
+                                file_id = case_file.get('cameraId')
+                                status = case_file.get('status', '').upper()
+                                if file_id and status not in ['ANALYZING', 'DONE']:
+                                    files_not_analyzing.append(file_id)
+                            
+                            if files_not_analyzing:
+                                # Only start analysis for files that aren't already analyzing
+                                try:
+                                    logger.debug(f"Starting analysis for {len(files_not_analyzing)} file(s) that aren't already analyzing...")
+                                    self.client_api.start_analyze_files_case(case_id, files_not_analyzing)
+                                    logger.info(f"✓ Started analysis for {len(files_not_analyzing)} file(s)")
                                 except Exception as analyze_error:
-                                    logger.warning(f"Could not restart analysis: {analyze_error}")
-                                    logger.warning("Analysis may need to be started manually in the UI")
-                            except Exception as update_error:
-                                logger.error(f"Failed to update Neo.webm configuration: {update_error}")
-                                logger.warning("You may need to manually update the ROI configuration in the UI")
+                                    # Files are likely already analyzing (with_analysis=True), so this is expected
+                                    error_str = str(analyze_error)
+                                    if "ERR_FAILED_TO_UPDATE_PROGRESS" in error_str or "already" in error_str.lower():
+                                        logger.debug(f"Analysis already in progress for files (expected): {error_str[:100]}")
+                                    else:
+                                        logger.debug(f"Could not start analysis (files may already be analyzing): {error_str[:100]}")
+                            else:
+                                # All files are already analyzing
+                                analyzing_count = len([f for f in case_files if f.get('status', '').upper() == 'ANALYZING'])
+                                done_count = len([f for f in case_files if f.get('status', '').upper() == 'DONE'])
+                                logger.debug(f"All files are already analyzing (Analyzing: {analyzing_count}, Done: {done_count})")
                         else:
-                            logger.warning("Could not find Neo.webm file in case to configure")
+                            logger.debug("No file IDs found to start analysis")
                     except Exception as e:
-                        logger.warning(f"Could not configure Neo.webm: {e}")
+                        logger.warning(f"Could not configure files or start analysis: {e}")
                 
-                logger.info(f"✓ Completed inquiry case: {inquiry_name}")
+                logger.info(f"✓ Completed inquiry case: {inquiry_name} ({len(successful_uploads)} file(s) uploaded)")
                 
             except Exception as e:
                 inquiry_name = inquiry_config.get('name', 'unknown')
@@ -1783,6 +1849,9 @@ Examples:
   # Dry-run mode (validate and show what would be executed)
   python3 main.py --dry-run
   
+  # View baseline dataset that will be populated
+  python3 main.py --show-baseline
+  
   # Verbose logging
   python3 main.py --verbose
   
@@ -1847,6 +1916,11 @@ Examples:
         metavar='IP_ADDRESS',
         help='Update all IP addresses in config.yaml to the specified IP address. Updates onwatch, ssh, and rancher IPs automatically. Creates a backup of the original config file.'
     )
+    parser.add_argument(
+        '--show-baseline',
+        action='store_true',
+        help='Display the default baseline dataset that will be populated and exit'
+    )
     
     args = parser.parse_args()
     
@@ -1870,6 +1944,123 @@ Examples:
         for step_id, step_name, description in steps:
             print(f"  --step {step_id:20s}  {step_name}")
             print(f"  {'':22s}  {description}\n")
+        sys.exit(0)
+    
+    # Handle show-baseline
+    if args.show_baseline:
+        try:
+            automation = OnWatchAutomation(config_path=args.config)
+            config = automation.config
+            
+            print("\n" + "=" * 70)
+            print("Default Baseline Dataset")
+            print("=" * 70)
+            print(f"\nConfiguration file: {args.config}")
+            print("\nThis dataset will be populated when you run the automation:\n")
+            
+            # KV Parameters
+            kv_params = config.get('kv_parameters', {})
+            if kv_params:
+                print(f"📋 KV Parameters: {len(kv_params)}")
+                for key, value in kv_params.items():
+                    print(f"   • {key}: {value}")
+            
+            # System Settings
+            sys_settings = config.get('system_settings', {})
+            if sys_settings:
+                print(f"\n⚙️  System Settings:")
+                general = sys_settings.get('general', {})
+                if general:
+                    print(f"   • Face Threshold: {general.get('default_face_threshold', 'N/A')}")
+                    print(f"   • Body Threshold: {general.get('default_body_threshold', 'N/A')}")
+                    print(f"   • Liveness Threshold: {general.get('default_liveness_threshold', 'N/A')}")
+                    print(f"   • Body Image Retention: {general.get('body_image_retention_period', 'N/A')}")
+                engine = sys_settings.get('engine', {})
+                if engine:
+                    print(f"   • Video Storage: {engine.get('video_storage', {}).get('all_videos_days', 'N/A')} days")
+                    print(f"   • Detection Storage: {engine.get('detection_storage_days', 'N/A')} days")
+                    print(f"   • Alert Storage: {engine.get('alert_storage_days', 'N/A')} days")
+                    print(f"   • Inquiry Storage: {engine.get('inquiry_storage_days', 'N/A')} days")
+            
+            # Devices/Cameras
+            devices = config.get('devices', [])
+            if devices:
+                print(f"\n📹 Cameras/Devices: {len(devices)}")
+                for device in devices:
+                    name = device.get('name', 'Unknown')
+                    threshold = device.get('details', {}).get('threshold', 'N/A')
+                    location = device.get('details', {}).get('location', {}).get('name', 'default')
+                    print(f"   • {name} (threshold: {threshold}, location: {location})")
+            
+            # Subject Groups
+            groups = config.get('groups', {})
+            subject_groups = groups.get('subject_groups', [])
+            if subject_groups:
+                print(f"\n👥 Subject Groups: {len(subject_groups)}")
+                for group in subject_groups:
+                    name = group.get('name', 'Unknown')
+                    auth = group.get('authorization', 'N/A')
+                    visibility = group.get('visibility', 'N/A')
+                    print(f"   • {name} ({auth}, {visibility})")
+            
+            # Watch List
+            watch_list = config.get('watch_list', {})
+            subjects = watch_list.get('subjects', [])
+            if subjects:
+                total_images = sum(len(s.get('images', [])) for s in subjects)
+                print(f"\n👤 Watch List Subjects: {len(subjects)}")
+                print(f"   Total Images: {total_images}")
+                for subject in subjects:
+                    name = subject.get('name', 'Unknown')
+                    images = subject.get('images', [])
+                    group = subject.get('group', 'N/A')
+                    print(f"   • {name} ({len(images)} image(s), group: {group})")
+            
+            # Inquiry Cases
+            inquiries = config.get('inquiries', [])
+            if inquiries:
+                print(f"\n🔍 Inquiry Cases: {len(inquiries)}")
+                for inquiry in inquiries:
+                    name = inquiry.get('name', 'Unknown')
+                    files = inquiry.get('files', [])
+                    priority = inquiry.get('priority', 'N/A')
+                    print(f"   • {name} ({len(files)} file(s), priority: {priority})")
+            
+            # Mass Import
+            mass_import = config.get('mass_import', {})
+            if mass_import:
+                name = mass_import.get('name', 'N/A')
+                file_path = mass_import.get('file_path', 'N/A')
+                print(f"\n📦 Mass Import:")
+                print(f"   • Name: {name}")
+                print(f"   • File: {file_path}")
+            
+            # Environment Variables
+            env_vars = config.get('env_vars', {})
+            if env_vars:
+                print(f"\n🔧 Environment Variables: {len(env_vars)}")
+                for key in env_vars.keys():
+                    print(f"   • {key}")
+            
+            # User Accounts
+            accounts = config.get('accounts', {})
+            users = accounts.get('users', [])
+            user_groups = accounts.get('user_groups', [])
+            if users or user_groups:
+                print(f"\n👤 User Accounts: {len(users)}")
+                print(f"   User Groups: {len(user_groups)}")
+                for user in users:
+                    username = user.get('username', 'Unknown')
+                    role = user.get('role', 'N/A')
+                    print(f"   • {username} ({role})")
+            
+            print("\n" + "=" * 70)
+            print("Note: This is the baseline dataset from config.yaml.")
+            print("You can customize it by editing config.yaml before running automation.")
+            print("=" * 70 + "\n")
+        except Exception as e:
+            print(f"\n❌ Error loading baseline dataset: {e}\n", file=sys.stderr)
+            sys.exit(1)
         sys.exit(0)
     
     # Configure logging

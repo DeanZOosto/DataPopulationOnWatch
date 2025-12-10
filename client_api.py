@@ -1423,6 +1423,31 @@ class ClientApi:
                 logger.error(f"Failed to create camera '{name}': {e}")
             raise
     
+    def get_inquiry_cases(self):
+        """
+        Get list of all inquiry cases.
+        
+        Returns:
+            List of inquiry cases with their names and IDs
+        """
+        try:
+            response = self.session.get(
+                f"{self.url}/inquiry",
+                headers=self.headers
+            )
+            response.raise_for_status()
+            result = response.json()
+            # Handle both list and dict with 'data' key
+            if isinstance(result, list):
+                return result
+            elif isinstance(result, dict) and 'data' in result:
+                return result['data']
+            else:
+                return []
+        except requests.exceptions.RequestException as e:
+            logger.debug(f"Failed to get inquiry cases: {e}")
+            return []
+    
     def create_inquiry_case(self, case_name):
         """
         Create an inquiry case.

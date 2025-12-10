@@ -72,6 +72,47 @@ nano config.yaml  # or use your preferred editor
 
 **Note:** All other data (subjects, cameras, groups, etc.) is already pre-configured.
 
+### Step 2.5: View Baseline Dataset (Optional)
+
+To see what data will be populated before running:
+
+```bash
+python3 main.py --show-baseline
+```
+
+This displays a summary of:
+- KV parameters
+- System settings (thresholds, retention periods)
+- Cameras/devices
+- Subject groups
+- Watch list subjects and images
+- Inquiry cases
+- Mass import file
+- Environment variables
+- User accounts
+
+**Example Output:**
+```
+Default Baseline Dataset
+======================================================================
+
+📋 KV Parameters: 5
+   • applicationSettings/watchVideo/secondsAfterDetection: 6
+   • applicationSettings/defaultFaceThreshold: 0.6
+   ...
+
+📹 Cameras/Devices: 4
+   • face camera (threshold: 0.5, location: holon)
+   • body camera (threshold: 0.3, location: London)
+   ...
+
+👤 Watch List Subjects: 5
+   Total Images: 6
+   • Yonatan (2 image(s), group: Default Group)
+   • crop 1 (1 image(s), group: Default Group)
+   ...
+```
+
 ### Step 3: Validate and Run
 
 ```bash
@@ -143,6 +184,16 @@ python3 main.py --step configure-system
 # Upload translation file only
 python3 main.py --step upload-files
 ```
+
+### View Baseline Dataset
+
+To see what data will be populated:
+
+```bash
+python3 main.py --show-baseline
+```
+
+This shows a summary of all the baseline data (subjects, cameras, settings, etc.) that will be configured.
 
 ### List All Available Steps
 
@@ -256,12 +307,35 @@ python3 main.py --config my-config.yaml
 1. Ensure translation file path is correct in `config.yaml`
 2. Run: `python3 main.py --step upload-files`
 
+## Default Baseline Dataset
+
+The `config.yaml` file comes pre-configured with a complete baseline dataset. To view what will be populated:
+
+```bash
+python3 main.py --show-baseline
+```
+
+**Baseline Dataset Includes:**
+- **5 KV Parameters**: Video detection settings, face thresholds, mask classifier, retention times
+- **System Settings**: Face/body/liveness thresholds, retention periods (6-9 days), map seed location
+- **4 Cameras**: Face cameras, body camera, moderate streamer (with thresholds, locations, calibration)
+- **3 Subject Groups**: OnPatrol subject, Cardholders, Default Group (with authorization and visibility rules)
+- **5 Watch List Subjects**: Yonatan (2 images), crop 1, crop 2, women 1, moderate 1 (with assigned groups)
+- **1 Inquiry Case**: "upgrade test" with 4 video files (Neo.mp4, Neo.webm, regular_avi_1.avi, regular_avi_2.avi)
+- **1 Mass Import**: "mass-import 43" file for bulk subject import
+- **5 Environment Variables**: DVR settings, FFmpeg options, service tags, CUDA device order
+- **2 User Accounts**: Test user (operator) and Administrator (super admin)
+- **2 User Groups**: testUser group and Full Data Group
+
+**Customization:** You can edit `config.yaml` to modify any of these before running the automation.
+
 ## Tips
 
-1. **Always validate first:** `python3 main.py --validate`
-2. **Use dry-run:** `python3 main.py --dry-run` before actual run
-3. **Run specific steps** when troubleshooting: `--step <step-name>`
-4. **Check logs** saved with `--log-file` option for debugging
+1. **View baseline first:** `python3 main.py --show-baseline` to see what will be populated
+2. **Always validate first:** `python3 main.py --validate`
+3. **Use dry-run:** `python3 main.py --dry-run` before actual run
+4. **Run specific steps** when troubleshooting: `--step <step-name>`
+5. **Check logs** saved with `--log-file` option for debugging
 
 ## Support
 

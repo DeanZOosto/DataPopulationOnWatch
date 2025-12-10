@@ -51,6 +51,12 @@ python3 main.py --dry-run
 python3 main.py --list-steps
 ```
 
+### View Baseline Dataset
+```bash
+# See what data will be populated
+python3 main.py --show-baseline
+```
+
 ### Update IP Address
 ```bash
 # Update all IP addresses in config.yaml (onwatch, ssh, rancher)
