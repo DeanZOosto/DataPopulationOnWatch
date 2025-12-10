@@ -1971,16 +1971,49 @@ Examples:
                 print(f"\n⚙️  System Settings:")
                 general = sys_settings.get('general', {})
                 if general:
-                    print(f"   • Face Threshold: {general.get('default_face_threshold', 'N/A')}")
-                    print(f"   • Body Threshold: {general.get('default_body_threshold', 'N/A')}")
-                    print(f"   • Liveness Threshold: {general.get('default_liveness_threshold', 'N/A')}")
-                    print(f"   • Body Image Retention: {general.get('body_image_retention_period', 'N/A')}")
+                    blur_faces = general.get('blur_all_faces_except_selected', False)
+                    discard_detections = general.get('discard_detections_not_in_watch_list', False)
+                    print(f"   General:")
+                    print(f"     • Blur all faces except selected: {'enabled' if blur_faces else 'disabled'}")
+                    print(f"     • Discard detections not in watch list: {'enabled' if discard_detections else 'disabled'}")
+                    print(f"     • Face Threshold: {general.get('default_face_threshold', 'N/A')}")
+                    print(f"     • Body Threshold: {general.get('default_body_threshold', 'N/A')}")
+                    print(f"     • Liveness Threshold: {general.get('default_liveness_threshold', 'N/A')}")
+                    print(f"     • Body Image Retention: {general.get('body_image_retention_period', 'N/A')}")
+                map_settings = sys_settings.get('map', {})
+                if map_settings:
+                    seed = map_settings.get('seed_location', {})
+                    acknowledge = map_settings.get('acknowledge', False)
+                    action_title = map_settings.get('action_title', 'N/A')
+                    masks_access = map_settings.get('masks_access_control', False)
+                    print(f"   Map:")
+                    if seed:
+                        print(f"     • Seed Location: lat {seed.get('lat', 'N/A')}, long {seed.get('long', 'N/A')}")
+                    print(f"     • Acknowledge: {'enabled' if acknowledge else 'disabled'}")
+                    if acknowledge:
+                        print(f"     • Action Title: {action_title}")
+                    print(f"     • Masks Access Control: {'enabled' if masks_access else 'disabled'}")
+                interface = sys_settings.get('system_interface', {})
+                if interface:
+                    product_name = interface.get('product_name', 'N/A')
+                    translation_file = interface.get('translation_file', '')
+                    icons = interface.get('icons', '')
+                    print(f"   System Interface:")
+                    print(f"     • Product Name: {product_name}")
+                    if translation_file:
+                        print(f"     • Translation File: {translation_file}")
+                    if icons:
+                        print(f"     • Icons: {icons} (⚠️  not yet implemented)")
                 engine = sys_settings.get('engine', {})
                 if engine:
-                    print(f"   • Video Storage: {engine.get('video_storage', {}).get('all_videos_days', 'N/A')} days")
-                    print(f"   • Detection Storage: {engine.get('detection_storage_days', 'N/A')} days")
-                    print(f"   • Alert Storage: {engine.get('alert_storage_days', 'N/A')} days")
-                    print(f"   • Inquiry Storage: {engine.get('inquiry_storage_days', 'N/A')} days")
+                    video_storage = engine.get('video_storage', {})
+                    print(f"   Engine:")
+                    if video_storage:
+                        print(f"     • All Videos Storage: {video_storage.get('all_videos_days', 'N/A')} days")
+                        print(f"     • Videos with Detections: {video_storage.get('videos_with_detections_days', 'N/A')} days")
+                    print(f"     • Detection Storage: {engine.get('detection_storage_days', 'N/A')} days")
+                    print(f"     • Alert Storage: {engine.get('alert_storage_days', 'N/A')} days")
+                    print(f"     • Inquiry Storage: {engine.get('inquiry_storage_days', 'N/A')} days")
             
             # Devices/Cameras
             devices = config.get('devices', [])
@@ -1988,20 +2021,51 @@ Examples:
                 print(f"\n📹 Cameras/Devices: {len(devices)}")
                 for device in devices:
                     name = device.get('name', 'Unknown')
-                    threshold = device.get('details', {}).get('threshold', 'N/A')
-                    location = device.get('details', {}).get('location', {}).get('name', 'default')
-                    print(f"   • {name} (threshold: {threshold}, location: {location})")
+                    details = device.get('details', {})
+                    threshold = details.get('threshold', 'N/A')
+                    location = details.get('location', {}).get('name', 'default')
+                    calibration = device.get('calibration', {})
+                    tracker = calibration.get('tracker', 'N/A')
+                    track_length = calibration.get('face_track_length', {})
+                    track_min = track_length.get('min', 'N/A')
+                    track_max = track_length.get('max', 'N/A')
+                    padding = calibration.get('calibration_tool', {}).get('padding', {})
+                    detection_min = calibration.get('calibration_tool', {}).get('detection_min_size', 'N/A')
+                    security = device.get('security_access', {})
+                    liveness = security.get('liveness', False)
+                    liveness_threshold = security.get('liveness_threshold', 'N/A')
+                    
+                    print(f"   • {name}")
+                    print(f"     - Threshold: {threshold}, Location: {location}")
+                    print(f"     - Tracker: {tracker}, Face Track Length: {track_min}-{track_max}s")
+                    if padding:
+                        print(f"     - Padding: top={padding.get('top', 0)}, right={padding.get('right', 0)}, bottom={padding.get('bottom', 0)}, left={padding.get('left', 0)}")
+                    print(f"     - Detection Min Size: {detection_min}")
+                    print(f"     - Liveness: {'active' if liveness else 'disabled'}", end='')
+                    if liveness:
+                        print(f" (threshold: {liveness_threshold})")
+                    else:
+                        print()
             
-            # Subject Groups
+            # Groups
             groups = config.get('groups', {})
             subject_groups = groups.get('subject_groups', [])
+            device_groups = groups.get('device_groups', [])
             if subject_groups:
                 print(f"\n👥 Subject Groups: {len(subject_groups)}")
                 for group in subject_groups:
                     name = group.get('name', 'Unknown')
                     auth = group.get('authorization', 'N/A')
                     visibility = group.get('visibility', 'N/A')
-                    print(f"   • {name} ({auth}, {visibility})")
+                    priority = group.get('priority', 'N/A')
+                    print(f"   • {name} ({auth}, {visibility}, priority: {priority})")
+            if device_groups:
+                print(f"\n📱 Device Groups (Camera Groups): {len(device_groups)}")
+                for group in device_groups:
+                    name = group.get('name', 'Unknown')
+                    priority = group.get('priority', 'N/A')
+                    description = group.get('description', '')
+                    print(f"   • {name} (priority: {priority}, description: {description or 'none'})")
             
             # Watch List
             watch_list = config.get('watch_list', {})
@@ -2024,7 +2088,12 @@ Examples:
                     name = inquiry.get('name', 'Unknown')
                     files = inquiry.get('files', [])
                     priority = inquiry.get('priority', 'N/A')
-                    print(f"   • {name} ({len(files)} file(s), priority: {priority})")
+                    print(f"   • {name} (priority: {priority}, {len(files)} file(s))")
+                    for file_config in files:
+                        file_path = file_config.get('path', 'Unknown')
+                        filename = os.path.basename(file_path)
+                        settings = file_config.get('settings', 'default')
+                        print(f"     - {filename} ({settings})")
             
             # Mass Import
             mass_import = config.get('mass_import', {})
@@ -2048,11 +2117,58 @@ Examples:
             user_groups = accounts.get('user_groups', [])
             if users or user_groups:
                 print(f"\n👤 User Accounts: {len(users)}")
-                print(f"   User Groups: {len(user_groups)}")
                 for user in users:
                     username = user.get('username', 'Unknown')
+                    first_name = user.get('first_name', '')
+                    last_name = user.get('last_name', '')
+                    email = user.get('email', '')
                     role = user.get('role', 'N/A')
-                    print(f"   • {username} ({role})")
+                    user_group = user.get('user_group', 'N/A')
+                    print(f"   • {username} ({first_name} {last_name}, {role}, group: {user_group})")
+                    if email:
+                        print(f"     Email: {email}")
+                if user_groups:
+                    print(f"\n   User Groups: {len(user_groups)}")
+                    for ug in user_groups:
+                        title = ug.get('title', 'Unknown')
+                        subject_groups = ug.get('subject_groups', [])
+                        camera_groups = ug.get('camera_groups', [])
+                        print(f"   • {title}")
+                        if subject_groups:
+                            print(f"     - Subject Groups: {', '.join(subject_groups)}")
+                        else:
+                            print(f"     - Subject Groups: none (⚠️  assignments not yet implemented)")
+                        if camera_groups:
+                            print(f"     - Camera Groups: {', '.join(camera_groups)}")
+                        else:
+                            print(f"     - Camera Groups: none (⚠️  assignments not yet implemented)")
+            
+            # Missing/Not Implemented Features
+            missing_features = []
+            sys_settings = config.get('system_settings', {})
+            if sys_settings:
+                interface = sys_settings.get('system_interface', {})
+                icons = interface.get('icons', '')
+                if icons and icons.strip():
+                    missing_features.append("Icons directory upload (configured but not yet implemented)")
+            
+            # Check for user group assignments (if any are configured)
+            accounts = config.get('accounts', {})
+            user_groups = accounts.get('user_groups', [])
+            has_assignments = False
+            for ug in user_groups:
+                subject_groups = ug.get('subject_groups', [])
+                camera_groups = ug.get('camera_groups', [])
+                if subject_groups or camera_groups:
+                    has_assignments = True
+                    break
+            if has_assignments:
+                missing_features.append("User group assignments to subject/camera groups (configured but not yet implemented)")
+            
+            if missing_features:
+                print(f"\n⚠️  Features Configured But Not Yet Implemented:")
+                for feature in missing_features:
+                    print(f"   • {feature}")
             
             print("\n" + "=" * 70)
             print("Note: This is the baseline dataset from config.yaml.")
