@@ -420,14 +420,18 @@ class ConfigManager:
                     logger.debug(f"Updated ssh.ip_address line: {original_line.strip()} -> {line.strip()}")
                 
                 # Update rancher.base_url line
-                elif in_rancher_section and re.match(r'^\s*base_url:\s*"https://' + ip_pattern, line):
-                    # Handle with port
-                    if ':9443' in line:
-                        line = re.sub(r'(https://)' + ip_pattern + r'(:9443)', r'\1' + new_ip + r'\2', line)
-                    else:
-                        line = re.sub(r'(https://)' + ip_pattern, r'\1' + new_ip, line)
-                    replacement_count += 1
-                    logger.debug(f"Updated rancher.base_url line: {original_line.strip()} -> {line.strip()}")
+                elif in_rancher_section and 'base_url' in line and 'https://' in line:
+                    # Replace IP address in the URL - find IP between https:// and : or "
+                    # This preserves the structure: "https://IP:9443" or "https://IP"
+                    new_line = re.sub(
+                        r'(https://)' + ip_pattern + r'([:"])',
+                        r'\1' + new_ip + r'\2',
+                        line
+                    )
+                    if new_line != line:
+                        line = new_line
+                        replacement_count += 1
+                        logger.debug(f"Updated rancher.base_url line: {original_line.strip()} -> {line.strip()}")
                 
                 updated_lines.append(line)
                 i += 1
