@@ -409,10 +409,12 @@ class ConfigManager:
                 
                 # Update onwatch.base_url line
                 elif in_onwatch_section and 'base_url' in line and 'https://' in line:
-                    # Replace IP address in the URL - be explicit about matching the quote
-                    # Match: "https://IP"
+                    # Replace IP address in the URL - use a very specific pattern
+                    # Original format: base_url: "https://10.1.71.14"
+                    # We want: base_url: "https://10.1.25.241"
+                    # Match the entire URL string and replace only the IP
                     new_line = re.sub(
-                        r'("https://)' + ip_pattern + r'(")',
+                        r'(base_url:\s*"https://)' + ip_pattern + r'(")',
                         r'\1' + new_ip + r'\2',
                         line
                     )
@@ -429,20 +431,22 @@ class ConfigManager:
                 
                 # Update rancher.base_url line
                 elif in_rancher_section and 'base_url' in line and 'https://' in line:
-                    # Replace IP address in the URL - be very explicit about what we're matching
-                    # Match: "https://OLD_IP:9443" or "https://OLD_IP"
-                    # Replace only the IP part, preserve https:// and port/quote
+                    # Replace IP address in the URL - use a very specific pattern
+                    # Original format: base_url: "https://10.1.71.14:9443"
+                    # We want: base_url: "https://10.1.25.241:9443"
+                    # Match the entire URL string and replace only the IP
                     if ':9443' in line:
-                        # Has port: "https://IP:9443"
+                        # Has port: match "https://IP:9443"
+                        # Use word boundaries and explicit matching
                         new_line = re.sub(
-                            r'("https://)' + ip_pattern + r'(:9443")',
+                            r'(base_url:\s*"https://)' + ip_pattern + r'(:9443")',
                             r'\1' + new_ip + r'\2',
                             line
                         )
                     else:
-                        # No port: "https://IP"
+                        # No port: match "https://IP"
                         new_line = re.sub(
-                            r'("https://)' + ip_pattern + r'(")',
+                            r'(base_url:\s*"https://)' + ip_pattern + r'(")',
                             r'\1' + new_ip + r'\2',
                             line
                         )
