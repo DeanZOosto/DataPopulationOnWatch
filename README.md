@@ -6,10 +6,12 @@ Automated tool for populating OnWatch on-premise systems with configuration and 
 
 ```bash
 # Install dependencies
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 
-# Configure
-# Edit config.yaml with your system details (IP addresses and credentials)
+# Configure IP address (recommended - updates all IPs automatically)
+python3 main.py --set-ip 192.168.1.100
+
+# Or manually edit config.yaml with your system details
 # The file already contains baseline data - just update connection details
 
 # Validate configuration
@@ -49,7 +51,29 @@ python3 main.py --dry-run
 python3 main.py --list-steps
 ```
 
+### Update IP Address
+```bash
+# Update all IP addresses in config.yaml (onwatch, ssh, rancher)
+python3 main.py --set-ip 192.168.1.100
+# Creates a backup of the original config file automatically
+```
+
 ## Configuration
+
+### Quick IP Configuration
+
+The easiest way to configure IP addresses is using the `--set-ip` option:
+
+```bash
+python3 main.py --set-ip 192.168.1.100
+```
+
+This automatically updates:
+- `onwatch.ip_address` and `onwatch.base_url`
+- `ssh.ip_address`
+- `rancher.ip_address` and `rancher.base_url`
+
+### Manual Configuration
 
 Edit `config.yaml` with your OnWatch system details. Use environment variables for passwords:
 

@@ -1801,6 +1801,12 @@ Examples:
         action='store_true',
         help='List all available automation steps and exit'
     )
+    parser.add_argument(
+        '--set-ip',
+        type=str,
+        metavar='IP_ADDRESS',
+        help='Update all IP addresses in config.yaml to the specified IP address. Updates onwatch, ssh, and rancher IPs automatically. Creates a backup of the original config file.'
+    )
     
     args = parser.parse_args()
     
@@ -1837,6 +1843,19 @@ Examples:
         file_handler = logging.FileHandler(args.log_file)
         file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
         logging.getLogger().addHandler(file_handler)
+    
+    # Handle --set-ip option (must be done before creating OnWatchAutomation)
+    if args.set_ip:
+        config_manager = ConfigManager(config_path=args.config)
+        success, message = config_manager.update_ip_address(args.set_ip, backup=True)
+        if success:
+            logger.info(f"✓ {message}")
+            logger.info(f"✓ Configuration file updated: {args.config}")
+            logger.info("✓ You can now run the automation with: python3 main.py")
+        else:
+            logger.error(f"❌ {message}")
+            sys.exit(1)
+        sys.exit(0)
     
     automation = OnWatchAutomation(config_path=args.config)
     

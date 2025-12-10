@@ -275,4 +275,74 @@ class ConfigManager:
                 logger.info("✓ Configuration validation passed (warnings present but non-critical)")
         
         return len(errors) == 0, errors
+    
+    def update_ip_address(self, new_ip, backup=True):
+        """
+        Update all IP addresses in the configuration file.
+        
+        Updates:
+        - onwatch.ip_address
+        - onwatch.base_url (replaces IP in URL)
+        - ssh.ip_address
+        - rancher.ip_address
+        - rancher.base_url (replaces IP in URL)
+        
+        Args:
+            new_ip: New IP address to set
+            backup: If True, create a backup of the original config file
+            
+        Returns:
+            tuple: (success: bool, message: str)
+        """
+        # Validate IP address format
+        if not self._validate_ip_address(new_ip, "new_ip"):
+            return False, f"Invalid IP address format: {new_ip}"
+        
+        # Load current config
+        if self.config is None:
+            self.load_config()
+        
+        # Create backup if requested
+        if backup:
+            import shutil
+            from datetime import datetime
+            backup_path = f"{self.config_path}.backup.{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            try:
+                shutil.copy2(self.config_path, backup_path)
+                logger.info(f"Created backup: {backup_path}")
+            except Exception as e:
+                logger.warning(f"Could not create backup: {e}")
+        
+        # Read the file as text to preserve formatting and comments
+        try:
+            with open(self.config_path, 'r') as f:
+                content = f.read()
+        except Exception as e:
+            return False, f"Failed to read config file: {e}"
+        
+        # Find and replace IP addresses
+        # Pattern to match IP addresses in various contexts
+        ip_pattern = r'\b(\d{1,3}\.){3}\d{1,3}\b'
+        
+        # Count how many replacements we'll make
+        matches = list(re.finditer(ip_pattern, content))
+        if not matches:
+            return False, "No IP addresses found in config file"
+        
+        # Replace all IP addresses with the new one
+        updated_content = re.sub(ip_pattern, new_ip, content)
+        
+        # Write back to file
+        try:
+            with open(self.config_path, 'w') as f:
+                f.write(updated_content)
+            
+            # Reload config to reflect changes
+            self.config = None
+            self.load_config()
+            
+            replacement_count = len(matches)
+            return True, f"Successfully updated {replacement_count} IP address(es) to {new_ip}"
+        except Exception as e:
+            return False, f"Failed to write config file: {e}"
 

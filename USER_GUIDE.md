@@ -29,7 +29,29 @@ pip3 install -r requirements.txt
 
 ### Step 2: Configure
 
-Edit `config.yaml` - update only IP addresses and credentials:
+#### Option A: Quick IP Configuration (Recommended)
+
+Update all IP addresses with a single command:
+
+```bash
+python3 main.py --set-ip YOUR_IP_ADDRESS
+```
+
+**Example:**
+```bash
+python3 main.py --set-ip 192.168.1.100
+```
+
+This automatically updates:
+- `onwatch.ip_address` and `onwatch.base_url`
+- `ssh.ip_address` (usually same as onwatch)
+- `rancher.ip_address` and `rancher.base_url`
+
+A backup of your original `config.yaml` is created automatically (e.g., `config.yaml.backup.20231209_181500`).
+
+#### Option B: Manual Configuration
+
+If you prefer to edit manually:
 
 ```bash
 nano config.yaml  # or use your preferred editor
@@ -37,12 +59,14 @@ nano config.yaml  # or use your preferred editor
 
 **Update these fields:**
 - `onwatch.ip_address` - Your OnWatch system IP
+- `onwatch.base_url` - Update IP in URL (e.g., `https://YOUR_IP`)
 - `onwatch.username` - Your OnWatch admin username  
 - `onwatch.password` - Your OnWatch admin password
 - `ssh.ip_address` - SSH IP (usually same as onwatch)
 - `ssh.username` - SSH username
 - `ssh.password` - SSH password
 - `rancher.ip_address` - Rancher server IP
+- `rancher.base_url` - Update IP in URL (e.g., `https://YOUR_IP:9443`)
 - `rancher.username` - Rancher username
 - `rancher.password` - Rancher password
 
@@ -94,6 +118,18 @@ python3 main.py
 **Note:** Running multiple times is safe - existing items are automatically skipped (⏭️).
 
 ## Advanced Usage
+
+### Update IP Address
+
+If you need to change the IP address after initial setup:
+
+```bash
+# Update all IP addresses to a new IP
+python3 main.py --set-ip 192.168.1.200
+
+# The original config.yaml is automatically backed up
+# You can find backups as: config.yaml.backup.YYYYMMDD_HHMMSS
+```
 
 ### Run Specific Steps
 
