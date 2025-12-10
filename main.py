@@ -1396,7 +1396,7 @@ class OnWatchAutomation:
     
     def configure_rancher(self):
         """
-        Configure Rancher environment variables via REST API (Step 10).
+        Configure Rancher environment variables via REST API (Step 11 - last step).
         
         This method uses the Rancher v3 REST API to update Kubernetes workload
         environment variables. It:
@@ -1724,27 +1724,27 @@ class OnWatchAutomation:
                 logger.error("⚠️  MANUAL ACTION REQUIRED: Please upload mass import file manually in the UI")
                 self.summary.record_step(9, "Upload Mass Import", "failed", error_msg, manual_action=True)
             
-            # Step 10: Configure Rancher
-            logger.info("\n[Step 10/11] Configuring Rancher...")
-            try:
-                self.configure_rancher()
-                self.summary.record_step(10, "Configure Rancher", "success")
-            except Exception as e:
-                error_msg = f"Failed to configure Rancher: {str(e)}"
-                logger.error(f"❌ {error_msg}")
-                logger.error("⚠️  MANUAL ACTION REQUIRED: Please configure Rancher environment variables manually")
-                self.summary.record_step(10, "Configure Rancher", "failed", error_msg, manual_action=True)
-            
-            # Step 11: Upload files
-            logger.info("\n[Step 11/11] Uploading files...")
+            # Step 10: Upload files
+            logger.info("\n[Step 10/11] Uploading files...")
             try:
                 await self.upload_files()
-                self.summary.record_step(11, "Upload Files", "success")
+                self.summary.record_step(10, "Upload Files", "success")
             except Exception as e:
                 error_msg = f"Failed to upload files: {str(e)}"
                 logger.error(f"❌ {error_msg}")
                 logger.error("⚠️  MANUAL ACTION REQUIRED: Please upload translation file manually via SSH")
-                self.summary.record_step(11, "Upload Files", "failed", error_msg, manual_action=True)
+                self.summary.record_step(10, "Upload Files", "failed", error_msg, manual_action=True)
+            
+            # Step 11: Configure Rancher (last step)
+            logger.info("\n[Step 11/11] Configuring Rancher...")
+            try:
+                self.configure_rancher()
+                self.summary.record_step(11, "Configure Rancher", "success")
+            except Exception as e:
+                error_msg = f"Failed to configure Rancher: {str(e)}"
+                logger.error(f"❌ {error_msg}")
+                logger.error("⚠️  MANUAL ACTION REQUIRED: Please configure Rancher environment variables manually")
+                self.summary.record_step(11, "Configure Rancher", "failed", error_msg, manual_action=True)
             
         except Exception as e:
             logger.error(f"\n❌ FATAL ERROR: Automation failed with exception: {e}", exc_info=True)
@@ -1955,8 +1955,8 @@ Examples:
         logger.info("  7. Configure devices")
         logger.info("  8. Configure inquiries")
         logger.info("  9. Upload mass import")
-        logger.info("  10. Configure Rancher")
-        logger.info("  11. Upload files")
+        logger.info("  10. Upload files")
+        logger.info("  11. Configure Rancher")
         logger.info("\n✓ Dry-run completed - no actual changes were made")
         sys.exit(0)
     
@@ -2018,8 +2018,8 @@ Examples:
         logger.info("  7. Configure devices")
         logger.info("  8. Configure inquiries")
         logger.info("  9. Upload mass import")
-        logger.info("  10. Configure Rancher")
-        logger.info("  11. Upload files")
+        logger.info("  10. Upload files")
+        logger.info("  11. Configure Rancher")
         logger.info("\n✓ Dry-run completed - no actual changes were made")
         sys.exit(0)
     
