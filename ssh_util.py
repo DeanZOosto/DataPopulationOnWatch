@@ -93,6 +93,8 @@ class SSHUtil:
             error_msg = f"SFTP authentication failed for {self.username}@{self.ip_address}"
             error_msg += "\n  → Check SSH username and password in config.yaml (ssh section)"
             error_msg += "\n  → Verify credentials are correct for this device"
+            error_msg += "\n  → Password may have been changed - update config.yaml with the correct password"
+            error_msg += "\n  → If using SSH keys, ensure ssh_key_path is set correctly"
             logger.error(error_msg)
             return False
         except paramiko.SSHException as e:
@@ -361,7 +363,12 @@ class SSHUtil:
             return True
             
         except paramiko.AuthenticationException as e:
-            logger.error(f"SSH authentication failed: {e}")
+            error_msg = f"SSH authentication failed for {self.username}@{self.ip_address}: {e}"
+            error_msg += "\n  → Check SSH username and password in config.yaml (ssh section)"
+            error_msg += "\n  → Verify credentials are correct for this device"
+            error_msg += "\n  → Password may have been changed - update config.yaml with the correct password"
+            error_msg += "\n  → If using SSH keys, ensure ssh_key_path is set correctly"
+            logger.error(error_msg)
             return False
         except paramiko.SSHException as e:
             logger.error(f"SSH error: {e}")

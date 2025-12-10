@@ -1437,19 +1437,50 @@ class OnWatchAutomation:
             # Extract workload_id and project_id from workload_path if provided
             # Default values for cv-engine workload
             workload_id = "statefulset:default:cv-engine"
-            project_id = "local:p-p6l45"
+            project_id = None  # Will be discovered dynamically if not found
             
             workload_path = rancher_config.get('workload_path', '')
             if workload_path:
-                # Parse workload_path URL to extract IDs
+                # Handle both full URLs and paths
+                # Full URL: https://10.1.25.241:9443/p/local:p-5fh4c/workloads/run?...
+                # Path: /p/local:p-p6l45/workloads/run?...
+                
+                # Remove protocol and base URL if present
+                if '://' in workload_path:
+                    # Full URL provided - extract just the path part
+                    import urllib.parse
+                    parsed_url = urllib.parse.urlparse(workload_path)
+                    workload_path = parsed_url.path + ('?' + parsed_url.query if parsed_url.query else '')
+                    logger.debug(f"Extracted path from full URL: {workload_path}")
+                
+                # Parse workload_path to extract IDs
                 # Format: /p/local:p-p6l45/workloads/run?launchConfigIndex=-1&namespaceId=default&upgrade=true&workloadId=statefulset%3Adefault%3Acv-engine
                 if 'workloadId=' in workload_path:
                     import urllib.parse
                     parsed = urllib.parse.parse_qs(urllib.parse.urlparse(workload_path).query)
                     if 'workloadId' in parsed:
                         workload_id = urllib.parse.unquote(parsed['workloadId'][0])
-                    if '/p/' in workload_path:
-                        project_id = workload_path.split('/p/')[1].split('/')[0]
+                        logger.info(f"Extracted workload_id from workload_path: {workload_id}")
+                
+                if '/p/' in workload_path:
+                    project_id = workload_path.split('/p/')[1].split('/')[0]
+                    logger.info(f"Extracted project_id from workload_path: {project_id}")
+            
+            # If project_id not found, discover it dynamically from default namespace
+            if not project_id:
+                logger.info("Project ID not found in workload_path, discovering from default namespace...")
+                project_id = rancher_api.get_project_id_from_namespace(namespace="default")
+                if project_id:
+                    logger.info(f"✓ Discovered project_id: {project_id}")
+                else:
+                    error_msg = "Could not discover project_id from default namespace"
+                    error_msg += "\n  → Please provide workload_path in config.yaml (rancher section)"
+                    error_msg += "\n  → Format: /p/local:p-XXXXX/workloads/run?workloadId=..."
+                    logger.error(error_msg)
+                    raise ValueError(error_msg)
+            
+            # Log what we're using
+            logger.info(f"Using workload_id: {workload_id}, project_id: {project_id}")
             
             # Update environment variables in the workload
             rancher_api.update_workload_environment_variables(

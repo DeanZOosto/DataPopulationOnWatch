@@ -124,6 +124,51 @@ class RancherApi:
                 logger.error(error_msg)
                 raise Exception(error_msg) from e
     
+    def get_project_id_from_namespace(self, namespace="default"):
+        """
+        Get project ID from namespace by querying the namespaces API.
+        
+        This method dynamically discovers the project_id by finding the namespace
+        with the specified name and extracting its projectId field.
+        
+        Args:
+            namespace: Namespace name (default: "default")
+        
+        Returns:
+            Project ID (e.g., "local:p-5fh4c") or None if not found
+        """
+        url = f"{self.base_url}/v3/cluster/local/namespaces?limit=-1&sort=name"
+        
+        try:
+            response = self.session.get(url, headers=self.headers)
+            response.raise_for_status()
+            data = response.json()
+            
+            # Find the namespace in the data array
+            namespaces = data.get("data", [])
+            for ns in namespaces:
+                if isinstance(ns, dict) and ns.get("name") == namespace:
+                    project_id = ns.get("projectId")
+                    if project_id:
+                        logger.info(f"Found project_id '{project_id}' for namespace '{namespace}'")
+                        return project_id
+                    else:
+                        logger.warning(f"Namespace '{namespace}' found but has no projectId")
+                        return None
+            
+            logger.warning(f"Namespace '{namespace}' not found in namespaces list")
+            return None
+            
+        except requests.exceptions.RequestException as e:
+            error_msg = f"Failed to get project_id from namespace '{namespace}'"
+            if hasattr(e, 'response') and e.response is not None:
+                status_code = e.response.status_code
+                error_msg += f": HTTP {status_code} - {e.response.text[:200]}"
+            else:
+                error_msg += f": {str(e)}"
+            logger.error(error_msg)
+            return None
+    
     def get_workload(self, workload_id="statefulset:default:cv-engine", project_id="local:p-p6l45"):
         """
         Get workload configuration.
@@ -141,7 +186,12 @@ class RancherApi:
             response = self.session.get(url, headers=self.headers)
             response.raise_for_status()
             workload = response.json()
-            logger.info(f"Successfully retrieved workload: {workload_id}")
+            
+            # Validate workload response
+            if workload is None:
+                raise ValueError(f"Workload response is None for {workload_id}")
+            
+            logger.info(f"Successfully retrieved workload: {workload_id} (project: {project_id})")
             return workload
         except requests.exceptions.RequestException as e:
             error_msg = f"Failed to get Rancher workload: {workload_id}"
@@ -151,6 +201,7 @@ class RancherApi:
                     error_msg += ": Workload not found (404)"
                     error_msg += f"\n  → Check workload_id '{workload_id}' is correct"
                     error_msg += f"\n  → Verify project_id '{project_id}' is correct"
+                    error_msg += f"\n  → Try running with --step configure-rancher --verbose to see details"
                 else:
                     error_msg += f": HTTP {status_code} - {e.response.text[:200]}"
             else:
@@ -185,8 +236,41 @@ class RancherApi:
         # Retrieve current workload configuration
         workload = self.get_workload(workload_id, project_id)
         
+        # Validate workload response
+        if workload is None:
+            raise ValueError(f"Workload response is None for {workload_id} in project {project_id}")
+        
+        # Check if workload is wrapped in 'data' field (some Rancher APIs do this)
+        if isinstance(workload, dict) and "data" in workload and isinstance(workload["data"], dict):
+            workload = workload["data"]
+            logger.debug("Workload was wrapped in 'data' field, extracted")
+        
+        # Log structure for debugging
+        if isinstance(workload, dict):
+            logger.debug(f"Workload structure keys: {list(workload.keys())}")
+        else:
+            raise ValueError(f"Workload is not a dictionary: {type(workload)}")
+        
         # Find the main application container (exclude init containers)
         containers = workload.get("containers", [])
+        
+        # Try alternative container locations if not found
+        if not containers:
+            if "spec" in workload and "containers" in workload["spec"]:
+                containers = workload["spec"]["containers"]
+                logger.debug("Found containers in workload.spec.containers")
+            elif "workload" in workload and "containers" in workload["workload"]:
+                containers = workload["workload"]["containers"]
+                logger.debug("Found containers in workload.workload.containers")
+            else:
+                available_keys = list(workload.keys()) if isinstance(workload, dict) else "Not a dict"
+                error_msg = f"Could not find containers in workload structure"
+                error_msg += f"\n  → Available keys: {available_keys}"
+                error_msg += f"\n  → Workload ID: {workload_id}"
+                error_msg += f"\n  → Project ID: {project_id}"
+                logger.error(error_msg)
+                raise ValueError(error_msg)
+        
         main_container = None
         for container in containers:
             if not container.get("initContainer", False):
@@ -194,7 +278,7 @@ class RancherApi:
                 break
         
         if not main_container:
-            raise ValueError("Could not find main container in workload")
+            raise ValueError(f"Could not find main container in workload (found {len(containers)} container(s), all may be init containers)")
         
         # Initialize environment dict if it doesn't exist
         if "environment" not in main_container:
