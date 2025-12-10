@@ -408,10 +408,18 @@ class ConfigManager:
                     logger.debug(f"Updated onwatch.ip_address line: {original_line.strip()} -> {line.strip()}")
                 
                 # Update onwatch.base_url line
-                elif in_onwatch_section and re.match(r'^\s*base_url:\s*"https://' + ip_pattern, line):
-                    line = re.sub(r'(https://)' + ip_pattern, r'\1' + new_ip, line)
-                    replacement_count += 1
-                    logger.debug(f"Updated onwatch.base_url line: {original_line.strip()} -> {line.strip()}")
+                elif in_onwatch_section and 'base_url' in line and 'https://' in line:
+                    # Replace IP address in the URL - be explicit about matching the quote
+                    # Match: "https://IP"
+                    new_line = re.sub(
+                        r'("https://)' + ip_pattern + r'(")',
+                        r'\1' + new_ip + r'\2',
+                        line
+                    )
+                    if new_line != line:
+                        line = new_line
+                        replacement_count += 1
+                        logger.debug(f"Updated onwatch.base_url line: {original_line.strip()} -> {line.strip()}")
                 
                 # Update ssh.ip_address line
                 elif in_ssh_section and re.match(r'^\s*ip_address:\s*"' + ip_pattern, line):
@@ -421,13 +429,23 @@ class ConfigManager:
                 
                 # Update rancher.base_url line
                 elif in_rancher_section and 'base_url' in line and 'https://' in line:
-                    # Replace IP address in the URL - find IP between https:// and : or "
-                    # This preserves the structure: "https://IP:9443" or "https://IP"
-                    new_line = re.sub(
-                        r'(https://)' + ip_pattern + r'([:"])',
-                        r'\1' + new_ip + r'\2',
-                        line
-                    )
+                    # Replace IP address in the URL - be very explicit about what we're matching
+                    # Match: "https://OLD_IP:9443" or "https://OLD_IP"
+                    # Replace only the IP part, preserve https:// and port/quote
+                    if ':9443' in line:
+                        # Has port: "https://IP:9443"
+                        new_line = re.sub(
+                            r'("https://)' + ip_pattern + r'(:9443")',
+                            r'\1' + new_ip + r'\2',
+                            line
+                        )
+                    else:
+                        # No port: "https://IP"
+                        new_line = re.sub(
+                            r'("https://)' + ip_pattern + r'(")',
+                            r'\1' + new_ip + r'\2',
+                            line
+                        )
                     if new_line != line:
                         line = new_line
                         replacement_count += 1
