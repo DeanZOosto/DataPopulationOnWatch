@@ -96,12 +96,15 @@ class OnWatchAutomation:
         if not self.client_api:
             self.initialize_api_client()
         
-            for key, value in kv_params.items():
-                try:
-                    self.client_api.set_kv_parameter(key, value)
-                except Exception as e:
-                    logger.error(f"Failed to set KV parameter {key}: {e}")
-                raise
+        # Set each KV parameter
+        for key, value in kv_params.items():
+            try:
+                self.client_api.set_kv_parameter(key, value)
+                logger.info(f"✓ Set KV parameter: {key} = {value}")
+            except Exception as e:
+                logger.error(f"Failed to set KV parameter {key}: {e}")
+                # Continue with next parameter instead of stopping
+                continue
     
     async def configure_system_settings(self):
         """
