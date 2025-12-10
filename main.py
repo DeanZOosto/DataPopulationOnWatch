@@ -2001,7 +2001,23 @@ Examples:
                     print(f"   System Interface:")
                     print(f"     • Product Name: {product_name}")
                     if translation_file:
-                        print(f"     • Translation File: {translation_file}")
+                        # Check if translation file exists
+                        project_root = os.path.dirname(os.path.abspath(__file__))
+                        if os.path.isabs(translation_file):
+                            translation_path = translation_file
+                        else:
+                            translation_path = os.path.join(project_root, translation_file)
+                        file_exists = os.path.exists(translation_path)
+                        file_size = os.path.getsize(translation_path) if file_exists else 0
+                        file_size_mb = file_size / (1024 * 1024) if file_size > 0 else 0
+                        filename = os.path.basename(translation_file)
+                        print(f"     • Translation File: {filename}")
+                        print(f"       Path: {translation_file}")
+                        if file_exists:
+                            print(f"       Status: ✓ File exists ({file_size_mb:.2f} MB)")
+                            print(f"       Upload: Will be uploaded via SSH to device")
+                        else:
+                            print(f"       Status: ⚠️  File not found at configured path")
                     if icons:
                         print(f"     • Icons: {icons} (⚠️  not yet implemented)")
                 engine = sys_settings.get('engine', {})
