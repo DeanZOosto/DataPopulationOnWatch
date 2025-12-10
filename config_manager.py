@@ -407,19 +407,14 @@ class ConfigManager:
                     replacement_count += 1
                     logger.debug(f"Updated onwatch.ip_address line: {original_line.strip()} -> {line.strip()}")
                 
-                # Update onwatch.base_url line
+                # Update onwatch.base_url line - simple string replacement
                 elif in_onwatch_section and 'base_url' in line and 'https://' in line:
-                    # Replace IP address in the URL - use a very specific pattern
-                    # Original format: base_url: "https://10.1.71.14"
-                    # We want: base_url: "https://10.1.25.241"
-                    # Match the entire URL string and replace only the IP
-                    new_line = re.sub(
-                        r'(base_url:\s*"https://)' + ip_pattern + r'(")',
-                        r'\1' + new_ip + r'\2',
-                        line
-                    )
-                    if new_line != line:
-                        line = new_line
+                    # Find IP in the line and replace it - simple and safe
+                    # Line format: base_url: "https://10.1.71.14"
+                    old_line = line
+                    # Find the IP address in the URL and replace it
+                    line = re.sub(r'https://' + ip_pattern, 'https://' + new_ip, line)
+                    if line != old_line:
                         replacement_count += 1
                         logger.debug(f"Updated onwatch.base_url line: {original_line.strip()} -> {line.strip()}")
                 
@@ -429,29 +424,14 @@ class ConfigManager:
                     replacement_count += 1
                     logger.debug(f"Updated ssh.ip_address line: {original_line.strip()} -> {line.strip()}")
                 
-                # Update rancher.base_url line
+                # Update rancher.base_url line - simple string replacement
                 elif in_rancher_section and 'base_url' in line and 'https://' in line:
-                    # Replace IP address in the URL - use a very specific pattern
-                    # Original format: base_url: "https://10.1.71.14:9443"
-                    # We want: base_url: "https://10.1.25.241:9443"
-                    # Match the entire URL string and replace only the IP
-                    if ':9443' in line:
-                        # Has port: match "https://IP:9443"
-                        # Use word boundaries and explicit matching
-                        new_line = re.sub(
-                            r'(base_url:\s*"https://)' + ip_pattern + r'(:9443")',
-                            r'\1' + new_ip + r'\2',
-                            line
-                        )
-                    else:
-                        # No port: match "https://IP"
-                        new_line = re.sub(
-                            r'(base_url:\s*"https://)' + ip_pattern + r'(")',
-                            r'\1' + new_ip + r'\2',
-                            line
-                        )
-                    if new_line != line:
-                        line = new_line
+                    # Find IP in the line and replace it - simple and safe
+                    # Line format: base_url: "https://10.1.71.14:9443"
+                    old_line = line
+                    # Find the IP address in the URL and replace it (preserves https:// and :9443)
+                    line = re.sub(r'https://' + ip_pattern, 'https://' + new_ip, line)
+                    if line != old_line:
                         replacement_count += 1
                         logger.debug(f"Updated rancher.base_url line: {original_line.strip()} -> {line.strip()}")
                 
