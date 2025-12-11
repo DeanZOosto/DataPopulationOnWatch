@@ -89,12 +89,12 @@ nano config.yaml  # or use your preferred editor
 
 **Note:** All other data (subjects, cameras, groups, etc.) is already pre-configured.
 
-### Step 2.5: View Baseline Dataset (Optional)
+### Step 2.5: Preview Dataset (Optional)
 
 To see what data will be populated before running:
 
 ```bash
-python3 main.py --show-baseline
+python3 main.py --preview-data
 ```
 
 This displays a summary of:
@@ -110,7 +110,7 @@ This displays a summary of:
 
 **Example Output:**
 ```
-Default Baseline Dataset
+Dataset Preview
 ======================================================================
 
 📋 KV Parameters: 5
@@ -202,15 +202,15 @@ python3 main.py --step configure-system
 python3 main.py --step upload-files
 ```
 
-### View Baseline Dataset
+### Preview Dataset
 
 To see what data will be populated:
 
 ```bash
-python3 main.py --show-baseline
+python3 main.py --preview-data
 ```
 
-This shows a summary of all the baseline data (subjects, cameras, settings, etc.) that will be configured.
+This shows a summary of all the data (subjects, cameras, settings, etc.) that will be configured.
 
 ### List All Available Steps
 
@@ -329,15 +329,15 @@ python3 main.py --config my-config.yaml
 1. Ensure translation file path is correct in `config.yaml`
 2. Run: `python3 main.py --step upload-files`
 
-## Default Baseline Dataset
+## Preview Dataset
 
-The `config.yaml` file comes pre-configured with a complete baseline dataset. To view what will be populated:
+The `config.yaml` file comes pre-configured with a complete dataset. To preview what will be populated:
 
 ```bash
-python3 main.py --show-baseline
+python3 main.py --preview-data
 ```
 
-**Baseline Dataset Includes:**
+**Dataset Includes:**
 - **5 KV Parameters**: Video detection settings, face thresholds, mask classifier, retention times
 - **System Settings**: Face/body/liveness thresholds, retention periods (6-9 days), map seed location
 - **4 Cameras**: Face cameras, body camera, moderate streamer (with thresholds, locations, calibration)
@@ -353,7 +353,7 @@ python3 main.py --show-baseline
 
 ## Tips
 
-1. **View baseline first:** `python3 main.py --show-baseline` to see what will be populated
+1. **View baseline first:** `python3 main.py --preview-data` to see what will be populated
 2. **Always validate first:** `python3 main.py --validate`
 3. **Use dry-run:** `python3 main.py --dry-run` before actual run
 4. **Run specific steps** when troubleshooting: `--step <step-name>`

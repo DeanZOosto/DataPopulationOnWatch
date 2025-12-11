@@ -2082,8 +2082,8 @@ Examples:
   # Dry-run mode (validate and show what would be executed)
   python3 main.py --dry-run
   
-  # View baseline dataset that will be populated
-  python3 main.py --show-baseline
+  # Preview dataset that will be populated
+  python3 main.py --preview-data
   
   # Verbose logging
   python3 main.py --verbose
@@ -2150,9 +2150,9 @@ Examples:
         help='Update all IP addresses in config.yaml to the specified IP address. Updates onwatch, ssh, and rancher IPs automatically. Creates a backup of the original config file.'
     )
     parser.add_argument(
-        '--show-baseline',
+        '--preview-data',
         action='store_true',
-        help='Display the default baseline dataset that will be populated and exit'
+        help='Preview the dataset that will be populated (shows all configured data) and exit'
     )
     
     args = parser.parse_args()
@@ -2179,14 +2179,14 @@ Examples:
             print(f"  {'':22s}  {description}\n")
         sys.exit(0)
     
-    # Handle show-baseline
-    if args.show_baseline:
+    # Handle preview-data
+    if args.preview_data:
         try:
             automation = OnWatchAutomation(config_path=args.config)
             config = automation.config
             
             print("\n" + "=" * 70)
-            print("Default Baseline Dataset")
+            print("Dataset Preview")
             print("=" * 70)
             print(f"\nConfiguration file: {args.config}")
             print("\nThis dataset will be populated when you run the automation:\n")
@@ -2425,11 +2425,11 @@ Examples:
                     print(f"   • {feature}")
             
             print("\n" + "=" * 70)
-            print("Note: This is the baseline dataset from config.yaml.")
+            print("Note: This is the dataset from config.yaml.")
             print("You can customize it by editing config.yaml before running automation.")
             print("=" * 70 + "\n")
         except Exception as e:
-            print(f"\n❌ Error loading baseline dataset: {e}\n", file=sys.stderr)
+            print(f"\n❌ Error loading dataset: {e}\n", file=sys.stderr)
             sys.exit(1)
         sys.exit(0)
     
