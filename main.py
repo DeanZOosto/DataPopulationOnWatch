@@ -2005,21 +2005,21 @@ class OnWatchAutomation:
                 logger.error("⚠️  MANUAL ACTION REQUIRED: Please upload mass import file manually in the UI")
                 self.summary.record_step(9, "Upload Mass Import", "failed", error_msg, manual_action=True)
             
-            # Step 10: Upload files
+            # Step 10: Upload translation file
             step_start = time.time()
-            logger.info("\n[Step 10/11] Uploading files...")
+            logger.info("\n[Step 10/11] Uploading translation file...")
             try:
                 await self.upload_files()
                 step_end = time.time()
                 self.summary.record_step_timing(10, step_start, step_end)
-                self.summary.record_step(10, "Upload Files", "success")
+                self.summary.record_step(10, "Upload Translation File", "success")
             except Exception as e:
                 step_end = time.time()
                 self.summary.record_step_timing(10, step_start, step_end)
-                error_msg = f"Failed to upload files: {str(e)}"
+                error_msg = f"Failed to upload translation file: {str(e)}"
                 logger.error(f"❌ {error_msg}")
                 logger.error("⚠️  MANUAL ACTION REQUIRED: Please upload translation file manually via SSH")
-                self.summary.record_step(10, "Upload Files", "failed", error_msg, manual_action=True)
+                self.summary.record_step(10, "Upload Translation File", "failed", error_msg, manual_action=True)
             
             # Step 11: Configure Rancher (last step)
             step_start = time.time()
@@ -2170,7 +2170,7 @@ Examples:
             ("configure-inquiries", "Configure Inquiries", "Create inquiry cases with file uploads and ROI settings"),
             ("upload-mass-import", "Upload Mass Import", "Upload mass import file for bulk subject import"),
             ("configure-rancher", "Configure Rancher", "Set Kubernetes environment variables via Rancher API"),
-            ("upload-files", "Upload Files", "Upload translation file to device via SSH")
+            ("upload-files", "Upload Translation File", "Upload translation file to device via SSH")
         ]
         print("\nAvailable Automation Steps:")
         print("=" * 70)
@@ -2516,7 +2516,7 @@ Examples:
         logger.info("  7. Configure devices")
         logger.info("  8. Configure inquiries")
         logger.info("  9. Upload mass import")
-        logger.info("  10. Upload files")
+        logger.info("  10. Upload translation file")
         logger.info("  11. Configure Rancher")
         logger.info("\n✓ Dry-run completed - no actual changes were made")
         sys.exit(0)
@@ -2579,7 +2579,7 @@ Examples:
         logger.info("  7. Configure devices")
         logger.info("  8. Configure inquiries")
         logger.info("  9. Upload mass import")
-        logger.info("  10. Upload files")
+        logger.info("  10. Upload translation file")
         logger.info("  11. Configure Rancher")
         logger.info("\n✓ Dry-run completed - no actual changes were made")
         sys.exit(0)
