@@ -6,6 +6,7 @@ Automated tool for populating OnWatch on-premise systems with configuration and 
 
 - **Python 3.9 or higher** (check with `python3 --version`)
 - Network access to OnWatch system
+- **macOS users:** Ensure WiFi is prioritized over Ethernet if OnWatch is on WiFi (check with `networksetup -listnetworkserviceorder`)
 - Network access to Rancher (for Kubernetes environment variables)
 - SSH access to OnWatch device (for translation file upload)
 - OnWatch admin credentials
@@ -90,6 +91,11 @@ This displays a summary of:
 - Mass import file
 - Environment variables
 - User accounts
+
+**Before running:** macOS users should verify network interface priority:
+```bash
+networksetup -listnetworkserviceorder  # Wi-Fi should be (1) if OnWatch is on WiFi
+```
 
 **Example Output:**
 ```
@@ -271,11 +277,16 @@ python3 main.py --config my-config.yaml
 
 ### Network Connectivity
 
-**Error:** `Connection error` or `404 Not Found`
+**Error:** `Connection error`, `404 Not Found`, or `No route to host`
 
 **Solution:**
 - Verify IP address in `config.yaml` is correct
 - Check network connectivity: `ping <ip-address>`
+- **macOS:** If both WiFi and Ethernet are connected, ensure the correct interface is prioritized:
+  ```bash
+  networksetup -listnetworkserviceorder  # Check which is (1)
+  # If Ethernet is first but you need WiFi: unplug Ethernet or reorder in System Settings → Network
+  ```
 - Ensure OnWatch API is accessible
 
 ## Common Use Cases
