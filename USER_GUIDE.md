@@ -5,6 +5,10 @@ Automated tool for populating OnWatch on-premise systems with configuration and 
 ## Prerequisites
 
 - **Python 3.9 or higher** (check with `python3 --version`)
+- **pip3** (Python package installer)
+  - Usually comes with Python 3
+  - If missing, install with: `python3 -m ensurepip --upgrade` or via your system package manager
+- **Virtual environment (recommended)** - Isolates dependencies from system Python
 - Network access to OnWatch system
 - **macOS users:** Ensure WiFi is prioritized over Ethernet (check with `networksetup -listnetworkserviceorder`)
 - Network access to Rancher (for Kubernetes environment variables)
@@ -24,9 +28,16 @@ This is the most common use case: populate OnWatch with the pre-configured basel
 git clone https://github.com/DeanZOosto/DataPopulationOnWatch.git
 cd DataPopulationOnWatch
 
+# Create and activate virtual environment (recommended)
+python3 -m venv venv
+source venv/bin/activate  # On macOS/Linux
+# On Windows: venv\Scripts\activate
+
 # Install Python dependencies
 pip3 install -r requirements.txt
 ```
+
+**Note:** Using a virtual environment is recommended to avoid conflicts with system Python packages. If you skip the venv step, you can install directly with `pip3 install -r requirements.txt`, but you may need to use `sudo` on some systems.
 
 ### Step 2: Configure
 
@@ -34,7 +45,7 @@ pip3 install -r requirements.txt
 
 **Before running:** macOS users should verify network interface priority:
 ```bash
-networksetup -listnetworkserviceorder  # Wi-Fi should be (1) if OnWatch is on WiFi
+networksetup -listnetworkserviceorder  # Wi-Fi should be (1) 
 ```
 
 Update all IP addresses with a single command:

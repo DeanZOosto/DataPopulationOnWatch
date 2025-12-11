@@ -5,6 +5,10 @@ Automated tool for populating OnWatch on-premise systems with configuration and 
 ## Quick Start
 
 ```bash
+# Create and activate virtual environment (recommended)
+python3 -m venv venv
+source venv/bin/activate  # On macOS/Linux
+
 # Install dependencies
 pip3 install -r requirements.txt
 
