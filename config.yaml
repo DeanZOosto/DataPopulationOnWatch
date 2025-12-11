@@ -2,14 +2,14 @@
 # Complete baseline data from machine 10.1.71.14
 
 onwatch:
-  ip_address: "10.1.71.14"
+  ip_address: "10.1.25.90"
   username: "Administrator"
   password: "pa$$word!"
-  base_url: "https://10.1.71.14"
+  base_url: "https://10.1.25.90"
 
 # SSH Configuration (for translation file upload)
 ssh:
-  ip_address: "10.1.71.14"  # Usually same as onwatch IP
+  ip_address: "10.1.25.90"  # Usually same as onwatch IP
   username: "user"  # SSH user (will sudo to root for translation-util)
   password: "user1!"  # SSH password (default for user "user")
   sudo_password: "user1!"  # Sudo password (if different from SSH password, leave empty to use SSH password)
@@ -21,7 +21,7 @@ rancher:
   port: 9443
   username: "admin"
   password: "admin"
-  base_url: "https://10.1.71.14:9443"
+  base_url: "https://10.1.25.90:9443"
   # Workload URL path (relative to base_url) - update workloadId if needed
   # Format: /p/local:p-p6l45/workloads/run?launchConfigIndex=-1&namespaceId=default&upgrade=true&workloadId=statefulset%3Adefault%3Acv-engine
   workload_path: "/p/local:p-p6l45/workloads/run?launchConfigIndex=-1&namespaceId=default&upgrade=true&workloadId=statefulset%3Adefault%3Acv-engine"
@@ -53,7 +53,7 @@ system_settings:
     masks_access_control: false
   
   system_interface:
-    translation_file: "assets/Polski-updated3.json.json"  # Path to translation file (relative to project root)
+    translation_file: "assets/Polski-updated3.json"  # Path to translation file (relative to project root)
     product_name: "metropolis"
     icons: ""  # Path to icons directory (if available)
   
@@ -68,7 +68,7 @@ system_settings:
 # Environment Variables (set via Rancher)
 env_vars:
   ENABLE_DVR: "True"
-  OVERWRITE_FFMPEG_OPTIONS_VALUES: "ffmpeg-opts:rtsp_transport=udp_multicast,probesize=1000000000,stimeout=10000000,buffer_size=1048576,analyzeduration=10000000;v2urisourcebin:stream-connect-timeout=20"
+  OVERWRITE_FFMPEG_OPTIONS_VALUES: "ffmpeg-opts:rtsp_transport=udp,reorder_queue_size=8192,max_delay=500000,buffer_size=4194304"
   SERVICE_TAGS: "engine-service,body-from-face-pipeline,body-pipeline,dvr,face-pipeline,ffmpeg-options,forensics,gdpr,image-processing,live-stream,roi,watch-video,webrtc"
   SERVICE_DOMAIN: "cv-engine.default"
   CUDA_DEVICE_ORDER: "PCI_BUS_ID"

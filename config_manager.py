@@ -70,7 +70,7 @@ class ConfigManager:
             # Substitute environment variables
             config = self._recursive_substitute_env(config)
             
-            logger.info(f"Configuration loaded from {self.config_path}")
+            logger.debug(f"Configuration loaded from {self.config_path}")
             self.config = config
             return config
         except FileNotFoundError:

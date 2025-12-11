@@ -17,7 +17,8 @@ from config_manager import ConfigManager
 
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'  # Removes milliseconds
 )
 logger = logging.getLogger(__name__)
 
@@ -101,8 +102,17 @@ class OnWatchAutomation:
             try:
                 self.client_api.set_kv_parameter(key, value)
                 logger.info(f"✓ Set KV parameter: {key} = {value}")
+                # Track created item
+                self.summary.add_created_item('kv_parameters', {'key': key, 'value': str(value)})
             except Exception as e:
-                logger.error(f"Failed to set KV parameter {key}: {e}")
+                error_str = str(e).lower()
+                # Check if error indicates value already exists or is already set correctly
+                if any(phrase in error_str for phrase in ['already exists', 'already set', 'no change', 'unchanged', 'duplicate']):
+                    logger.debug(f"KV parameter {key} already has value {value} (or already exists), skipping")
+                    # Don't log as error - this is expected behavior
+                else:
+                    logger.error(f"Failed to set KV parameter {key}: {e}")
+                    self.summary.add_error("KV Parameter", key, str(e))
                 # Continue with next parameter instead of stopping
                 continue
     
@@ -134,6 +144,8 @@ class OnWatchAutomation:
         try:
             self.client_api.update_system_settings(system_settings)
             logger.info("✓ System settings configured via API")
+            # Track system settings that were configured
+            self.summary.add_created_item('system_settings', system_settings)
             
             # Handle acknowledge actions separately
             if 'map' in system_settings:
@@ -184,6 +196,12 @@ class OnWatchAutomation:
                     try:
                         self.client_api.upload_logo(logo_path, logo_type)
                         logger.info(f"✓ Uploaded {logo_type} logo")
+                        # Track uploaded logo under system_interface
+                        self.summary.add_created_item('logo', {
+                            'type': logo_type,
+                            'source_file': os.path.basename(logo_path),
+                            'path': logo_path
+                        })
                     except Exception as e:
                         logger.warning(f"Could not upload {logo_type} logo: {e}")
                         logger.warning("Continuing with other settings...")
@@ -199,6 +217,12 @@ class OnWatchAutomation:
                 try:
                     self.client_api.upload_logo(favicon_path, "favicon")
                     logger.info("✓ Uploaded favicon logo")
+                    # Track uploaded favicon under system_interface
+                    self.summary.add_created_item('logo', {
+                        'type': 'favicon',
+                        'source_file': 'favicon.ico',
+                        'path': favicon_path
+                    })
                 except Exception as e:
                     logger.warning(f"Could not upload favicon logo: {e}")
             else:
@@ -346,7 +370,7 @@ class OnWatchAutomation:
                 camera_mode = 2 if "body" in name.lower() else 1
                 
                 # Create camera via GraphQL
-                self.client_api.create_camera(
+                camera_response = self.client_api.create_camera(
                     name=name,
                     video_url=video_url,
                     camera_group_id=camera_group_id,
@@ -359,6 +383,24 @@ class OnWatchAutomation:
                 logger.info(f"✓ Created camera: {name} (mode: {'body' if camera_mode == 2 else 'face'})")
                 created_count += 1
                 existing_camera_names.add(name.lower())  # Track created camera
+                
+                # Track created camera
+                try:
+                    camera_data = camera_response.json() if hasattr(camera_response, 'json') else {}
+                    camera_id = camera_data.get('id') or camera_data.get('cameraId') or 'unknown'
+                    self.summary.add_created_item('cameras', {
+                        'name': name,
+                        'id': camera_id,
+                        'video_url': video_url,
+                        'mode': 'body' if camera_mode == 2 else 'face'
+                    })
+                except Exception:
+                    self.summary.add_created_item('cameras', {
+                        'name': name,
+                        'id': 'unknown',
+                        'video_url': video_url,
+                        'mode': 'body' if camera_mode == 2 else 'face'
+                    })
                 
             except Exception as e:
                 camera_name = device_config.get('name', 'unknown')
@@ -621,11 +663,29 @@ class OnWatchAutomation:
                 logger.info(f"✓ Added subject to watch list: {name} (image: {os.path.basename(image_path)})")
                 success_count += 1
                 
+                # Track created subject
+                try:
+                    subject_data = response.json() if hasattr(response, 'json') else {}
+                    subject_id = subject_data.get('id')
+                    self.summary.add_created_item('subjects', {
+                        'name': name,
+                        'id': subject_id or 'unknown',
+                        'images': len(images)
+                    })
+                except Exception:
+                    # Fallback if response parsing fails
+                    self.summary.add_created_item('subjects', {
+                        'name': name,
+                        'id': 'unknown',
+                        'images': len(images)
+                    })
+                
                 # Add additional images immediately if any (e.g., Yonatan has 2 images)
                 if len(images) > 1:
                     try:
-                        subject_data = response.json() if hasattr(response, 'json') else {}
-                        subject_id = subject_data.get('id')
+                        if not subject_id:
+                            subject_data = response.json() if hasattr(response, 'json') else {}
+                            subject_id = subject_data.get('id')
                         
                         if subject_id:
                             for additional_img_info in images[1:]:
@@ -766,7 +826,8 @@ class OnWatchAutomation:
                             break
                     
                     if matching_existing:
-                        logger.info(f"Subject group '{name}' already exists as '{matching_existing}', skipping")
+                        logger.info(f"⏭️  Subject group '{name}' already exists as '{matching_existing}', skipping")
+                        self.summary.add_skipped("Subject Group", name, f"already exists as '{matching_existing}'")
                         continue
                     
                     authorization = group_config.get('authorization', 'Always Unauthorized')
@@ -776,7 +837,7 @@ class OnWatchAutomation:
                     color = group_config.get('color', '#D20300')
                     camera_groups = group_config.get('camera_groups', None)
                     
-                    self.client_api.create_subject_group(
+                    group_response = self.client_api.create_subject_group(
                         name=name,
                         authorization=authorization,
                         visibility=visibility,
@@ -786,6 +847,26 @@ class OnWatchAutomation:
                         camera_groups=camera_groups
                     )
                     logger.info(f"✓ Created subject group: {name}")
+                    
+                    # Track created group
+                    try:
+                        group_data = group_response.json() if hasattr(group_response, 'json') else group_response if isinstance(group_response, dict) else {}
+                        group_id = group_data.get('id') or 'unknown'
+                        self.summary.add_created_item('groups', {
+                            'name': name,
+                            'id': group_id,
+                            'type': 'subject',
+                            'authorization': authorization,
+                            'visibility': visibility
+                        })
+                    except Exception:
+                        self.summary.add_created_item('groups', {
+                            'name': name,
+                            'id': 'unknown',
+                            'type': 'subject',
+                            'authorization': authorization,
+                            'visibility': visibility
+                        })
                     
                 except Exception as e:
                     group_name = group_config.get('name', 'unknown')
@@ -946,7 +1027,7 @@ class OnWatchAutomation:
                         logger.info(f"Skipping password for user '{username}' (keep existing)")
                     
                     # Create user
-                    self.client_api.create_user(
+                    user_response = self.client_api.create_user(
                         username=username,
                         first_name=first_name,
                         last_name=last_name,
@@ -956,6 +1037,28 @@ class OnWatchAutomation:
                         password=password
                     )
                     logger.info(f"✓ Created user: {username}")
+                    
+                    # Track created user
+                    try:
+                        user_data = user_response.json() if hasattr(user_response, 'json') else user_response if isinstance(user_response, dict) else {}
+                        user_id = user_data.get('id') or user_data.get('userId') or 'unknown'
+                        self.summary.add_created_item('accounts', {
+                            'username': username,
+                            'id': user_id,
+                            'first_name': first_name,
+                            'last_name': last_name,
+                            'email': email,
+                            'role': role_name
+                        })
+                    except Exception:
+                        self.summary.add_created_item('accounts', {
+                            'username': username,
+                            'id': 'unknown',
+                            'first_name': first_name,
+                            'last_name': last_name,
+                            'email': email,
+                            'role': role_name
+                        })
                     
                 except Exception as e:
                     username = user_config.get('username', 'unknown')
@@ -1038,12 +1141,32 @@ class OnWatchAutomation:
                         logger.debug(f"Camera groups mapping not yet implemented for user group '{title}'")
                     
                     # Create user group
-                    self.client_api.create_user_group(
+                    ug_response = self.client_api.create_user_group(
                         title=title,
                         subject_groups=subject_group_ids,
                         camera_groups=camera_group_ids
                     )
                     logger.info(f"✓ Created user group: {title}")
+                    
+                    # Track created user group
+                    try:
+                        ug_data = ug_response.json() if hasattr(ug_response, 'json') else ug_response if isinstance(ug_response, dict) else {}
+                        ug_id = ug_data.get('id') or ug_data.get('userGroupId') or 'unknown'
+                        self.summary.add_created_item('groups', {
+                            'name': title,
+                            'id': ug_id,
+                            'type': 'user',
+                            'subject_groups': len(subject_group_ids),
+                            'camera_groups': len(camera_group_ids)
+                        })
+                    except Exception:
+                        self.summary.add_created_item('groups', {
+                            'name': title,
+                            'id': 'unknown',
+                            'type': 'user',
+                            'subject_groups': len(subject_group_ids),
+                            'camera_groups': len(camera_group_ids)
+                        })
                     
                 except Exception as e:
                     title = ug_config.get('title', 'unknown') or ug_config.get('name', 'unknown')
@@ -1114,12 +1237,20 @@ class OnWatchAutomation:
                 
                 # Create inquiry case
                 from client_api import InquiryCaseAlreadyExists
+                inquiry_tracking = None  # Initialize for tracking
                 try:
                     case_result = self.client_api.create_inquiry_case(inquiry_name)
                     case_id = case_result.get('id')
                     if not case_id:
                         logger.error(f"Failed to get case ID for '{inquiry_name}'")
                         continue
+                    
+                    # Track created inquiry case (will update with files later)
+                    inquiry_tracking = {
+                        'name': inquiry_name,
+                        'id': case_id,
+                        'files': []
+                    }
                 except InquiryCaseAlreadyExists:
                     logger.info(f"⏭️  Inquiry case '{inquiry_name}' already exists, skipping")
                     self.summary.add_skipped("Inquiry Case", inquiry_name, "already exists")
@@ -1222,6 +1353,13 @@ class OnWatchAutomation:
                         
                         logger.info(f"✓ Added file to inquiry: {filename}")
                         
+                        # Track uploaded file in inquiry_tracking
+                        if inquiry_tracking is not None:
+                            inquiry_tracking['files'].append({
+                                'filename': filename,
+                                'upload_id': upload_id
+                            })
+                        
                         # Store Neo.webm upload_id for configuration after all files are added
                         if filename.lower() == 'neo.webm' and settings.lower() == 'custom':
                             file_ids_map['neo_webm_configure'] = upload_id
@@ -1315,6 +1453,11 @@ class OnWatchAutomation:
                         logger.warning(f"Could not configure files or start analysis: {e}")
                 
                 logger.info(f"✓ Completed inquiry case: {inquiry_name} ({len(successful_uploads)} file(s) uploaded)")
+                
+                # Track created inquiry case
+                if inquiry_tracking is not None:
+                    inquiry_tracking['files_count'] = len(successful_uploads)
+                    self.summary.add_created_item('inquiries', inquiry_tracking)
                 
             except Exception as e:
                 inquiry_name = inquiry_config.get('name', 'unknown')
@@ -1450,6 +1593,13 @@ class OnWatchAutomation:
                 logger.info(f"✓ Mass import '{mass_import_name}' upload started successfully")
                 logger.info("Processing will continue in the background. Check the UI for status updates.")
                 logger.info("Note: You may need to manually resolve issues in the mass import report after processing completes.")
+                
+                # Track mass import
+                self.summary.add_created_item('mass_import', {
+                    'name': mass_import_name,
+                    'filename': filename,
+                    'upload_id': upload_id
+                })
             except MassImportAlreadyExists as e:
                 logger.info(f"⏭️  Mass import '{mass_import_name}' already exists, skipping")
                 self.summary.add_skipped("Mass Import", mass_import_name, "already exists")
@@ -1564,6 +1714,13 @@ class OnWatchAutomation:
                 project_id=project_id
             )
             logger.info(f"✓ Successfully configured {len(env_vars)} environment variables in Rancher")
+            
+            # Track Rancher env vars
+            for key, value in env_vars.items():
+                self.summary.add_created_item('rancher_env_vars', {
+                    'key': key,
+                    'value': str(value)  # Convert to string for export
+                })
         except Exception as e:
             logger.error(f"Failed to configure Rancher environment variables: {e}")
             raise
@@ -1664,6 +1821,13 @@ class OnWatchAutomation:
                 
                 if success:
                     logger.info(f"✓ Successfully uploaded translation file: {translation_file}")
+                    
+                    # Track translation file
+                    self.summary.add_created_item('translation_file', {
+                        'filename': os.path.basename(translation_file),
+                        'path': translation_file,
+                        'local_path': local_file_path
+                    })
                 else:
                     logger.error("Failed to upload translation file")
                     raise Exception("Translation file upload failed")
@@ -1683,13 +1847,24 @@ class OnWatchAutomation:
         logger.info("Starting OnWatch Data Population Automation")
         logger.info("=" * 80)
         
+        # Get OnWatch IP for export metadata
+        onwatch_ip = self.config.get('onwatch', {}).get('ip_address', 'unknown')
+        
+        # Start timing
+        self.summary.start_timing(onwatch_ip=onwatch_ip)
+        
         try:
             # Step 1: Initialize API client
+            step_start = time.time()
             logger.info("\n[Step 1/11] Initializing API client...")
             try:
                 self.initialize_api_client()
+                step_end = time.time()
+                self.summary.record_step_timing(1, step_start, step_end)
                 self.summary.record_step(1, "Initialize API Client", "success", "API client initialized and logged in")
             except Exception as e:
+                step_end = time.time()
+                self.summary.record_step_timing(1, step_start, step_end)
                 error_msg = f"Failed to initialize API client: {str(e)}"
                 logger.error(f"❌ {error_msg}")
                 logger.error("⚠️  MANUAL ACTION REQUIRED: Cannot proceed without API client. Please check credentials and network connectivity.")
@@ -1697,53 +1872,76 @@ class OnWatchAutomation:
                 raise  # Cannot continue without API client
             
             # Step 2: Set KV parameters
+            step_start = time.time()
             logger.info("\n[Step 2/11] Setting KV parameters...")
             try:
                 await self.set_kv_parameters()
+                step_end = time.time()
+                self.summary.record_step_timing(2, step_start, step_end)
                 self.summary.record_step(2, "Set KV Parameters", "success")
             except Exception as e:
+                step_end = time.time()
+                self.summary.record_step_timing(2, step_start, step_end)
                 error_msg = f"Failed to set KV parameters: {str(e)}"
                 logger.error(f"❌ {error_msg}")
                 logger.error("⚠️  MANUAL ACTION REQUIRED: Please set KV parameters manually in the UI at /bt/settings/kv")
                 self.summary.record_step(2, "Set KV Parameters", "failed", error_msg, manual_action=True)
             
             # Step 3: Configure system settings
+            step_start = time.time()
             logger.info("\n[Step 3/11] Configuring system settings...")
             try:
                 await self.configure_system_settings()
+                step_end = time.time()
+                self.summary.record_step_timing(3, step_start, step_end)
                 self.summary.record_step(3, "Configure System Settings", "success")
             except Exception as e:
+                step_end = time.time()
+                self.summary.record_step_timing(3, step_start, step_end)
                 error_msg = f"Failed to configure system settings: {str(e)}"
                 logger.error(f"❌ {error_msg}")
                 logger.error("⚠️  MANUAL ACTION REQUIRED: Please configure system settings manually in the UI")
                 self.summary.record_step(3, "Configure System Settings", "failed", error_msg, manual_action=True)
             
             # Step 4: Configure groups and profiles
+            step_start = time.time()
             logger.info("\n[Step 4/11] Configuring groups and profiles...")
             try:
                 await self.configure_groups()
+                step_end = time.time()
+                self.summary.record_step_timing(4, step_start, step_end)
                 self.summary.record_step(4, "Configure Groups", "success")
             except Exception as e:
+                step_end = time.time()
+                self.summary.record_step_timing(4, step_start, step_end)
                 error_msg = f"Failed to configure groups: {str(e)}"
                 logger.error(f"❌ {error_msg}")
                 logger.error("⚠️  MANUAL ACTION REQUIRED: Please configure groups manually in the UI")
                 self.summary.record_step(4, "Configure Groups", "failed", error_msg, manual_action=True)
             
             # Step 5: Configure accounts
+            step_start = time.time()
             logger.info("\n[Step 5/11] Configuring accounts...")
             try:
                 await self.configure_accounts()
+                step_end = time.time()
+                self.summary.record_step_timing(5, step_start, step_end)
                 self.summary.record_step(5, "Configure Accounts", "success")
             except Exception as e:
+                step_end = time.time()
+                self.summary.record_step_timing(5, step_start, step_end)
                 error_msg = f"Failed to configure accounts: {str(e)}"
                 logger.error(f"❌ {error_msg}")
                 logger.error("⚠️  MANUAL ACTION REQUIRED: Please configure accounts manually in the UI")
                 self.summary.record_step(5, "Configure Accounts", "failed", error_msg, manual_action=True)
             
             # Step 6: Populate watch list
+            step_start = time.time()
             logger.info("\n[Step 6/11] Populating watch list...")
             try:
                 self.populate_watch_list()
+                step_end = time.time()
+                self.summary.record_step_timing(6, step_start, step_end)
                 # Check if there were any failures (tracked in populate_watch_list)
                 # If warnings exist for subjects, mark as partial
                 subject_warnings = [w for w in self.summary.warnings if "Subject" in w and "was not added" in w]
@@ -1752,61 +1950,88 @@ class OnWatchAutomation:
                 else:
                     self.summary.record_step(6, "Populate Watch List", "success")
             except Exception as e:
+                step_end = time.time()
+                self.summary.record_step_timing(6, step_start, step_end)
                 error_msg = f"Failed to populate watch list: {str(e)}"
                 logger.error(f"❌ {error_msg}")
                 logger.error("⚠️  MANUAL ACTION REQUIRED: Please add watch list subjects manually in the UI")
                 self.summary.record_step(6, "Populate Watch List", "failed", error_msg, manual_action=True)
             
             # Step 7: Configure devices
+            step_start = time.time()
             logger.info("\n[Step 7/11] Configuring devices...")
             try:
                 await self.configure_devices()
+                step_end = time.time()
+                self.summary.record_step_timing(7, step_start, step_end)
                 self.summary.record_step(7, "Configure Devices", "success")
             except Exception as e:
+                step_end = time.time()
+                self.summary.record_step_timing(7, step_start, step_end)
                 error_msg = f"Failed to configure devices: {str(e)}"
                 logger.error(f"❌ {error_msg}")
                 logger.error("⚠️  MANUAL ACTION REQUIRED: Please configure devices manually in the UI")
                 self.summary.record_step(7, "Configure Devices", "failed", error_msg, manual_action=True)
             
             # Step 8: Configure inquiries
+            step_start = time.time()
             logger.info("\n[Step 8/11] Configuring inquiries...")
             try:
                 await self.configure_inquiries()
+                step_end = time.time()
+                self.summary.record_step_timing(8, step_start, step_end)
                 self.summary.record_step(8, "Configure Inquiries", "success")
             except Exception as e:
+                step_end = time.time()
+                self.summary.record_step_timing(8, step_start, step_end)
                 error_msg = f"Failed to configure inquiries: {str(e)}"
                 logger.error(f"❌ {error_msg}")
                 logger.error("⚠️  MANUAL ACTION REQUIRED: Please configure inquiries manually in the UI")
                 self.summary.record_step(8, "Configure Inquiries", "failed", error_msg, manual_action=True)
             
             # Step 9: Upload mass import
+            step_start = time.time()
             logger.info("\n[Step 9/11] Uploading mass import...")
             try:
                 await self.configure_mass_import()
+                step_end = time.time()
+                self.summary.record_step_timing(9, step_start, step_end)
                 self.summary.record_step(9, "Upload Mass Import", "success", "File uploaded, processing continues in background")
             except Exception as e:
+                step_end = time.time()
+                self.summary.record_step_timing(9, step_start, step_end)
                 error_msg = f"Failed to upload mass import: {str(e)}"
                 logger.error(f"❌ {error_msg}")
                 logger.error("⚠️  MANUAL ACTION REQUIRED: Please upload mass import file manually in the UI")
                 self.summary.record_step(9, "Upload Mass Import", "failed", error_msg, manual_action=True)
             
             # Step 10: Upload files
+            step_start = time.time()
             logger.info("\n[Step 10/11] Uploading files...")
             try:
                 await self.upload_files()
+                step_end = time.time()
+                self.summary.record_step_timing(10, step_start, step_end)
                 self.summary.record_step(10, "Upload Files", "success")
             except Exception as e:
+                step_end = time.time()
+                self.summary.record_step_timing(10, step_start, step_end)
                 error_msg = f"Failed to upload files: {str(e)}"
                 logger.error(f"❌ {error_msg}")
                 logger.error("⚠️  MANUAL ACTION REQUIRED: Please upload translation file manually via SSH")
                 self.summary.record_step(10, "Upload Files", "failed", error_msg, manual_action=True)
             
             # Step 11: Configure Rancher (last step)
+            step_start = time.time()
             logger.info("\n[Step 11/11] Configuring Rancher...")
             try:
                 self.configure_rancher()
+                step_end = time.time()
+                self.summary.record_step_timing(11, step_start, step_end)
                 self.summary.record_step(11, "Configure Rancher", "success")
             except Exception as e:
+                step_end = time.time()
+                self.summary.record_step_timing(11, step_start, step_end)
                 error_msg = f"Failed to configure Rancher: {str(e)}"
                 logger.error(f"❌ {error_msg}")
                 logger.error("⚠️  MANUAL ACTION REQUIRED: Please configure Rancher environment variables manually")
@@ -1815,9 +2040,17 @@ class OnWatchAutomation:
         except Exception as e:
             logger.error(f"\n❌ FATAL ERROR: Automation failed with exception: {e}", exc_info=True)
             logger.error("Automation stopped due to fatal error")
+        finally:
+            # End timing
+            self.summary.end_timing()
         
         # Print summary
         self.summary.print_summary()
+        
+        # Export created items to file
+        export_path = self.summary.export_to_file(format='yaml')
+        if export_path:
+            logger.info(f"💾 Data export saved for post-upgrade validation: {export_path}")
         
         # Exit with appropriate code
         failed_steps = sum(1 for s in self.summary.steps.values() if s['status'] == 'failed')
@@ -2209,7 +2442,7 @@ Examples:
     # Setup log file if specified
     if args.log_file:
         file_handler = logging.FileHandler(args.log_file)
-        file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+        file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S'))
         logging.getLogger().addHandler(file_handler)
     
     # Handle --set-ip option (must be done before creating OnWatchAutomation)

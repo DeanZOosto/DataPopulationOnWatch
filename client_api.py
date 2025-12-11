@@ -815,8 +815,14 @@ class ClientApi:
             # Check GraphQL response for errors
             result = response.json()
             if 'errors' in result:
-                logger.error(f"GraphQL errors for {key}: {result['errors']}")
-                raise Exception(f"GraphQL error: {result['errors']}")
+                errors = result['errors']
+                # Check if error is "already exists" or "no change needed"
+                error_messages = [str(err).lower() for err in errors]
+                if any(phrase in msg for msg in error_messages for phrase in ['already exists', 'already set', 'no change', 'unchanged']):
+                    logger.debug(f"KV parameter {key} already has correct value or already exists")
+                    return response  # Success - no change needed
+                logger.error(f"GraphQL errors for {key}: {errors}")
+                raise Exception(f"GraphQL error: {errors}")
             
             logger.info(f"Successfully set KV parameter: {key} = {value}")
             return response
