@@ -6,7 +6,7 @@ Automated tool for populating OnWatch on-premise systems with configuration and 
 
 - **Python 3.9 or higher** (check with `python3 --version`)
 - Network access to OnWatch system
-- **macOS users:** Ensure WiFi is prioritized over Ethernet if OnWatch is on WiFi (check with `networksetup -listnetworkserviceorder`)
+- **macOS users:** Ensure WiFi is prioritized over Ethernet (check with `networksetup -listnetworkserviceorder`)
 - Network access to Rancher (for Kubernetes environment variables)
 - SSH access to OnWatch device (for translation file upload)
 - OnWatch admin credentials
@@ -31,6 +31,11 @@ pip3 install -r requirements.txt
 ### Step 2: Configure
 
 #### Option A: Quick IP Configuration (Recommended)
+
+**Before running:** macOS users should verify network interface priority:
+```bash
+networksetup -listnetworkserviceorder  # Wi-Fi should be (1) if OnWatch is on WiFi
+```
 
 Update all IP addresses with a single command:
 
@@ -91,11 +96,6 @@ This displays a summary of:
 - Mass import file
 - Environment variables
 - User accounts
-
-**Before running:** macOS users should verify network interface priority:
-```bash
-networksetup -listnetworkserviceorder  # Wi-Fi should be (1) if OnWatch is on WiFi
-```
 
 **Example Output:**
 ```
