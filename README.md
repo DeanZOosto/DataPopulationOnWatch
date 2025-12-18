@@ -69,16 +69,12 @@ python3 main.py --set-ip 192.168.1.100
 ```
 
 ### Validate Data (Post-Upgrade)
+
+See [VALIDATION_GUIDE.md](VALIDATION_GUIDE.md) for complete validation instructions.
+
 ```bash
-# Validate that all populated data is still present and correct
-# Uses the output YAML file generated after running the population script
+# Quick validation
 python3 validate_data.py onwatch_data_export_2025-01-15_10-30-00.yaml
-
-# With custom config file
-python3 validate_data.py output.yaml --config my-config.yaml
-
-# Verbose mode
-python3 validate_data.py output.yaml --verbose
 ```
 
 ## Configuration
@@ -126,19 +122,17 @@ All automation is done via REST API, GraphQL API, and Rancher API - no UI intera
 
 After running the population script, an output YAML file is generated (e.g., `onwatch_data_export_2025-01-15_10-30-00.yaml`). This file contains a snapshot of all data that was created.
 
-**Before upgrading your OnWatch system**, use the validation script to verify all data is still present:
+**For detailed validation instructions, see [VALIDATION_GUIDE.md](VALIDATION_GUIDE.md)**
+
+Quick validation:
 
 ```bash
+# Validate after population
+python3 validate_data.py onwatch_data_export_2025-01-15_10-30-00.yaml
+
+# Validate after upgrade
 python3 validate_data.py onwatch_data_export_2025-01-15_10-30-00.yaml
 ```
-
-The validation script will:
-- Connect to your OnWatch system
-- Check that all items from the output YAML still exist
-- Verify values match (for KV parameters, system settings, etc.)
-- Report any missing or modified data
-
-**After upgrading**, run the validation again to ensure the upgrade didn't cause data loss or modifications.
 
 ## Testing
 
