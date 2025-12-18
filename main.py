@@ -1296,11 +1296,12 @@ class OnWatchAutomation:
                         self.summary.add_skipped("Inquiry Case", inquiry_name, "already exists")
                         continue
                 
-                # Create inquiry case
+                # Create inquiry case with priority (try to set during creation, then update as fallback)
                 from client_api import InquiryCaseAlreadyExists
                 inquiry_tracking = None  # Initialize for tracking
                 try:
-                    case_result = self.client_api.create_inquiry_case(inquiry_name)
+                    # Try to create with priority included in creation payload
+                    case_result = self.client_api.create_inquiry_case(inquiry_name, priority=priority)
                     case_id = case_result.get('id')
                     if not case_id:
                         logger.error(f"Failed to get case ID for '{inquiry_name}'")
@@ -1312,25 +1313,19 @@ class OnWatchAutomation:
                         'id': case_id,
                         'files': []
                     }
-                except InquiryCaseAlreadyExists:
-                    logger.info(f"⏭️  Inquiry case '{inquiry_name}' already exists, skipping")
-                    self.summary.add_skipped("Inquiry Case", inquiry_name, "already exists")
-                    continue
-                
-                # Set priority immediately after creation (ensure it's "Medium" by default)
-                if priority:
+                    
+                    # Always update priority separately as well (in case creation didn't accept it)
+                    # This ensures priority is set even if the creation API doesn't support it
                     try:
                         self.client_api.update_inquiry_case(case_id, priority=priority)
                         logger.info(f"✓ Set inquiry priority to: {priority}")
                     except Exception as e:
                         logger.warning(f"Could not set priority for inquiry '{inquiry_name}': {e}")
-                else:
-                    # Default to Medium if not specified
-                    try:
-                        self.client_api.update_inquiry_case(case_id, priority='Medium')
-                        logger.info(f"✓ Set inquiry priority to: Medium (default)")
-                    except Exception as e:
-                        logger.warning(f"Could not set default priority for inquiry '{inquiry_name}': {e}")
+                        logger.warning(f"  → Priority may need to be set manually in the UI")
+                except InquiryCaseAlreadyExists:
+                    logger.info(f"⏭️  Inquiry case '{inquiry_name}' already exists, skipping")
+                    self.summary.add_skipped("Inquiry Case", inquiry_name, "already exists")
+                    continue
                 
                 # Process each file
                 logger.info(f"Adding {len(files_config)} files to inquiry case...")

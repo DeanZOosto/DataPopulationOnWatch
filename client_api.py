@@ -1455,12 +1455,13 @@ class ClientApi:
             logger.debug(f"Failed to get inquiry cases: {e}")
             return []
     
-    def create_inquiry_case(self, case_name):
+    def create_inquiry_case(self, case_name, priority=None):
         """
         Create an inquiry case.
         
         Args:
             case_name: Name of the inquiry case
+            priority: Priority level (optional, e.g., "Medium", "High", "Low", or numeric 1-1000)
         
         Returns:
             Created inquiry case data with 'id'
@@ -1470,6 +1471,26 @@ class ClientApi:
         """
         try:
             payload = {"name": case_name}
+            
+            # Add priority if provided (map string to number)
+            if priority is not None:
+                priority_map = {
+                    "low": 1,
+                    "medium": 500,
+                    "high": 1000
+                }
+                if isinstance(priority, str):
+                    priority_lower = priority.lower()
+                    if priority_lower in priority_map:
+                        payload["priority"] = priority_map[priority_lower]
+                    else:
+                        logger.warning(f"Unknown priority string '{priority}', using default 500")
+                        payload["priority"] = 500
+                elif isinstance(priority, (int, float)):
+                    # Ensure it's in valid range
+                    priority_num = max(1, min(1000, int(priority)))
+                    payload["priority"] = priority_num
+            
             response = self.session.post(
                 f"{self.url}/inquiry",
                 headers=self.headers,
@@ -1543,14 +1564,17 @@ class ClientApi:
                 return
             
             payload = {"dataToUpdate": data_to_update}
+            logger.debug(f"Updating inquiry case {inquiry_id} with payload: {payload}")
             response = self.session.patch(
                 f"{self.url}/inquiry/{inquiry_id}",
                 headers=self.headers,
                 json=payload
             )
             response.raise_for_status()
-            logger.info(f"Updated inquiry case: {inquiry_id}")
-            return response.json()
+            result = response.json()
+            logger.info(f"Updated inquiry case {inquiry_id}: {data_to_update}")
+            logger.debug(f"Update response: {result}")
+            return result
         except requests.exceptions.RequestException as e:
             if hasattr(e, 'response') and e.response is not None:
                 logger.error(f"Failed to update inquiry case '{inquiry_id}': {e}")
