@@ -75,3 +75,12 @@ kv_page_debug.png
 *.tmp
 *.bak
 *.swp
+
+# Automation artifacts
+# Output files from automation runs
+onwatch_data_export_*.yaml
+onwatch_data_export_*.json
+
+# Config backup files
+*.backup.*
+config.yaml.backup.*
