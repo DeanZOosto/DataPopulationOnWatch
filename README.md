@@ -140,6 +140,32 @@ The validation script will:
 
 **After upgrading**, run the validation again to ensure the upgrade didn't cause data loss or modifications.
 
+## Testing
+
+The project includes comprehensive unit and integration tests. To run tests:
+
+```bash
+# Install test dependencies (if not already installed)
+pip3 install -r requirements.txt
+
+# Run all tests
+python3 -m pytest tests/ -v
+
+# Run specific test file
+python3 -m pytest tests/test_config_manager.py -v
+
+# Run with coverage (if pytest-cov is installed)
+python3 -m pytest tests/ --cov=. --cov-report=html
+```
+
+**Test Coverage:**
+- ✅ Configuration management and validation
+- ✅ Priority mapping (Low=201, Medium=101, High=1)
+- ✅ Run summary and export file generation
+- ✅ Integration workflows (config validation, export generation, Rancher env vars tracking)
+
+All tests pass without requiring actual API connections (using mocks and temporary files).
+
 ## Help
 
 ```bash

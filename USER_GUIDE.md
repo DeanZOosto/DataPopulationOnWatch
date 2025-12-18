@@ -359,6 +359,32 @@ python3 main.py --preview-data
 4. **Run specific steps** when troubleshooting: `--step <step-name>`
 5. **Check logs** saved with `--log-file` option for debugging
 
+## Testing
+
+The project includes comprehensive tests to ensure reliability. To run tests:
+
+```bash
+# Install test dependencies
+pip3 install -r requirements.txt
+
+# Run all tests
+python3 -m pytest tests/ -v
+
+# Run specific test category
+python3 -m pytest tests/test_config_manager.py -v  # Config tests
+python3 -m pytest tests/test_run_summary.py -v     # Summary/export tests
+python3 -m pytest tests/test_integration.py -v    # Integration tests
+```
+
+**What's Tested:**
+- Configuration loading and validation
+- Environment variable substitution
+- Priority mapping (inquiry cases)
+- Run summary tracking and export file generation
+- Integration workflows
+
+All tests are designed to run without requiring actual API connections, making them safe to run in any environment.
+
 ## Support
 
 For issues:
@@ -366,3 +392,4 @@ For issues:
 2. Review error messages (they include troubleshooting hints)
 3. Use `--verbose` for detailed debugging
 4. Check logs saved with `--log-file` option
+5. Run tests to verify functionality: `python3 -m pytest tests/ -v`

@@ -84,3 +84,10 @@ onwatch_data_export_*.json
 # Config backup files
 *.backup.*
 config.yaml.backup.*
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+*.pyc
+__pycache__/
