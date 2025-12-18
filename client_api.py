@@ -54,6 +54,7 @@ class ClientApi:
         self.token = ""
         self.session = requests.Session()
         self.session.verify = False
+        self._settings_cache = None  # Cache for /settings endpoint response
         
     def login(self):
         """Login to the OnWatch system and set authentication headers."""
@@ -2234,3 +2235,610 @@ class ClientApi:
         except Exception as e:
             logger.error(f"Failed to update white label settings: {e}")
             raise
+    
+    def _get_kv_parameter_via_rest(self, key):
+        """
+        Try to get KV parameter via REST endpoints.
+        
+        Args:
+            key: Parameter key
+            
+        Returns:
+            Parameter value as string, or None if not found
+        """
+        # #region agent log
+        import json
+        try:
+            with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
+                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"F","location":"client_api.py:2254","message":"Trying REST endpoints for KV parameter","data":{"key":key},"timestamp":int(__import__('time').time()*1000)}) + '\n')
+        except: pass
+        # #endregion
+        
+        # Try different REST endpoints
+        rest_endpoints = [
+            f"{self.url}/settings/kv",
+            f"{self.url}/key-value-settings",
+            f"{self.url}/kv-parameters",
+            f"{self.url}/settings/key-value",
+        ]
+        
+        for endpoint in rest_endpoints:
+            try:
+                response = self.session.get(endpoint, headers=self.headers)
+                # #region agent log
+                try:
+                    with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
+                        f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"F","location":"client_api.py:2265","message":"REST endpoint response","data":{"endpoint":endpoint,"status_code":response.status_code,"response_text":response.text[:500] if response.status_code != 200 else "success"},"timestamp":int(__import__('time').time()*1000)}) + '\n')
+                except: pass
+                # #endregion
+                
+                if response.status_code == 200:
+                    try:
+                        data = response.json()
+                        # #region agent log
+                        try:
+                            with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
+                                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"F","location":"client_api.py:2270","message":"REST endpoint success - parsing response","data":{"endpoint":endpoint,"response_type":type(data).__name__,"is_list":isinstance(data, list),"is_dict":isinstance(data, dict),"keys":list(data.keys())[:10] if isinstance(data, dict) else "N/A","key_being_searched":key},"timestamp":int(__import__('time').time()*1000)}) + '\n')
+                        except: pass
+                        # #endregion
+                        # Try to find the key in the response
+                        if isinstance(data, list):
+                            # #region agent log
+                            try:
+                                with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
+                                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"F","location":"client_api.py:2275","message":"Response is list, searching items","data":{"list_length":len(data),"first_item_keys":list(data[0].keys()) if data and isinstance(data[0], dict) else "N/A","key_being_searched":key},"timestamp":int(__import__('time').time()*1000)}) + '\n')
+                            except: pass
+                            # #endregion
+                            for item in data:
+                                if isinstance(item, dict) and item.get('key') == key:
+                                    value = item.get('value', '')
+                                    # #region agent log
+                                    try:
+                                        with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
+                                            f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"F","location":"client_api.py:2280","message":"Found key in list response","data":{"key":key,"value":value,"endpoint":endpoint},"timestamp":int(__import__('time').time()*1000)}) + '\n')
+                                    except: pass
+                                    # #endregion
+                                    return str(value)
+                        elif isinstance(data, dict):
+                            # Check if key is directly in dict
+                            if key in data:
+                                value = str(data[key])
+                                # #region agent log
+                                try:
+                                    with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
+                                        f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"F","location":"client_api.py:2288","message":"Found key directly in dict","data":{"key":key,"value":value,"endpoint":endpoint},"timestamp":int(__import__('time').time()*1000)}) + '\n')
+                                except: pass
+                                # #endregion
+                                return value
+                            # Check if there's a list of settings
+                            if 'items' in data:
+                                for item in data['items']:
+                                    if isinstance(item, dict) and item.get('key') == key:
+                                        value = str(item.get('value', ''))
+                                        # #region agent log
+                                        try:
+                                            with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
+                                                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"F","location":"client_api.py:2295","message":"Found key in items list","data":{"key":key,"value":value,"endpoint":endpoint},"timestamp":int(__import__('time').time()*1000)}) + '\n')
+                                        except: pass
+                                        # #region agent log
+                                        try:
+                                            with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
+                                                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"F","location":"client_api.py:2324","message":"RETURNING value from items list","data":{"key":key,"value":value,"endpoint":endpoint},"timestamp":int(__import__('time').time()*1000)}) + '\n')
+                                        except: pass
+                                        # #endregion
+                                        return value
+                            # Check nested structures
+                            for section_name, section in data.items():
+                                if isinstance(section, dict) and key in section:
+                                    value = str(section[key])
+                                    # #region agent log
+                                    try:
+                                        with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
+                                            f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"F","location":"client_api.py:2303","message":"Found key in nested section","data":{"key":key,"value":value,"section":section_name,"endpoint":endpoint},"timestamp":int(__import__('time').time()*1000)}) + '\n')
+                                    except: pass
+                                    # #endregion
+                                    return value
+                    except ValueError:
+                        # Response is not JSON
+                        # #region agent log
+                        try:
+                            with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
+                                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"F","location":"client_api.py:2310","message":"Response is not JSON","data":{"endpoint":endpoint,"response_text":response.text[:200]},"timestamp":int(__import__('time').time()*1000)}) + '\n')
+                        except: pass
+                        # #endregion
+                        pass
+            except Exception as e:
+                logger.debug(f"REST endpoint {endpoint} failed: {e}")
+                continue
+        
+        # #region agent log
+        try:
+            with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
+                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"F","location":"client_api.py:2345","message":"_get_kv_parameter_via_rest returning None - key not found in any REST endpoint","data":{"key":key},"timestamp":int(__import__('time').time()*1000)}) + '\n')
+        except: pass
+        # #endregion
+        return None
+    
+    def _get_kv_parameter_via_graphql(self, key):
+        """
+        Get a KV parameter value using GraphQL query.
+        
+        This method queries KV parameters via GraphQL, which is needed for
+        parameters that aren't available in the REST /settings endpoint,
+        such as keys starting with 'DEFAULT/'.
+        
+        Args:
+            key: Parameter key (e.g., 'DEFAULT/collate-service/TRACKS_RETENTION_TIME_MS')
+            
+        Returns:
+            Parameter value as string, or None if not found
+        """
+        try:
+            graphql_url = f"{self.url}/graphql"
+            
+            # Try multiple GraphQL query patterns to find the one that works
+            # Pattern 1: Query all key-value settings
+            query_all = """
+            query {
+              settings {
+                keyValueSettings {
+                  key
+                  value
+                }
+              }
+            }
+            """
+            
+            # Pattern 2: Try to query a single setting by key (if API supports it)
+            query_single = """
+            query getSetting($key: String!) {
+              getSetting(key: $key) {
+                key
+                value
+              }
+            }
+            """
+            
+            # Pattern 3: Query settings with keyValueSettings as a list
+            query_list = """
+            query {
+              keyValueSettings {
+                key
+                value
+              }
+            }
+            """
+            
+            # Pattern 4: Try querying all settings (mirroring the mutation structure)
+            query_all_settings = """
+            query {
+              settings {
+                keyValueSettings {
+                  key
+                  value
+                }
+              }
+            }
+            """
+            
+            # Pattern 5: Try getSingleSetting query (mirroring updateSingleSetting mutation)
+            query_single_mirror = """
+            query getSingleSetting($key: String!) {
+              getSingleSetting(key: $key) {
+                key
+                value
+              }
+            }
+            """
+            
+            # Try Pattern 1 first: query all settings with keyValueSettings
+            try:
+                payload = {
+                    "query": query_all
+                }
+                
+                response = self.session.post(
+                    graphql_url,
+                    headers=self.headers,
+                    json=payload
+                )
+                # #region agent log
+                import json
+                try:
+                    with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
+                        f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"A","location":"client_api.py:2295","message":"GraphQL Pattern 1 response","data":{"status_code":response.status_code,"response_text":response.text[:500],"key":key},"timestamp":int(__import__('time').time()*1000)}) + '\n')
+                except: pass
+                # #endregion
+                
+                result = response.json() if response.status_code == 200 else None
+                if response.status_code != 200:
+                    # #region agent log
+                    try:
+                        with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
+                            f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"A","location":"client_api.py:2300","message":"GraphQL Pattern 1 error response","data":{"status_code":response.status_code,"response_text":response.text,"response_headers":dict(response.headers)},"timestamp":int(__import__('time').time()*1000)}) + '\n')
+                    except: pass
+                    # #endregion
+                    raise Exception(f"HTTP {response.status_code}: {response.text[:200]}")
+                
+                if 'errors' in result:
+                    # #region agent log
+                    try:
+                        with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
+                            f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"A","location":"client_api.py:2303","message":"GraphQL Pattern 1 GraphQL errors","data":{"errors":result.get('errors'),"key":key},"timestamp":int(__import__('time').time()*1000)}) + '\n')
+                    except: pass
+                    # #endregion
+                    # Check if it's a schema error (field doesn't exist)
+                    errors = result['errors']
+                    error_messages = ' '.join(str(e) for e in errors).lower()
+                    if 'keyvaluesettings' not in error_messages and 'cannot query field' not in error_messages:
+                        # Not a schema error, might be something else
+                        logger.debug(f"GraphQL query returned errors (but might be recoverable): {errors}")
+                    else:
+                        # Schema doesn't support keyValueSettings, try other patterns
+                        raise Exception("keyValueSettings field not available")
+                
+                # Extract settings from response
+                if 'data' in result and 'settings' in result['data']:
+                    settings = result['data']['settings']
+                    if 'keyValueSettings' in settings:
+                        # Find the setting with matching key
+                        kv_settings = settings['keyValueSettings']
+                        if isinstance(kv_settings, list):
+                            for setting in kv_settings:
+                                if setting.get('key') == key:
+                                    value = setting.get('value', '')
+                                    logger.debug(f"Found KV parameter '{key}' via GraphQL: {value}")
+                                    return str(value)
+                        elif isinstance(kv_settings, dict):
+                            # If it's a dict, might be keyed by the key itself
+                            if key in kv_settings:
+                                value = kv_settings[key].get('value', '') if isinstance(kv_settings[key], dict) else str(kv_settings[key])
+                                logger.debug(f"Found KV parameter '{key}' via GraphQL: {value}")
+                                return str(value)
+            except Exception as e1:
+                logger.debug(f"Pattern 1 (settings.keyValueSettings) failed: {e1}, trying Pattern 2...")
+                
+                # Try Pattern 2: query single setting
+                try:
+                    payload = {
+                        "operationName": "getSetting",
+                        "variables": {
+                            "key": key
+                        },
+                        "query": query_single
+                    }
+                    
+                    response = self.session.post(
+                        graphql_url,
+                        headers=self.headers,
+                        json=payload
+                    )
+                    # #region agent log
+                    try:
+                        with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
+                            f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"client_api.py:2345","message":"GraphQL Pattern 2 response","data":{"status_code":response.status_code,"response_text":response.text[:500],"key":key},"timestamp":int(__import__('time').time()*1000)}) + '\n')
+                    except: pass
+                    # #endregion
+                    
+                    result = response.json() if response.status_code == 200 else None
+                    if response.status_code != 200:
+                        # #region agent log
+                        try:
+                            with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
+                                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"client_api.py:2350","message":"GraphQL Pattern 2 error response","data":{"status_code":response.status_code,"response_text":response.text,"response_headers":dict(response.headers)},"timestamp":int(__import__('time').time()*1000)}) + '\n')
+                        except: pass
+                        # #endregion
+                        raise Exception(f"HTTP {response.status_code}: {response.text[:200]}")
+                    
+                    if 'errors' not in result:
+                        if 'data' in result and 'getSetting' in result['data']:
+                            setting = result['data']['getSetting']
+                            if setting and 'value' in setting:
+                                value = setting['value']
+                                logger.debug(f"Found KV parameter '{key}' via GraphQL (getSetting): {value}")
+                                return str(value)
+                    else:
+                        # #region agent log
+                        try:
+                            with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
+                                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"client_api.py:2353","message":"GraphQL Pattern 2 GraphQL errors","data":{"errors":result.get('errors'),"key":key},"timestamp":int(__import__('time').time()*1000)}) + '\n')
+                        except: pass
+                        # #endregion
+                except Exception as e2:
+                    logger.debug(f"Pattern 2 (getSetting) failed: {e2}, trying Pattern 3...")
+                    
+                    # Try Pattern 3: direct keyValueSettings query
+                    try:
+                        payload = {
+                            "query": query_list
+                        }
+                        
+                        response = self.session.post(
+                            graphql_url,
+                            headers=self.headers,
+                            json=payload
+                        )
+                        # #region agent log
+                        try:
+                            with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
+                                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"C","location":"client_api.py:2369","message":"GraphQL Pattern 3 response","data":{"status_code":response.status_code,"response_text":response.text[:500],"key":key},"timestamp":int(__import__('time').time()*1000)}) + '\n')
+                        except: pass
+                        # #endregion
+                        
+                        result = response.json() if response.status_code == 200 else None
+                        if response.status_code != 200:
+                            # #region agent log
+                            try:
+                                with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
+                                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"C","location":"client_api.py:2374","message":"GraphQL Pattern 3 error response","data":{"status_code":response.status_code,"response_text":response.text,"response_headers":dict(response.headers)},"timestamp":int(__import__('time').time()*1000)}) + '\n')
+                            except: pass
+                            # #endregion
+                            raise Exception(f"HTTP {response.status_code}: {response.text[:200]}")
+                        
+                        if 'errors' not in result:
+                            if 'data' in result and 'keyValueSettings' in result['data']:
+                                kv_settings = result['data']['keyValueSettings']
+                                if isinstance(kv_settings, list):
+                                    for setting in kv_settings:
+                                        if setting.get('key') == key:
+                                            value = setting.get('value', '')
+                                            logger.debug(f"Found KV parameter '{key}' via GraphQL (direct query): {value}")
+                                            return str(value)
+                        else:
+                            # #region agent log
+                            try:
+                                with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
+                                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"C","location":"client_api.py:2377","message":"GraphQL Pattern 3 GraphQL errors","data":{"errors":result.get('errors'),"key":key},"timestamp":int(__import__('time').time()*1000)}) + '\n')
+                            except: pass
+                            # #endregion
+                    except Exception as e3:
+                        logger.debug(f"Pattern 3 (direct keyValueSettings) also failed: {e3}, trying Pattern 4...")
+                        
+                        # Try Pattern 4: query all settings (alternative structure)
+                        try:
+                            payload = {
+                                "query": query_all_settings
+                            }
+                            
+                            response = self.session.post(
+                                graphql_url,
+                                headers=self.headers,
+                                json=payload
+                            )
+                            # #region agent log
+                            try:
+                                with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
+                                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"D","location":"client_api.py:2390","message":"GraphQL Pattern 4 response","data":{"status_code":response.status_code,"response_text":response.text[:500],"key":key},"timestamp":int(__import__('time').time()*1000)}) + '\n')
+                            except: pass
+                            # #endregion
+                            
+                            result = response.json() if response.status_code == 200 else None
+                            if response.status_code != 200:
+                                # #region agent log
+                                try:
+                                    with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
+                                        f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"D","location":"client_api.py:2395","message":"GraphQL Pattern 4 error response","data":{"status_code":response.status_code,"response_text":response.text,"response_headers":dict(response.headers)},"timestamp":int(__import__('time').time()*1000)}) + '\n')
+                                except: pass
+                                # #endregion
+                                raise Exception(f"HTTP {response.status_code}: {response.text[:200]}")
+                            
+                            if 'errors' not in result and 'data' in result:
+                                # Try different response structures
+                                data = result['data']
+                                if 'settings' in data and isinstance(data['settings'], dict):
+                                    settings = data['settings']
+                                    if 'keyValueSettings' in settings:
+                                        kv_settings = settings['keyValueSettings']
+                                        if isinstance(kv_settings, list):
+                                            for setting in kv_settings:
+                                                if setting.get('key') == key:
+                                                    value = setting.get('value', '')
+                                                    logger.debug(f"Found KV parameter '{key}' via GraphQL (Pattern 4): {value}")
+                                                    return str(value)
+                            elif 'errors' in result:
+                                # #region agent log
+                                try:
+                                    with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
+                                        f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"D","location":"client_api.py:2408","message":"GraphQL Pattern 4 GraphQL errors","data":{"errors":result.get('errors'),"key":key},"timestamp":int(__import__('time').time()*1000)}) + '\n')
+                                except: pass
+                                # #endregion
+                        except Exception as e4:
+                            logger.debug(f"Pattern 4 also failed: {e4}, trying Pattern 5...")
+                            
+                            # Try Pattern 5: getSingleSetting (mirroring updateSingleSetting)
+                            try:
+                                payload = {
+                                    "operationName": "getSingleSetting",
+                                    "variables": {
+                                        "key": key
+                                    },
+                                    "query": query_single_mirror
+                                }
+                                
+                                response = self.session.post(
+                                    graphql_url,
+                                    headers=self.headers,
+                                    json=payload
+                                )
+                                # #region agent log
+                                try:
+                                    with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
+                                        f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"E","location":"client_api.py:2430","message":"GraphQL Pattern 5 response","data":{"status_code":response.status_code,"response_text":response.text[:500],"key":key},"timestamp":int(__import__('time').time()*1000)}) + '\n')
+                                except: pass
+                                # #endregion
+                                
+                                result = response.json() if response.status_code == 200 else None
+                                if response.status_code != 200:
+                                    # #region agent log
+                                    try:
+                                        with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
+                                            f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"E","location":"client_api.py:2435","message":"GraphQL Pattern 5 error response","data":{"status_code":response.status_code,"response_text":response.text,"response_headers":dict(response.headers)},"timestamp":int(__import__('time').time()*1000)}) + '\n')
+                                    except: pass
+                                    # #endregion
+                                    raise Exception(f"HTTP {response.status_code}: {response.text[:200]}")
+                                
+                                if 'errors' not in result:
+                                    if 'data' in result and 'getSingleSetting' in result['data']:
+                                        setting = result['data']['getSingleSetting']
+                                        if setting and 'value' in setting:
+                                            value = setting['value']
+                                            logger.debug(f"Found KV parameter '{key}' via GraphQL (getSingleSetting): {value}")
+                                            return str(value)
+                                elif 'errors' in result:
+                                    # #region agent log
+                                    try:
+                                        with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
+                                            f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"E","location":"client_api.py:2445","message":"GraphQL Pattern 5 GraphQL errors","data":{"errors":result.get('errors'),"key":key},"timestamp":int(__import__('time').time()*1000)}) + '\n')
+                                    except: pass
+                                    # #endregion
+                            except Exception as e5:
+                                logger.debug(f"Pattern 5 (getSingleSetting) also failed: {e5}")
+            
+            logger.debug(f"KV parameter '{key}' not found in any GraphQL query pattern")
+            return None
+            
+        except Exception as e:
+            logger.debug(f"Could not get KV parameter {key} via GraphQL: {e}")
+            return None
+    
+    def get_kv_parameter(self, key):
+        """
+        Get a KV parameter value using REST API endpoint, with GraphQL fallback.
+        
+        First tries REST /bt/api/settings endpoint for keys starting with 'applicationSettings/'.
+        Falls back to GraphQL for keys starting with 'DEFAULT/' or if REST lookup fails.
+        
+        Args:
+            key: Parameter key (e.g., 'applicationSettings/watchVideo/secondsAfterDetection' or 'DEFAULT/collate-service/TRACKS_RETENTION_TIME_MS')
+            
+        Returns:
+            Parameter value as string, or None if not found
+        """
+        # For keys starting with 'DEFAULT/', try REST first, then GraphQL
+        if key.startswith('DEFAULT/'):
+            logger.debug(f"KV parameter key '{key}' uses DEFAULT prefix - trying REST endpoints first")
+            rest_result = self._get_kv_parameter_via_rest(key)
+            # #region agent log
+            import json
+            try:
+                with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
+                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"F","location":"client_api.py:2709","message":"Checking REST result","data":{"key":key,"rest_result":rest_result,"rest_result_type":type(rest_result).__name__,"is_none":rest_result is None},"timestamp":int(__import__('time').time()*1000)}) + '\n')
+            except: pass
+            # #endregion
+            if rest_result is not None:
+                # #region agent log
+                try:
+                    with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
+                        f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"F","location":"client_api.py:2711","message":"RETURNING REST result","data":{"key":key,"value":rest_result},"timestamp":int(__import__('time').time()*1000)}) + '\n')
+                except: pass
+                # #endregion
+                return rest_result
+            logger.debug(f"REST endpoints failed for '{key}', trying GraphQL...")
+            return self._get_kv_parameter_via_graphql(key)
+        
+        try:
+            # Try REST endpoint first for 'applicationSettings/' keys
+            # Cache the settings response to avoid multiple API calls
+            if self._settings_cache is None:
+                settings_url = f"{self.url}/settings"
+                response = self.session.get(settings_url, headers=self.headers)
+                response.raise_for_status()
+                self._settings_cache = response.json()
+                # #region agent log
+                import json
+                try:
+                    with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
+                        # Log top-level keys to see structure
+                        top_keys = list(self._settings_cache.keys())[:20] if isinstance(self._settings_cache, dict) else "not_dict"
+                        f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"G","location":"client_api.py:2481","message":"REST /settings endpoint structure","data":{"top_keys":top_keys,"total_keys":len(self._settings_cache) if isinstance(self._settings_cache, dict) else "N/A","key_being_searched":key},"timestamp":int(__import__('time').time()*1000)}) + '\n')
+                except: pass
+                # #endregion
+            
+            settings_data = self._settings_cache
+            
+            # Map KV parameter key to nested path in settings response
+            # Examples:
+            # 'applicationSettings/watchVideo/secondsAfterDetection' -> watchVideo.secondsAfterDetection
+            # 'applicationSettings/maskClassifier/threshold' -> maskClassifier.threshold
+            # 'applicationSettings/defaultFaceThreshold' -> defaultFaceThreshold (but this is also a system setting)
+            
+            # Remove 'applicationSettings/' prefix if present
+            if key.startswith('applicationSettings/'):
+                path = key.replace('applicationSettings/', '')
+                # Convert path to nested dictionary access
+                parts = path.split('/')
+                
+                # Navigate nested structure
+                value = settings_data
+                for i, part in enumerate(parts):
+                    if isinstance(value, dict) and part in value:
+                        value = value[part]
+                    else:
+                        # Path not found in settings - try GraphQL as fallback
+                        logger.debug(f"KV parameter key '{key}' not found in REST settings response, trying GraphQL...")
+                        return self._get_kv_parameter_via_graphql(key)
+                
+                # Convert to string for consistency
+                return str(value) if value is not None else None
+            else:
+                # Try direct key lookup
+                if key in settings_data:
+                    return str(settings_data[key])
+                
+                # Not found in REST - check if it's a DEFAULT/ key and try REST endpoints, then GraphQL
+                if key.startswith('DEFAULT/'):
+                    logger.debug(f"KV parameter key '{key}' not found in /settings, trying REST KV endpoints...")
+                    rest_result = self._get_kv_parameter_via_rest(key)
+                    if rest_result is not None:
+                        return rest_result
+                    logger.debug(f"REST KV endpoints failed, trying GraphQL...")
+                    return self._get_kv_parameter_via_graphql(key)
+                else:
+                    # Not found in REST - try GraphQL as fallback
+                    logger.debug(f"KV parameter key '{key}' not found in REST settings response, trying GraphQL...")
+                    return self._get_kv_parameter_via_graphql(key)
+                
+        except Exception as e:
+            logger.debug(f"REST lookup failed for KV parameter {key}: {e}, trying GraphQL...")
+            # If REST fails, try GraphQL as fallback
+            return self._get_kv_parameter_via_graphql(key)
+    
+    def get_system_settings(self):
+        """
+        Get system settings via REST API endpoint.
+        
+        Uses GET /bt/api/settings to retrieve system settings separately from KV parameters.
+        This ensures we get the actual system settings, not KV parameters.
+        
+        Returns:
+            Dictionary with system settings or None if error
+        """
+        try:
+            # Use REST endpoint to get system settings separately from KV parameters
+            settings_url = f"{self.url}/settings"
+            response = self.session.get(settings_url, headers=self.headers)
+            response.raise_for_status()
+            
+            settings_data = response.json()
+            
+            # Map REST API response fields to our validation structure
+            # The REST API returns fields like defaultFaceThreshold, defaultBodyThreshold, etc.
+            result = {}
+            
+            # Map the fields we validate
+            if 'defaultFaceThreshold' in settings_data:
+                result['defaultFaceThreshold'] = float(settings_data['defaultFaceThreshold'])
+            if 'defaultBodyThreshold' in settings_data:
+                result['defaultBodyThreshold'] = float(settings_data['defaultBodyThreshold'])
+            if 'cameraDefaultLivenessTh' in settings_data:
+                result['cameraDefaultLivenessTh'] = float(settings_data['cameraDefaultLivenessTh'])
+            if 'bodyImageTtlH' in settings_data:
+                result['bodyImageTtlH'] = int(settings_data['bodyImageTtlH'])
+            if 'whiteLabel' in settings_data:
+                result['whiteLabel'] = settings_data['whiteLabel']
+            
+            return result
+            
+        except Exception as e:
+            logger.debug(f"Could not get system settings: {e}")
+            return None

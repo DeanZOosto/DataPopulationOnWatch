@@ -144,8 +144,45 @@ class OnWatchAutomation:
         try:
             self.client_api.update_system_settings(system_settings)
             logger.info("✓ System settings configured via API")
-            # Track system settings that were configured
-            self.summary.add_created_item('system_settings', system_settings)
+            
+            # Verify and store actual values that were set (not just config values)
+            # Query back the actual system settings to store what's really in the system
+            time.sleep(1)  # Brief wait for settings to be saved
+            actual_system_settings = self.client_api.get_system_settings()
+            
+            # Build verified system settings dict with actual values
+            verified_settings = {}
+            if actual_system_settings:
+                # Map actual values back to config structure
+                if 'general' in system_settings:
+                    verified_general = {}
+                    if 'default_face_threshold' in system_settings['general']:
+                        actual_value = actual_system_settings.get('defaultFaceThreshold')
+                        if actual_value is not None:
+                            verified_general['default_face_threshold'] = float(actual_value)
+                    if 'default_body_threshold' in system_settings['general']:
+                        actual_value = actual_system_settings.get('defaultBodyThreshold')
+                        if actual_value is not None:
+                            verified_general['default_body_threshold'] = float(actual_value)
+                    if 'default_liveness_threshold' in system_settings['general']:
+                        actual_value = actual_system_settings.get('cameraDefaultLivenessTh')
+                        if actual_value is not None:
+                            verified_general['default_liveness_threshold'] = float(actual_value)
+                    if verified_general:
+                        verified_settings['general'] = verified_general
+                
+                if 'system_interface' in system_settings:
+                    verified_interface = {}
+                    if 'product_name' in system_settings['system_interface']:
+                        actual_value = actual_system_settings.get('whiteLabel', {}).get('productName')
+                        if actual_value:
+                            verified_interface['product_name'] = actual_value
+                    if verified_interface:
+                        verified_settings['system_interface'] = verified_interface
+            
+            # Track system settings with verified actual values (fallback to config if verification failed)
+            settings_to_store = verified_settings if verified_settings else system_settings
+            self.summary.add_created_item('system_settings', settings_to_store)
             
             # Handle acknowledge actions separately
             if 'map' in system_settings:
@@ -1435,24 +1472,137 @@ class OnWatchAutomation:
                                     logger.debug(f"Starting analysis for {len(files_not_analyzing)} file(s) that aren't already analyzing...")
                                     self.client_api.start_analyze_files_case(case_id, files_not_analyzing)
                                     logger.info(f"✓ Started analysis for {len(files_not_analyzing)} file(s)")
+                                    
+                                    # Wait a moment and re-check status
+                                    time.sleep(2)
+                                    case_files = self.client_api.get_inquiry_case_files(case_id)
+                                    
                                 except Exception as analyze_error:
-                                    # Files are likely already analyzing (with_analysis=True), so this is expected
+                                    # Re-check file statuses after error to provide accurate feedback
+                                    time.sleep(1)  # Brief wait for status to update
+                                    try:
+                                        case_files = self.client_api.get_inquiry_case_files(case_id)
+                                    except:
+                                        case_files = []  # Fallback if we can't re-fetch
+                                    
+                                    # Count files by status
+                                    status_counts = {}
+                                    files_by_status = {}
+                                    for case_file in case_files:
+                                        status = case_file.get('status', 'UNKNOWN').upper()
+                                        filename = case_file.get('fileName', 'unknown')
+                                        status_counts[status] = status_counts.get(status, 0) + 1
+                                        if status not in files_by_status:
+                                            files_by_status[status] = []
+                                        files_by_status[status].append(filename)
+                                    
+                                    done_count = status_counts.get('DONE', 0)
+                                    analyzing_count = status_counts.get('ANALYZING', 0)
+                                    queued_count = status_counts.get('QUEUED', 0)
+                                    total_files = len(case_files)
+                                    
+                                    # Provide clear warning based on actual status
                                     error_str = str(analyze_error)
-                                    if "ERR_FAILED_TO_UPDATE_PROGRESS" in error_str or "already" in error_str.lower():
-                                        logger.debug(f"Analysis already in progress for files (expected): {error_str[:100]}")
+                                    if "ERR_FAILED_TO_UPDATE_PROGRESS" in error_str:
+                                        if done_count == total_files:
+                                            # All files are done - this is actually success
+                                            logger.info(f"✓ All {total_files} inquiry file(s) completed analysis successfully")
+                                        elif done_count > 0 or analyzing_count > 0:
+                                            # Some files are working
+                                            warning_msg = f"⚠️  Inquiry file analysis status: {done_count} out of {total_files} file(s) DONE"
+                                            if analyzing_count > 0:
+                                                warning_msg += f", {analyzing_count} ANALYZING"
+                                            if queued_count > 0:
+                                                warning_msg += f", {queued_count} QUEUED"
+                                            
+                                            # List files that need attention
+                                            if queued_count > 0 and 'QUEUED' in files_by_status:
+                                                warning_msg += f"\n   Files that may need manual attention: {', '.join(files_by_status['QUEUED'])}"
+                                            
+                                            warning_msg += "\n   Please check the UI to verify all files complete analysis"
+                                            logger.warning(warning_msg)
+                                            self.summary.add_warning(f"Inquiry '{inquiry_name}': {done_count}/{total_files} files completed analysis - some may need manual review")
+                                        else:
+                                            # All files stuck
+                                            logger.warning(f"⚠️  Could not start analysis for inquiry files. Status: {status_counts}")
+                                            logger.warning(f"   Please check the UI and manually start analysis if needed")
+                                            self.summary.add_warning(f"Inquiry '{inquiry_name}': Analysis may need to be started manually")
                                     else:
+                                        # Other error - log but don't be too verbose
                                         logger.debug(f"Could not start analysis (files may already be analyzing): {error_str[:100]}")
+                                        
+                                        # Still provide status summary
+                                        if done_count > 0 or analyzing_count > 0:
+                                            logger.info(f"✓ File analysis status: {done_count} DONE, {analyzing_count} ANALYZING")
+                            
                             else:
-                                # All files are already analyzing
+                                # All files are already analyzing or done - check final status
+                                time.sleep(1)  # Brief wait to get latest status
+                                try:
+                                    case_files = self.client_api.get_inquiry_case_files(case_id)
+                                except:
+                                    pass  # Use existing case_files if re-fetch fails
+                                
                                 analyzing_count = len([f for f in case_files if f.get('status', '').upper() == 'ANALYZING'])
                                 done_count = len([f for f in case_files if f.get('status', '').upper() == 'DONE'])
-                                logger.debug(f"All files are already analyzing (Analyzing: {analyzing_count}, Done: {done_count})")
+                                queued_count = len([f for f in case_files if f.get('status', '').upper() == 'QUEUED'])
+                                
+                                if done_count == len(case_files):
+                                    logger.info(f"✓ All {done_count} inquiry file(s) completed analysis")
+                                elif analyzing_count > 0 or done_count > 0:
+                                    logger.info(f"✓ File analysis in progress: {done_count} DONE, {analyzing_count} ANALYZING")
+                                    if queued_count > 0:
+                                        logger.warning(f"⚠️  {queued_count} file(s) are QUEUED - may need manual attention")
+                                else:
+                                    logger.debug(f"File analysis status: Analyzing: {analyzing_count}, Done: {done_count}, Queued: {queued_count}")
                         else:
                             logger.debug("No file IDs found to start analysis")
                     except Exception as e:
                         logger.warning(f"Could not configure files or start analysis: {e}")
                 
-                logger.info(f"✓ Completed inquiry case: {inquiry_name} ({len(successful_uploads)} file(s) uploaded)")
+                # Final status check - wait a moment and verify all files
+                time.sleep(2)
+                try:
+                    final_case_files = self.client_api.get_inquiry_case_files(case_id)
+                    final_status_counts = {}
+                    final_files_by_status = {}
+                    for case_file in final_case_files:
+                        status = case_file.get('status', 'UNKNOWN').upper()
+                        filename = case_file.get('fileName', 'unknown')
+                        final_status_counts[status] = final_status_counts.get(status, 0) + 1
+                        if status not in final_files_by_status:
+                            final_files_by_status[status] = []
+                        final_files_by_status[status].append(filename)
+                    
+                    final_done = final_status_counts.get('DONE', 0)
+                    final_analyzing = final_status_counts.get('ANALYZING', 0)
+                    final_queued = final_status_counts.get('QUEUED', 0)
+                    final_total = len(final_case_files)
+                    
+                    if final_done == final_total:
+                        logger.info(f"✓ Completed inquiry case: {inquiry_name} ({len(successful_uploads)} file(s) uploaded, all {final_done} completed analysis)")
+                    elif final_done > 0 or final_analyzing > 0:
+                        status_msg = f"✓ Completed inquiry case: {inquiry_name} ({len(successful_uploads)} file(s) uploaded)"
+                        status_msg += f" - Analysis status: {final_done}/{final_total} DONE"
+                        if final_analyzing > 0:
+                            status_msg += f", {final_analyzing} ANALYZING"
+                        if final_queued > 0:
+                            status_msg += f", {final_queued} QUEUED"
+                        logger.info(status_msg)
+                        
+                        if final_queued > 0:
+                            logger.warning(f"⚠️  {final_queued} file(s) are QUEUED and may need manual analysis:")
+                            for queued_file in final_files_by_status.get('QUEUED', []):
+                                logger.warning(f"   - {queued_file}")
+                            logger.warning(f"   Please check the UI and manually start analysis if needed")
+                            self.summary.add_warning(f"Inquiry '{inquiry_name}': {final_queued} file(s) are QUEUED - may need manual analysis")
+                    else:
+                        logger.info(f"✓ Completed inquiry case: {inquiry_name} ({len(successful_uploads)} file(s) uploaded)")
+                        logger.warning(f"⚠️  File analysis status unclear - please verify in UI")
+                except Exception as e:
+                    # If we can't check final status, just log completion
+                    logger.info(f"✓ Completed inquiry case: {inquiry_name} ({len(successful_uploads)} file(s) uploaded)")
+                    logger.debug(f"Could not check final file status: {e}")
                 
                 # Track created inquiry case
                 if inquiry_tracking is not None:

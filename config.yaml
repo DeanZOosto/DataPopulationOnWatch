@@ -1,5 +1,5 @@
 # OnWatch Automation Configuration
-# Complete baseline data from machine 10.1.71.14
+# Complete baseline data from machine 10.1.25.90
 
 onwatch:
   ip_address: "10.1.25.90"
@@ -17,7 +17,7 @@ ssh:
   translation_util_path: "/opt/ansible-installer-1.4.0-8/support-scripts/translation-util"
 
 rancher:
-  ip_address: "10.1.71.14"
+  ip_address: "10.1.25.90"
   port: 9443
   username: "admin"
   password: "admin"
@@ -40,7 +40,6 @@ system_settings:
     blur_all_faces_except_selected: false
     discard_detections_not_in_watch_list: false
     body_image_retention_period: "13h"
-    default_face_threshold: 0.61
     default_body_threshold: 0.61
     default_liveness_threshold: 0.55
   
