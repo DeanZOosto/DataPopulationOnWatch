@@ -15,6 +15,23 @@ from ssh_util import SSHUtil
 from run_summary import RunSummary
 from config_manager import ConfigManager
 
+# Store original exception hook for verbose mode
+_original_excepthook = sys.excepthook
+
+def _clean_excepthook(exc_type, exc_value, exc_traceback):
+    """Custom exception handler that suppresses traceback unless in verbose mode."""
+    # Check if verbose/debug mode is enabled
+    root_logger = logging.getLogger()
+    if root_logger.level <= logging.DEBUG:
+        # Show full traceback in verbose mode
+        _original_excepthook(exc_type, exc_value, exc_traceback)
+    else:
+        # In normal mode, suppress traceback (our error handlers will show user-friendly messages)
+        # Only print the exception type and message, not the full traceback
+        error_msg = str(exc_value) if exc_value else str(exc_type)
+        # Don't print anything - our logging system already handles it with user-friendly messages
+        pass
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -2058,6 +2075,7 @@ class OnWatchAutomation:
                 logger.error(f"❌ {error_msg}")
                 logger.error("⚠️  MANUAL ACTION REQUIRED: Cannot proceed without API client. Please check credentials and network connectivity.")
                 self.summary.record_step(1, "Initialize API Client", "failed", error_msg, manual_action=True)
+                # Store the exception to re-raise later (but we'll catch it cleanly in outer handler)
                 raise  # Cannot continue without API client
             
             # Step 2: Set KV parameters
@@ -2227,8 +2245,17 @@ class OnWatchAutomation:
                 self.summary.record_step(11, "Configure Rancher", "failed", error_msg, manual_action=True)
             
         except Exception as e:
-            logger.error(f"\n❌ FATAL ERROR: Automation failed with exception: {e}", exc_info=True)
+            # Show user-friendly error message without full stack trace
+            error_message = str(e)
+            logger.error(f"\n❌ FATAL ERROR: {error_message}")
             logger.error("Automation stopped due to fatal error")
+            # Only show full traceback in verbose/debug mode
+            # Check if verbose mode is enabled by checking root logger level
+            root_logger = logging.getLogger()
+            if root_logger.level <= logging.DEBUG:
+                import traceback
+                logger.debug("\nFull traceback (verbose mode):")
+                logger.debug("", exc_info=True)
         finally:
             # End timing
             self.summary.end_timing()
@@ -2625,8 +2652,15 @@ Examples:
     # Configure logging
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
+        # In verbose mode, show full tracebacks
+        sys.excepthook = _original_excepthook
     elif args.quiet:
         logging.getLogger().setLevel(logging.ERROR)
+        # In quiet mode, suppress tracebacks
+        sys.excepthook = _clean_excepthook
+    else:
+        # In normal mode, suppress tracebacks (show user-friendly messages only)
+        sys.excepthook = _clean_excepthook
     
     # Setup log file if specified
     if args.log_file:
@@ -2774,7 +2808,22 @@ Examples:
         sys.exit(0)
     
     # Run full automation
-    asyncio.run(automation.run())
+    # Run automation with clean error handling
+    try:
+        asyncio.run(automation.run())
+    except Exception as e:
+        # This should not normally be reached since run() catches all exceptions,
+        # but if it does, show user-friendly message
+        error_message = str(e)
+        logger.error(f"\n❌ FATAL ERROR: {error_message}")
+        logger.error("Automation stopped due to fatal error")
+        # Only show traceback in verbose mode
+        root_logger = logging.getLogger()
+        if root_logger.level <= logging.DEBUG:
+            import traceback
+            logger.debug("\nFull traceback (verbose mode):")
+            logger.debug("", exc_info=True)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
