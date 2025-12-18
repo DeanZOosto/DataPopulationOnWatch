@@ -1,0 +1,66 @@
+metadata:
+  generated_at: '2025-12-18 12:50:45'
+  onwatch_ip: 10.1.71.14
+  total_duration: 17.8s
+  run_status:
+    total_steps: 11
+    successful_steps: 11
+    failed_steps: 0
+    skipped_items_count: 16
+    errors_count: 0
+created_items:
+  kv_parameters:
+  - key: applicationSettings/watchVideo/secondsAfterDetection
+    value: '6'
+  - key: applicationSettings/watchVideo/secondsBeforeDetection
+    value: '6'
+  - key: applicationSettings/defaultFaceThreshold
+    value: '0.6'
+  - key: applicationSettings/maskClassifier/threshold
+    value: '0.7'
+  - key: DEFAULT/collate-service/TRACKS_RETENTION_TIME_MS
+    value: '80000'
+  system_settings:
+    general:
+      default_body_threshold: 0.61
+      default_liveness_threshold: 0.55
+    system_interface:
+      product_name: metropolis
+      logos:
+        company:
+          source_file: me.jpg
+          path: assets/images/me.jpg
+        sidebar:
+          source_file: me.jpg
+          path: assets/images/me.jpg
+        favicon:
+          source_file: favicon.ico
+          path: assets/images/favicon.ico
+  cameras:
+  - name: face camera 2
+    id: unknown
+    video_url: rtsp://10.1.70.16:8554/Faces720
+    mode: face
+  - name: Moderate-from-streamer
+    id: unknown
+    video_url: rtsp://10.1.70.16:8554/moderate_4_2h
+    mode: face
+  - name: body camera
+    id: unknown
+    video_url: rtsp://service:AnyVision1!@10.1.50.103
+    mode: body
+  rancher_env_vars:
+  - key: ENABLE_DVR
+    value: 'True'
+  - key: OVERWRITE_FFMPEG_OPTIONS_VALUES
+    value: ffmpeg-opts:rtsp_transport=udp,reorder_queue_size=8192,max_delay=500000,buffer_size=4194304
+  - key: SERVICE_TAGS
+    value: engine-service,body-from-face-pipeline,body-pipeline,dvr,face-pipeline,ffmpeg-options,forensics,gdpr,image-processing,live-stream,roi,watch-video,webrtc
+  - key: SERVICE_DOMAIN
+    value: cv-engine.default
+  - key: CUDA_DEVICE_ORDER
+    value: PCI_BUS_ID
+  translation_file:
+    filename: Polski-updated3.json
+    path: assets/Polski-updated3.json
+    local_path: /Users/deanzion/Work/DataPopulationOnWatch/assets/Polski-updated3.json

@@ -1834,6 +1834,16 @@ class OnWatchAutomation:
             Exception: If configuration is missing or API calls fail
         """
         env_vars = self.config.get('env_vars', {})
+        
+        # Track env_vars from config.yaml for export (for transparency, even if step fails)
+        # This ensures they appear in the export file regardless of success/failure
+        if env_vars:
+            for key, value in env_vars.items():
+                self.summary.add_created_item('rancher_env_vars', {
+                    'key': key,
+                    'value': str(value)  # Convert to string for export
+                })
+        
         if not env_vars:
             logger.info("No Rancher environment variables to set")
             return
@@ -1921,12 +1931,8 @@ class OnWatchAutomation:
             )
             logger.info(f"✓ Successfully configured {len(env_vars)} environment variables in Rancher")
             
-            # Track Rancher env vars
-            for key, value in env_vars.items():
-                self.summary.add_created_item('rancher_env_vars', {
-                    'key': key,
-                    'value': str(value)  # Convert to string for export
-                })
+            # Note: Rancher env vars are already tracked at the start of this method
+            # for export transparency (so they appear even if step fails)
         except Exception as e:
             logger.error(f"Failed to configure Rancher environment variables: {e}")
             raise
