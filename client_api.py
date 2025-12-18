@@ -1473,22 +1473,23 @@ class ClientApi:
             payload = {"name": case_name}
             
             # Add priority if provided (map string to number)
+            # Correct mapping: Low=201, Medium=101, High=1
             if priority is not None:
                 priority_map = {
-                    "low": 1,
-                    "medium": 500,
-                    "high": 1000
+                    "low": 201,
+                    "medium": 101,
+                    "high": 1
                 }
                 if isinstance(priority, str):
                     priority_lower = priority.lower()
                     if priority_lower in priority_map:
                         payload["priority"] = priority_map[priority_lower]
                     else:
-                        logger.warning(f"Unknown priority string '{priority}', using default 500")
-                        payload["priority"] = 500
+                        logger.warning(f"Unknown priority string '{priority}', using default 101 (Medium)")
+                        payload["priority"] = 101
                 elif isinstance(priority, (int, float)):
-                    # Ensure it's in valid range
-                    priority_num = max(1, min(1000, int(priority)))
+                    # Ensure it's in valid range (1-201 based on actual API values)
+                    priority_num = max(1, min(201, int(priority)))
                     payload["priority"] = priority_num
             
             response = self.session.post(
@@ -1538,26 +1539,26 @@ class ClientApi:
             if name is not None:
                 data_to_update["name"] = name
             if priority is not None:
-                # Map priority strings to numbers (API expects 1-1000)
+                # Map priority strings to numbers (correct mapping: Low=201, Medium=101, High=1)
                 priority_map = {
-                    "low": 1,
-                    "medium": 500,
-                    "high": 1000
+                    "low": 201,
+                    "medium": 101,
+                    "high": 1
                 }
                 if isinstance(priority, str):
                     priority_lower = priority.lower()
                     if priority_lower in priority_map:
                         data_to_update["priority"] = priority_map[priority_lower]
                     else:
-                        logger.warning(f"Unknown priority string '{priority}', using default 500")
-                        data_to_update["priority"] = 500
+                        logger.warning(f"Unknown priority string '{priority}', using default 101 (Medium)")
+                        data_to_update["priority"] = 101
                 elif isinstance(priority, (int, float)):
-                    # Ensure it's in valid range
-                    priority_num = max(1, min(1000, int(priority)))
+                    # Ensure it's in valid range (1-201 based on actual API values)
+                    priority_num = max(1, min(201, int(priority)))
                     data_to_update["priority"] = priority_num
                 else:
-                    logger.warning(f"Invalid priority type '{type(priority)}', using default 500")
-                    data_to_update["priority"] = 500
+                    logger.warning(f"Invalid priority type '{type(priority)}', using default 101 (Medium)")
+                    data_to_update["priority"] = 101
             
             if not data_to_update:
                 logger.warning("No fields to update in inquiry case")
