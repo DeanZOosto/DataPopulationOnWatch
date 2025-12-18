@@ -225,6 +225,37 @@ class RunSummary:
             if len(self.warnings) > 10:
                 logger.warning(f"  ... and {len(self.warnings) - 10} more warnings")
         
+        # Created Items Summary (for transparency)
+        logger.info(f"\n📦 Created Items Summary:")
+        created_counts = {}
+        for category, items in self.created_items.items():
+            if items:
+                if isinstance(items, list):
+                    count = len(items)
+                    created_counts[category] = count
+                    logger.info(f"  • {category.replace('_', ' ').title()}: {count} item(s)")
+                elif isinstance(items, dict) and items:
+                    # For system_settings, show what was configured
+                    if category == 'system_settings':
+                        logger.info(f"  • System Settings: Configured")
+                        # Show logos if present
+                        if 'system_interface' in items and 'logos' in items['system_interface']:
+                            logos = items['system_interface']['logos']
+                            if isinstance(logos, dict):
+                                logo_types = list(logos.keys())
+                                logger.info(f"    - Logos/Favicon: {', '.join(logo_types)}")
+                            elif isinstance(logos, list) and logos:
+                                logger.info(f"    - Logos/Favicon: {len(logos)} uploaded")
+                    else:
+                        created_counts[category] = 1
+                        logger.info(f"  • {category.replace('_', ' ').title()}: Configured")
+                elif items is not None:
+                    created_counts[category] = 1
+                    logger.info(f"  • {category.replace('_', ' ').title()}: Uploaded/Configured")
+        
+        if not created_counts and not any(isinstance(v, dict) and v for v in self.created_items.values()):
+            logger.info("  (No items created - all may have been skipped)")
+        
         # Final status
         logger.info("\n" + "=" * 80)
         if failed == 0 and not self.manual_actions_needed:
@@ -300,13 +331,30 @@ class RunSummary:
             return None
     
     def _clean_system_settings(self, settings):
-        """Remove empty icons field from system_interface."""
+        """
+        Clean system settings for export.
+        Removes empty fields and ensures logos are properly structured.
+        """
         cleaned = settings.copy()
         if 'system_interface' in cleaned and isinstance(cleaned['system_interface'], dict):
             cleaned_interface = cleaned['system_interface'].copy()
-            # Remove empty icons field
+            # Remove empty icons field (if it exists and is empty)
             if 'icons' in cleaned_interface and not cleaned_interface['icons']:
                 del cleaned_interface['icons']
+            # Ensure logos are properly included if they exist
+            # Logos are stored in system_interface.logos as a list from add_created_item
+            if 'logos' in cleaned_interface and isinstance(cleaned_interface['logos'], list):
+                # Convert list of logo dicts to a more readable structure
+                logos_dict = {}
+                for logo_item in cleaned_interface['logos']:
+                    logo_type = logo_item.get('type')
+                    if logo_type:
+                        logos_dict[logo_type] = {
+                            'source_file': logo_item.get('source_file', ''),
+                            'path': logo_item.get('path', '')  # Config path (relative)
+                        }
+                if logos_dict:
+                    cleaned_interface['logos'] = logos_dict
             cleaned['system_interface'] = cleaned_interface
         return cleaned
 

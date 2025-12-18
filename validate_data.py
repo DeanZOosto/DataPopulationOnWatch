@@ -17,6 +17,7 @@ import glob
 from pathlib import Path
 from client_api import ClientApi
 from config_manager import ConfigManager
+from rancher_api import RancherApi
 
 logging.basicConfig(
     level=logging.INFO,
@@ -42,6 +43,7 @@ class DataValidator:
         self.config_manager = ConfigManager(config_path)
         self.config = self.config_manager.load_config()
         self.client_api = None
+        self.rancher_api = None
         
         # Validation results
         self.results = {
@@ -61,6 +63,27 @@ class DataValidator:
         )
         self.client_api.login()
         logger.info("✓ Connected to OnWatch API")
+    
+    def initialize_rancher_api(self):
+        """Initialize and authenticate with Rancher API."""
+        rancher_config = self.config.get('rancher', {})
+        if not rancher_config:
+            logger.warning("Rancher configuration not found - skipping environment variables validation")
+            return False
+        
+        try:
+            self.rancher_api = RancherApi(
+                base_url=rancher_config['base_url'],
+                username=rancher_config['username'],
+                password=rancher_config['password']
+            )
+            self.rancher_api.login()
+            logger.info("✓ Connected to Rancher API")
+            return True
+        except Exception as e:
+            logger.warning(f"Could not connect to Rancher API: {e}")
+            logger.warning("Environment variables validation will be skipped")
+            return False
     
     def load_output_yaml(self):
         """Load output YAML file."""
@@ -214,9 +237,11 @@ class DataValidator:
                         self.results['passed'] += 1
                         logger.debug(f"  ✓ cameraDefaultLivenessTh = {expected}")
             
-            # Validate system_interface product_name
+            # Validate system_interface settings (product_name, logos, favicon)
             if 'system_interface' in system_settings:
                 interface = system_settings['system_interface']
+                
+                # Validate product_name
                 if 'product_name' in interface:
                     self.results['validated'] += 1
                     expected = interface['product_name']
@@ -228,7 +253,54 @@ class DataValidator:
                         logger.error(f"  ❌ {error_msg}")
                     else:
                         self.results['passed'] += 1
-                        logger.debug(f"  ✓ productName = {expected}")
+                        logger.info(f"  ✓ productName = {expected}")
+                
+                # Validate logos and favicon
+                white_label = actual_settings.get('whiteLabel', {})
+                logos = interface.get('logos', {})
+                
+                if logos:
+                    # Validate company logo
+                    if 'company' in logos:
+                        self.results['validated'] += 1
+                        actual_company_logo = white_label.get('companyLogo')
+                        if actual_company_logo:
+                            self.results['passed'] += 1
+                            logger.info(f"  ✓ Company logo uploaded (source: {logos['company'].get('source_file', 'unknown')})")
+                        else:
+                            self.results['failed'] += 1
+                            error_msg = f"Company logo: NOT FOUND (expected from: {logos['company'].get('path', 'unknown')})"
+                            self.results['errors'].append(error_msg)
+                            logger.error(f"  ❌ {error_msg}")
+                    
+                    # Validate sidebar logo
+                    if 'sidebar' in logos:
+                        self.results['validated'] += 1
+                        actual_sidebar_logo = white_label.get('sidebarLogo')
+                        if actual_sidebar_logo:
+                            self.results['passed'] += 1
+                            logger.info(f"  ✓ Sidebar logo uploaded (source: {logos['sidebar'].get('source_file', 'unknown')})")
+                        else:
+                            self.results['failed'] += 1
+                            error_msg = f"Sidebar logo: NOT FOUND (expected from: {logos['sidebar'].get('path', 'unknown')})"
+                            self.results['errors'].append(error_msg)
+                            logger.error(f"  ❌ {error_msg}")
+                    
+                    # Validate favicon
+                    if 'favicon' in logos or 'favicon' in interface:
+                        self.results['validated'] += 1
+                        favicon_info = logos.get('favicon') or interface.get('favicon')
+                        actual_favicon = white_label.get('favicon')
+                        if actual_favicon:
+                            self.results['passed'] += 1
+                            source_file = favicon_info.get('source_file', 'unknown') if isinstance(favicon_info, dict) else 'unknown'
+                            logger.info(f"  ✓ Favicon uploaded (source: {source_file})")
+                        else:
+                            self.results['failed'] += 1
+                            favicon_path = favicon_info.get('path', 'unknown') if isinstance(favicon_info, dict) else (favicon_info if isinstance(favicon_info, str) else 'unknown')
+                            error_msg = f"Favicon: NOT FOUND (expected from: {favicon_path})"
+                            self.results['errors'].append(error_msg)
+                            logger.error(f"  ❌ {error_msg}")
             
         except Exception as e:
             self.results['failed'] += 1
@@ -527,6 +599,104 @@ class DataValidator:
             self.results['errors'].append(error_msg)
             logger.error(f"  ❌ {error_msg}")
     
+    def validate_env_vars(self, env_vars):
+        """Validate environment variables set via Rancher."""
+        if not env_vars:
+            return
+        
+        # Handle both list format (from output YAML) and dict format (from config)
+        env_vars_dict = {}
+        if isinstance(env_vars, list):
+            # Convert list of {key, value} dicts to a single dict
+            for item in env_vars:
+                if isinstance(item, dict) and 'key' in item:
+                    env_vars_dict[item['key']] = item.get('value', '')
+        elif isinstance(env_vars, dict):
+            env_vars_dict = env_vars
+        
+        if not env_vars_dict:
+            return
+        
+        logger.info(f"\n🔧 Validating {len(env_vars_dict)} environment variables...")
+        
+        # Initialize Rancher API if not already done
+        if not self.rancher_api:
+            if not self.initialize_rancher_api():
+                logger.warning("  ⚠️  Skipping environment variables validation (Rancher API not available)")
+                return
+        
+        # Get workload configuration from config
+        rancher_config = self.config.get('rancher', {})
+        workload_path = rancher_config.get('workload_path', '')
+        
+        # Extract workload_id and project_id from workload_path
+        # Format: /p/local:p-p6l45/workloads/run?launchConfigIndex=-1&namespaceId=default&upgrade=true&workloadId=statefulset%3Adefault%3Acv-engine
+        import urllib.parse
+        project_id = "local:p-p6l45"  # Default
+        workload_id = "statefulset:default:cv-engine"  # Default
+        
+        if workload_path:
+            try:
+                # Parse the workload_path URL
+                parsed = urllib.parse.urlparse(workload_path)
+                # Extract project_id from path (e.g., /p/local:p-p6l45/...)
+                path_parts = parsed.path.split('/')
+                for i, part in enumerate(path_parts):
+                    if part == 'p' and i + 1 < len(path_parts):
+                        project_id = path_parts[i + 1]
+                        break
+                
+                # Extract workloadId from query string
+                query_params = urllib.parse.parse_qs(parsed.query)
+                if 'workloadId' in query_params:
+                    workload_id = urllib.parse.unquote(query_params['workloadId'][0])
+            except Exception as e:
+                logger.debug(f"Could not parse workload_path, using defaults: {e}")
+        
+        # Try to discover project_id dynamically (more reliable)
+        try:
+            if self.rancher_api:
+                discovered_project_id = self.rancher_api.get_project_id_from_namespace(namespace="default")
+                if discovered_project_id:
+                    project_id = discovered_project_id
+                    logger.debug(f"Discovered project_id: {project_id}")
+        except Exception as e:
+            logger.debug(f"Could not discover project_id, using from workload_path: {e}")
+        
+        try:
+            actual_env_vars = self.rancher_api.get_workload_environment_variables(workload_id, project_id)
+            
+            if actual_env_vars is None:
+                logger.warning(f"  ⚠️  Could not retrieve environment variables from workload {workload_id}")
+                logger.warning(f"  ⚠️  This might be a Rancher API issue, not a data loss issue")
+                return
+            
+            # Validate each expected environment variable
+            for key, expected_value in env_vars_dict.items():
+                self.results['validated'] += 1
+                expected_str = str(expected_value)
+                actual_value = actual_env_vars.get(key)
+                
+                if actual_value is None:
+                    self.results['failed'] += 1
+                    error_msg = f"Environment variable '{key}': NOT FOUND"
+                    self.results['errors'].append(error_msg)
+                    logger.error(f"  ❌ {error_msg}")
+                elif str(actual_value) != expected_str:
+                    self.results['failed'] += 1
+                    error_msg = f"Environment variable '{key}': VALUE MISMATCH (expected: {expected_str}, actual: {actual_value})"
+                    self.results['errors'].append(error_msg)
+                    logger.error(f"  ❌ {error_msg}")
+                else:
+                    self.results['passed'] += 1
+                    logger.info(f"  ✓ {key} = {expected_str}")
+        
+        except Exception as e:
+            self.results['failed'] += 1
+            error_msg = f"Environment variables: ERROR - {str(e)}"
+            self.results['errors'].append(error_msg)
+            logger.error(f"  ❌ {error_msg}")
+    
     def validate(self):
         """Run full validation."""
         logger.info("=" * 80)
@@ -568,6 +738,9 @@ class DataValidator:
         
         if 'mass_import' in created_items:
             self.validate_mass_import(created_items['mass_import'])
+        
+        if 'rancher_env_vars' in created_items:
+            self.validate_env_vars(created_items['rancher_env_vars'])
         
         # Print summary
         self.print_summary()

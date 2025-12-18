@@ -316,4 +316,56 @@ class RancherApi:
             error_msg += f"\n  → Environment variables attempted: {list(env_vars.keys())}"
             logger.error(error_msg)
             raise Exception(error_msg) from e
+    
+    def get_workload_environment_variables(self, workload_id="statefulset:default:cv-engine", project_id="local:p-p6l45"):
+        """
+        Get environment variables from a Kubernetes workload.
+        
+        Args:
+            workload_id: Workload ID in format "type:namespace:name" 
+                       (e.g., "statefulset:default:cv-engine")
+            project_id: Rancher project ID (e.g., "local:p-p6l45")
+        
+        Returns:
+            Dictionary of environment variable key-value pairs, or None if not found
+        """
+        try:
+            # Retrieve current workload configuration
+            workload = self.get_workload(workload_id, project_id)
+            
+            # Check if workload is wrapped in 'data' field
+            if isinstance(workload, dict) and "data" in workload and isinstance(workload["data"], dict):
+                workload = workload["data"]
+            
+            # Find the main application container (exclude init containers)
+            containers = workload.get("containers", [])
+            
+            # Try alternative container locations if not found
+            if not containers:
+                if "spec" in workload and "containers" in workload["spec"]:
+                    containers = workload["spec"]["containers"]
+                elif "workload" in workload and "containers" in workload["workload"]:
+                    containers = workload["workload"]["containers"]
+            
+            if not containers:
+                logger.warning(f"Could not find containers in workload {workload_id}")
+                return None
+            
+            main_container = None
+            for container in containers:
+                if not container.get("initContainer", False):
+                    main_container = container
+                    break
+            
+            if not main_container:
+                logger.warning(f"Could not find main container in workload {workload_id}")
+                return None
+            
+            # Get environment variables
+            env_vars = main_container.get("environment", {})
+            return env_vars if env_vars else None
+            
+        except Exception as e:
+            logger.debug(f"Could not get environment variables from workload {workload_id}: {e}")
+            return None
 

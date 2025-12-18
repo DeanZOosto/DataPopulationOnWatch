@@ -208,62 +208,69 @@ class OnWatchAutomation:
                         logger.warning(f"Could not create acknowledge action: {e}")
                         logger.warning("Continuing with other settings...")
             
-            # Handle logo uploads
-            # Use "me.jpg" from Yonatan subject for company and sidebar logos
-            watch_list = self.config.get('watch_list', {}).get('subjects', [])
-            logo_path = None
-            for subject in watch_list:
-                if subject.get('name') == 'Yonatan':
-                    images = subject.get('images', [])
-                    for img in images:
-                        img_path = img.get('path', '') if isinstance(img, dict) else img
-                        if 'me.jpg' in img_path:
-                            if not os.path.isabs(img_path):
-                                config_dir = os.path.dirname(os.path.abspath(self.config_path))
-                                logo_path = os.path.join(config_dir, img_path)
-                            else:
-                                logo_path = img_path
-                            break
-                    if logo_path:
-                        break
+            # Handle logo and favicon uploads (read from config.yaml)
+            system_interface = system_settings.get('system_interface', {})
+            project_root = os.path.dirname(os.path.abspath(self.config_path))
             
-            # Upload company and sidebar logos (use me.jpg)
-            if logo_path and os.path.exists(logo_path):
+            # Upload company and sidebar logos
+            logos = system_interface.get('logos', {})
+            if logos:
                 for logo_type in ["company", "sidebar"]:
+                    logo_path_config = logos.get(logo_type)
+                    if logo_path_config:
+                        # Resolve path (relative to project root or absolute)
+                        if not os.path.isabs(logo_path_config):
+                            logo_path = os.path.join(project_root, logo_path_config)
+                        else:
+                            logo_path = logo_path_config
+                        
+                        if os.path.exists(logo_path):
+                            try:
+                                self.client_api.upload_logo(logo_path, logo_type)
+                                logger.info(f"✓ Uploaded {logo_type} logo from: {logo_path_config}")
+                                # Track uploaded logo under system_interface
+                                self.summary.add_created_item('logo', {
+                                    'type': logo_type,
+                                    'source_file': os.path.basename(logo_path),
+                                    'path': logo_path_config,  # Store relative path for config consistency
+                                    'resolved_path': logo_path
+                                })
+                            except Exception as e:
+                                logger.warning(f"Could not upload {logo_type} logo from '{logo_path_config}': {e}")
+                                logger.warning("Continuing with other settings...")
+                        else:
+                            logger.warning(f"Logo file not found: {logo_path_config} (resolved: {logo_path})")
+                    else:
+                        logger.debug(f"No {logo_type} logo configured in config.yaml (optional, skipping)")
+            else:
+                logger.debug("No logos configured in config.yaml (optional, skipping)")
+            
+            # Upload favicon
+            favicon_path_config = system_interface.get('favicon')
+            if favicon_path_config:
+                # Resolve path (relative to project root or absolute)
+                if not os.path.isabs(favicon_path_config):
+                    favicon_path = os.path.join(project_root, favicon_path_config)
+                else:
+                    favicon_path = favicon_path_config
+                
+                if os.path.exists(favicon_path):
                     try:
-                        self.client_api.upload_logo(logo_path, logo_type)
-                        logger.info(f"✓ Uploaded {logo_type} logo")
-                        # Track uploaded logo under system_interface
+                        self.client_api.upload_logo(favicon_path, "favicon")
+                        logger.info(f"✓ Uploaded favicon from: {favicon_path_config}")
+                        # Track uploaded favicon under system_interface
                         self.summary.add_created_item('logo', {
-                            'type': logo_type,
-                            'source_file': os.path.basename(logo_path),
-                            'path': logo_path
+                            'type': 'favicon',
+                            'source_file': os.path.basename(favicon_path),
+                            'path': favicon_path_config,  # Store relative path for config consistency
+                            'resolved_path': favicon_path
                         })
                     except Exception as e:
-                        logger.warning(f"Could not upload {logo_type} logo: {e}")
-                        logger.warning("Continuing with other settings...")
-            elif logo_path:
-                logger.warning(f"Logo image not found: {logo_path}")
+                        logger.warning(f"Could not upload favicon from '{favicon_path_config}': {e}")
+                else:
+                    logger.warning(f"Favicon file not found: {favicon_path_config} (resolved: {favicon_path})")
             else:
-                logger.warning("Could not find 'me.jpg' image from Yonatan subject in watch_list")
-            
-            # Upload favicon (use favicon.ico from assets/images directory)
-            project_root = os.path.dirname(os.path.abspath(__file__))
-            favicon_path = os.path.join(project_root, "assets", "images", "favicon.ico")
-            if os.path.exists(favicon_path):
-                try:
-                    self.client_api.upload_logo(favicon_path, "favicon")
-                    logger.info("✓ Uploaded favicon logo")
-                    # Track uploaded favicon under system_interface
-                    self.summary.add_created_item('logo', {
-                        'type': 'favicon',
-                        'source_file': 'favicon.ico',
-                        'path': favicon_path
-                    })
-                except Exception as e:
-                    logger.warning(f"Could not upload favicon logo: {e}")
-            else:
-                logger.debug(f"Favicon not found at {favicon_path} (optional, skipping)")
+                logger.debug("No favicon configured in config.yaml (optional, skipping)")
                 
         except Exception as e:
             logger.error(f"Failed to configure system settings via API: {e}")
@@ -1324,8 +1331,30 @@ class OnWatchAutomation:
                             logger.warning(f"File entry missing path: {file_config}")
                             continue
                         
-                        settings = file_config.get('settings', '').strip()
+                        settings = file_config.get('settings', '')
                         filename = os.path.basename(file_path)
+                        
+                        # Parse settings - support both string (backward compatibility) and dict (new format)
+                        custom_settings = None
+                        if isinstance(settings, dict):
+                            # New format: settings is a dict with type, threshold, roi
+                            if settings.get('type') == 'custom':
+                                custom_settings = {
+                                    'threshold': settings.get('threshold', 0.5),
+                                    'roi': settings.get('roi', {})
+                                }
+                                logger.debug(f"File '{filename}' has custom settings: threshold={custom_settings['threshold']}, ROI={custom_settings['roi']}")
+                        elif isinstance(settings, str):
+                            # Legacy format: string like "custom" or "DEFAULT VALUES"
+                            settings_str = settings.strip().lower()
+                            if settings_str == 'custom':
+                                # Backward compatibility: use hardcoded Neo.webm values if it's Neo.webm
+                                if filename.lower() == 'neo.webm':
+                                    custom_settings = {
+                                        'threshold': 0.37,
+                                        'roi': {'top': 15, 'right': 15, 'bottom': 22, 'left': 0}
+                                    }
+                                    logger.debug(f"File '{filename}' using legacy custom settings (Neo.webm defaults)")
                         
                         # Resolve file path - always relative to project root
                         # Supports paths like: "assets/videos/Neo.mp4", "Neo.mp4", or absolute paths
@@ -1365,12 +1394,10 @@ class OnWatchAutomation:
                         self.client_api.upload_forensic_file(full_file_path, upload_id)
                         
                         # Step 3: Add file to case
-                        # Use default threshold (0.5) unless it's Neo.webm with custom settings
-                        threshold = 0.5
-                        if filename.lower() == 'neo.webm' and settings.lower() == 'custom':
-                            threshold = 0.37  # Will be updated via GraphQL later
+                        # Use custom threshold if specified, otherwise default (0.5)
+                        threshold = custom_settings.get('threshold', 0.5) if custom_settings else 0.5
                         
-                        logger.debug(f"Adding file to case: {filename}")
+                        logger.debug(f"Adding file to case: {filename} (threshold: {threshold})")
                         add_result = self.client_api.add_file_to_inquiry_case(
                             case_id, upload_id, filename, threshold=threshold
                         )
@@ -1384,8 +1411,11 @@ class OnWatchAutomation:
                         else:
                             logger.debug(f"Verified file '{filename}' was added (status: {uploaded_file.get('status', 'unknown')})")
                         
-                        # Store upload_id for potential configuration update
+                        # Store upload_id and custom settings for potential configuration update
                         file_ids_map[filename] = upload_id
+                        if custom_settings:
+                            # Store custom settings for this file to configure after all files are added
+                            file_ids_map[f'{filename}_custom'] = custom_settings
                         successful_uploads.append(filename)
                         
                         logger.info(f"✓ Added file to inquiry: {filename}")
@@ -1394,12 +1424,9 @@ class OnWatchAutomation:
                         if inquiry_tracking is not None:
                             inquiry_tracking['files'].append({
                                 'filename': filename,
-                                'upload_id': upload_id
+                                'upload_id': upload_id,
+                                'has_custom_settings': custom_settings is not None
                             })
-                        
-                        # Store Neo.webm upload_id for configuration after all files are added
-                        if filename.lower() == 'neo.webm' and settings.lower() == 'custom':
-                            file_ids_map['neo_webm_configure'] = upload_id
                         
                     except Exception as e:
                         logger.error(f"❌ Failed to process file '{file_config.get('path', 'unknown')}': {e}")
@@ -1418,41 +1445,53 @@ class OnWatchAutomation:
                     try:
                         case_files = self.client_api.get_inquiry_case_files(case_id)
                         
-                        # Configure Neo.webm ROI and threshold if needed
-                        if 'neo_webm_configure' in file_ids_map:
-                            neo_webm_upload_id = file_ids_map['neo_webm_configure']
-                            logger.debug("Configuring Neo.webm ROI and threshold...")
+                        # Configure files with custom ROI and threshold settings
+                        files_to_configure = {}
+                        for key, value in file_ids_map.items():
+                            if key.endswith('_custom') and isinstance(value, dict):
+                                filename = key.replace('_custom', '')
+                                files_to_configure[filename] = value
+                        
+                        if files_to_configure:
+                            logger.info(f"Configuring {len(files_to_configure)} file(s) with custom ROI/threshold settings...")
                             
-                            neo_webm_file_id = None
-                            neo_webm_status = None
-                            
-                            for case_file in case_files:
-                                if case_file.get('fileName', '').lower() == 'neo.webm':
-                                    # Use cameraId for GraphQL mutations (updateFileMediaData and startAnalyzeFilesCase)
-                                    neo_webm_file_id = case_file.get('cameraId', '')
-                                    neo_webm_status = case_file.get('status', '')
-                                    logger.info(f"Neo.webm cameraId: {neo_webm_file_id}, status: {neo_webm_status}")
-                                    break
-                            
-                            if neo_webm_file_id:
-                                # Update ROI and threshold configuration
-                                try:
-                                    self.client_api.update_file_media_data(
-                                        file_id=neo_webm_file_id,
-                                        threshold=0.37,
-                                        camera_padding={
-                                            'top': 15,
-                                            'right': 15,
-                                            'bottom': 22,
-                                            'left': 0
-                                        }
-                                    )
-                                    logger.info(f"✓ Updated Neo.webm configuration (ROI: top=15, right=15, bottom=22, left=0, threshold=0.37)")
-                                except Exception as update_error:
-                                    logger.error(f"Failed to update Neo.webm configuration: {update_error}")
-                                    logger.warning("You may need to manually update the ROI configuration in the UI")
-                            else:
-                                logger.warning("Could not find Neo.webm file in case to configure")
+                            for filename, custom_config in files_to_configure.items():
+                                file_id = None
+                                file_status = None
+                                
+                                # Find the file in the case
+                                for case_file in case_files:
+                                    if case_file.get('fileName', '').lower() == filename.lower():
+                                        # Use cameraId for GraphQL mutations (updateFileMediaData and startAnalyzeFilesCase)
+                                        file_id = case_file.get('cameraId', '')
+                                        file_status = case_file.get('status', '')
+                                        logger.debug(f"Found {filename} in case (cameraId: {file_id}, status: {file_status})")
+                                        break
+                                
+                                if file_id:
+                                    # Update ROI and threshold configuration
+                                    try:
+                                        roi = custom_config.get('roi', {})
+                                        threshold = custom_config.get('threshold', 0.5)
+                                        
+                                        self.client_api.update_file_media_data(
+                                            file_id=file_id,
+                                            threshold=threshold,
+                                            camera_padding=roi
+                                        )
+                                        logger.info(f"✓ Updated {filename} configuration (ROI: top={roi.get('top', 0)}, right={roi.get('right', 0)}, bottom={roi.get('bottom', 0)}, left={roi.get('left', 0)}, threshold={threshold})")
+                                        
+                                        # Track the custom configuration
+                                        if inquiry_tracking is not None:
+                                            for file_track in inquiry_tracking['files']:
+                                                if file_track.get('filename', '').lower() == filename.lower():
+                                                    file_track['custom_config'] = custom_config
+                                                    break
+                                    except Exception as update_error:
+                                        logger.error(f"Failed to update {filename} configuration: {update_error}")
+                                        logger.warning(f"You may need to manually update the ROI configuration for {filename} in the UI")
+                                else:
+                                    logger.warning(f"Could not find {filename} in case to configure custom settings")
                         
                         # Check file analysis status and start analysis if needed
                         # Note: Files are typically already analyzing due to with_analysis=True in prepare_forensic_upload

@@ -1,6 +1,12 @@
 # OnWatch Automation Configuration
 # Complete baseline data from machine 10.1.25.90
+#
+# This configuration file defines all data that will be populated on the OnWatch system.
+# All paths are relative to the project root unless specified as absolute paths.
+# After running the automation, an output YAML file will be generated for validation.
 
+# OnWatch API Connection
+# Required: All fields must be configured for the automation to work
 onwatch:
   ip_address: "10.1.25.90"
   username: "Administrator"
@@ -26,7 +32,9 @@ rancher:
   # Format: /p/local:p-p6l45/workloads/run?launchConfigIndex=-1&namespaceId=default&upgrade=true&workloadId=statefulset%3Adefault%3Acv-engine
   workload_path: "/p/local:p-p6l45/workloads/run?launchConfigIndex=-1&namespaceId=default&upgrade=true&workloadId=statefulset%3Adefault%3Acv-engine"
 
-# KV Parameters (key-value settings)
+# KV Parameters (Key-Value Settings)
+# These are application-level settings stored as key-value pairs.
+# All parameters will be validated after population.
 kv_parameters:
   "applicationSettings/watchVideo/secondsAfterDetection": 6
   "applicationSettings/watchVideo/secondsBeforeDetection": 6
@@ -35,6 +43,8 @@ kv_parameters:
   "DEFAULT/collate-service/TRACKS_RETENTION_TIME_MS": 80000
 
 # System Settings
+# Comprehensive system configuration including thresholds, retention periods, and UI customization.
+# All settings will be validated after population.
 system_settings:
   general:
     blur_all_faces_except_selected: false
@@ -54,7 +64,12 @@ system_settings:
   system_interface:
     translation_file: "assets/Polski-updated3.json"  # Path to translation file (relative to project root)
     product_name: "metropolis"
-    icons: ""  # Path to icons directory (if available)
+    # Logo and favicon configuration
+    # Paths are relative to project root, or absolute paths
+    logos:
+      company: "assets/images/me.jpg"  # Company logo (displayed in top-left of UI)
+      sidebar: "assets/images/me.jpg"  # Sidebar logo (displayed in navigation sidebar)
+    favicon: "assets/images/favicon.ico"  # Browser favicon (displayed in browser tab)
   
   engine:
     video_storage:
@@ -64,7 +79,9 @@ system_settings:
     alert_storage_days: 9
     inquiry_storage_days: 8
 
-# Environment Variables (set via Rancher)
+# Environment Variables (set via Rancher/Kubernetes)
+# These are set in the cv-engine workload via Rancher API.
+# All environment variables will be validated after population.
 env_vars:
   ENABLE_DVR: "True"
   OVERWRITE_FFMPEG_OPTIONS_VALUES: "ffmpeg-opts:rtsp_transport=udp,reorder_queue_size=8192,max_delay=500000,buffer_size=4194304"
@@ -73,6 +90,8 @@ env_vars:
   CUDA_DEVICE_ORDER: "PCI_BUS_ID"
 
 # Device/Camera Settings
+# Each device/camera will be created with the specified configuration.
+# All cameras will be validated after population (existence check).
 devices:
   - name: "face camera"
     video_url: "rtsp://10.1.70.16:8554/Faces720"
@@ -163,6 +182,9 @@ devices:
       liveness: false
 
 # Groups and Profiles
+# Subject groups define authorization and visibility rules for watch list subjects.
+# Device groups organize cameras (currently not fully utilized in automation).
+# All groups will be validated after population.
 groups:
   subject_groups:
     - name: "OnPatrol subject"
@@ -186,11 +208,11 @@ groups:
       priority: 3
       description: "none"
   
-  time_profile:
-    screenshot_reference: "Screenshot 2025-12-04 at 12.22.37.png"
-    # Note: Time profile may need manual configuration or screenshot reference
 
 # Account Management
+# User accounts and user groups define access control.
+# All users will be validated after population (existence check).
+# Note: Passwords are only set for new users (null means keep existing password).
 accounts:
   users:
     - username: "Test"
@@ -218,14 +240,23 @@ accounts:
       subject_groups: []  # List of subject group names to assign
       camera_groups: []  # List of camera group names to assign (not yet implemented)
 
-# Inquiries
+# Inquiries (Forensic Analysis Cases)
+# Inquiry cases with video/image files for analysis.
+# All inquiry cases will be validated after population (existence check).
 inquiries:
   - name: "upgrade test"
     files:
       - path: "assets/videos/Neo.mp4"
         settings: "DEFAULT VALUES"
       - path: "assets/videos/Neo.webm"
-        settings: "custom"  # Special config: ROI (Top:15, Right:15, Bottom:22, Left:0), Threshold: 0.37
+        settings:
+          type: "custom"  # Use custom ROI and threshold instead of defaults
+          threshold: 0.37  # Detection threshold for this file
+          roi:  # Region of Interest (camera padding)
+            top: 15
+            right: 15
+            bottom: 22
+            left: 0
       - path: "assets/videos/regular_avi_1.avi"
         settings: "DEFAULT VALUES"
       - path: "assets/videos/regular_avi_2.avi"
@@ -233,11 +264,15 @@ inquiries:
     priority: "Medium"
 
 # Mass Import
+# Bulk import of subjects from a tar file.
+# The mass import will be validated after population (existence check by ID).
 mass_import:
   name: "mass-import 43"
   file_path: "assets/mass-import/mass-import-43.tar"
 
-# Watch List - 5 subjects
+# Watch List
+# Subjects to be added to the watch list with their images.
+# All subjects will be validated after population (existence and image count check).
 watch_list:
   subjects:
     - name: "Yonatan"
@@ -265,16 +300,3 @@ watch_list:
       images:
         - path: "assets/images/image (3).jpg"
       group: "Default Group"
-
-# Future Enhancements (Not Yet Implemented)
-# These features require additional API endpoints or manual setup:
-#
-# Translation File Upload:
-#   - File: /Users/deanzion/Downloads/Polski-updated3.json.json
-#   - Status: Currently loaded via bash script to service (no API endpoint available)
-#   - Future: Implement SSH/SCP upload or wait for API endpoint
-#
-# Additional Settings (Intentionally Excluded):
-#   - privacyMode (blur_all_faces_except_selected): Not modified per requirements
-#   - gdprMode (discard_detections_not_in_watch_list): Not modified per requirements
-#   - maskClassifier.access (masks_access_control): Not modified per requirements
