@@ -14,6 +14,14 @@ from rancher_api import RancherApi
 from ssh_util import SSHUtil
 from run_summary import RunSummary
 from config_manager import ConfigManager
+from constants import (
+    INQUIRY_PRIORITY_MAP,
+    INQUIRY_PRIORITY_DEFAULT,
+    ANALYSIS_WAIT_DELAY,
+    FILE_STATUS_CHECK_DELAY,
+    RETRY_DELAY,
+    FILE_ANALYSIS_CHECK_INTERVAL
+)
 
 # Store original exception hook for verbose mode
 _original_excepthook = sys.excepthook
@@ -164,7 +172,7 @@ class OnWatchAutomation:
             
             # Verify and store actual values that were set (not just config values)
             # Query back the actual system settings to store what's really in the system
-            time.sleep(1)  # Brief wait for settings to be saved
+            time.sleep(FILE_STATUS_CHECK_DELAY)  # Brief wait for settings to be saved
             actual_system_settings = self.client_api.get_system_settings()
             
             # Build verified system settings dict with actual values
@@ -1078,7 +1086,8 @@ class OnWatchAutomation:
                         # Example: "Test" -> "Test123!", "Administrator" -> "Administrator123!"
                         if username:
                             password = f"{username[0].upper()}{username[1:].lower()}123!"
-                            logger.info(f"Generated password for user '{username}': {password}")
+                            logger.info(f"Generated password for user '{username}'")
+                            logger.debug(f"Generated password: {password}")  # Only log in debug mode
                         else:
                             logger.warning(f"Cannot generate password for user without username, skipping")
                             continue
@@ -1281,7 +1290,7 @@ class OnWatchAutomation:
                     logger.warning(f"Inquiry '{inquiry_name}' has no files, skipping")
                     continue
                 
-                priority = inquiry_config.get('priority', 'Medium')
+                priority = inquiry_config.get('priority', 'Medium')  # Default to Medium if not specified
                 
                 # Check if case already exists before creating (prevent "case 2")
                 existing_cases = self.client_api.get_inquiry_cases()
@@ -1336,7 +1345,7 @@ class OnWatchAutomation:
                     try:
                         # Add small delay between file uploads to prevent queue issues (except first file)
                         if idx > 0:
-                            time.sleep(1)  # Small delay between uploads
+                            time.sleep(FILE_STATUS_CHECK_DELAY)  # Small delay between uploads
                         
                         file_path = file_config.get('path', '').strip()
                         if not file_path:
@@ -1415,7 +1424,7 @@ class OnWatchAutomation:
                         )
                         
                         # Verify file was added successfully
-                        time.sleep(0.5)  # Wait a moment for file to be registered
+                        time.sleep(0.5)  # Wait a moment for file to be registered (short delay, keep as-is)
                         case_files = self.client_api.get_inquiry_case_files(case_id)
                         uploaded_file = next((f for f in case_files if f.get('fileName', '').lower() == filename.lower()), None)
                         if not uploaded_file:
@@ -1451,7 +1460,7 @@ class OnWatchAutomation:
                 
                 # Wait a moment for all files to be registered before configuring
                 if file_ids_map:
-                    time.sleep(2)
+                    time.sleep(RETRY_DELAY)
                     
                     # Get all files from the case
                     try:
@@ -1525,15 +1534,16 @@ class OnWatchAutomation:
                                     logger.info(f"✓ Started analysis for {len(files_not_analyzing)} file(s)")
                                     
                                     # Wait a moment and re-check status
-                                    time.sleep(2)
+                                    time.sleep(RETRY_DELAY)
                                     case_files = self.client_api.get_inquiry_case_files(case_id)
                                     
                                 except Exception as analyze_error:
                                     # Re-check file statuses after error to provide accurate feedback
-                                    time.sleep(1)  # Brief wait for status to update
+                                    time.sleep(FILE_STATUS_CHECK_DELAY)  # Brief wait for status to update
                                     try:
                                         case_files = self.client_api.get_inquiry_case_files(case_id)
-                                    except:
+                                    except Exception as fetch_error:
+                                        logger.debug(f"Could not re-fetch case files after error: {fetch_error}")
                                         case_files = []  # Fallback if we can't re-fetch
                                     
                                     # Count files by status
@@ -1588,10 +1598,11 @@ class OnWatchAutomation:
                             
                             else:
                                 # All files are already analyzing or done - check final status
-                                time.sleep(1)  # Brief wait to get latest status
+                                time.sleep(FILE_STATUS_CHECK_DELAY)  # Brief wait to get latest status
                                 try:
                                     case_files = self.client_api.get_inquiry_case_files(case_id)
-                                except:
+                                except Exception as fetch_error:
+                                    logger.debug(f"Could not re-fetch case files for final status: {fetch_error}")
                                     pass  # Use existing case_files if re-fetch fails
                                 
                                 analyzing_count = len([f for f in case_files if f.get('status', '').upper() == 'ANALYZING'])
@@ -1612,7 +1623,7 @@ class OnWatchAutomation:
                         logger.warning(f"Could not configure files or start analysis: {e}")
                 
                 # Final status check - wait a moment and verify all files
-                time.sleep(2)
+                time.sleep(RETRY_DELAY)
                 try:
                     final_case_files = self.client_api.get_inquiry_case_files(case_id)
                     final_status_counts = {}
@@ -2037,7 +2048,7 @@ class OnWatchAutomation:
                     })
                 else:
                     logger.error("Failed to upload translation file")
-                    raise Exception("Translation file upload failed")
+                    raise RuntimeError("Translation file upload failed")
                     
             except Exception as e:
                 logger.error(f"Error uploading translation file: {e}")

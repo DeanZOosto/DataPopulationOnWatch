@@ -9,6 +9,13 @@ import logging
 import mimetypes
 import os
 from datetime import datetime, timedelta
+from constants import (
+    INQUIRY_PRIORITY_MAP,
+    INQUIRY_PRIORITY_DEFAULT,
+    INQUIRY_PRIORITY_LOW,
+    INQUIRY_PRIORITY_HIGH,
+    KV_PARAMETER_ENDPOINTS
+)
 
 # Disable SSL warnings for self-signed certificates
 urllib3.disable_warnings(InsecureRequestWarning)
@@ -53,7 +60,12 @@ class ClientApi:
         self.headers = {"accept": "application/json"}
         self.token = ""
         self.session = requests.Session()
-        self.session.verify = False
+        # Make SSL verification configurable via environment variable
+        verify_ssl = os.getenv('ONWATCH_VERIFY_SSL', 'false').lower() == 'true'
+        self.session.verify = verify_ssl
+        if not verify_ssl:
+            # Only disable warnings if SSL verification is disabled
+            urllib3.disable_warnings(InsecureRequestWarning)
         self._settings_cache = None  # Cache for /settings endpoint response
         
     def login(self):
@@ -1473,23 +1485,17 @@ class ClientApi:
             payload = {"name": case_name}
             
             # Add priority if provided (map string to number)
-            # Correct mapping: Low=201, Medium=101, High=1
             if priority is not None:
-                priority_map = {
-                    "low": 201,
-                    "medium": 101,
-                    "high": 1
-                }
                 if isinstance(priority, str):
                     priority_lower = priority.lower()
-                    if priority_lower in priority_map:
-                        payload["priority"] = priority_map[priority_lower]
+                    if priority_lower in INQUIRY_PRIORITY_MAP:
+                        payload["priority"] = INQUIRY_PRIORITY_MAP[priority_lower]
                     else:
-                        logger.warning(f"Unknown priority string '{priority}', using default 101 (Medium)")
-                        payload["priority"] = 101
+                        logger.warning(f"Unknown priority string '{priority}', using default {INQUIRY_PRIORITY_DEFAULT} (Medium)")
+                        payload["priority"] = INQUIRY_PRIORITY_DEFAULT
                 elif isinstance(priority, (int, float)):
                     # Ensure it's in valid range (1-201 based on actual API values)
-                    priority_num = max(1, min(201, int(priority)))
+                    priority_num = max(INQUIRY_PRIORITY_HIGH, min(INQUIRY_PRIORITY_LOW, int(priority)))
                     payload["priority"] = priority_num
             
             response = self.session.post(
@@ -1539,26 +1545,21 @@ class ClientApi:
             if name is not None:
                 data_to_update["name"] = name
             if priority is not None:
-                # Map priority strings to numbers (correct mapping: Low=201, Medium=101, High=1)
-                priority_map = {
-                    "low": 201,
-                    "medium": 101,
-                    "high": 1
-                }
+                # Map priority strings to numbers using constants
                 if isinstance(priority, str):
                     priority_lower = priority.lower()
-                    if priority_lower in priority_map:
-                        data_to_update["priority"] = priority_map[priority_lower]
+                    if priority_lower in INQUIRY_PRIORITY_MAP:
+                        data_to_update["priority"] = INQUIRY_PRIORITY_MAP[priority_lower]
                     else:
-                        logger.warning(f"Unknown priority string '{priority}', using default 101 (Medium)")
-                        data_to_update["priority"] = 101
+                        logger.warning(f"Unknown priority string '{priority}', using default {INQUIRY_PRIORITY_DEFAULT} (Medium)")
+                        data_to_update["priority"] = INQUIRY_PRIORITY_DEFAULT
                 elif isinstance(priority, (int, float)):
                     # Ensure it's in valid range (1-201 based on actual API values)
-                    priority_num = max(1, min(201, int(priority)))
+                    priority_num = max(INQUIRY_PRIORITY_HIGH, min(INQUIRY_PRIORITY_LOW, int(priority)))
                     data_to_update["priority"] = priority_num
                 else:
-                    logger.warning(f"Invalid priority type '{type(priority)}', using default 101 (Medium)")
-                    data_to_update["priority"] = 101
+                    logger.warning(f"Invalid priority type '{type(priority)}', using default {INQUIRY_PRIORITY_DEFAULT} (Medium)")
+                    data_to_update["priority"] = INQUIRY_PRIORITY_DEFAULT
             
             if not data_to_update:
                 logger.warning("No fields to update in inquiry case")
@@ -2271,117 +2272,56 @@ class ClientApi:
         Returns:
             Parameter value as string, or None if not found
         """
-        # #region agent log
-        import json
-        try:
-            with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
-                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"F","location":"client_api.py:2254","message":"Trying REST endpoints for KV parameter","data":{"key":key},"timestamp":int(__import__('time').time()*1000)}) + '\n')
-        except: pass
-        # #endregion
+        logger.debug(f"Trying REST endpoints for KV parameter: {key}")
         
         # Try different REST endpoints
-        rest_endpoints = [
-            f"{self.url}/settings/kv",
-            f"{self.url}/key-value-settings",
-            f"{self.url}/kv-parameters",
-            f"{self.url}/settings/key-value",
-        ]
+        rest_endpoints = [f"{self.url}{endpoint}" for endpoint in KV_PARAMETER_ENDPOINTS]
         
         for endpoint in rest_endpoints:
             try:
                 response = self.session.get(endpoint, headers=self.headers)
-                # #region agent log
-                try:
-                    with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
-                        f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"F","location":"client_api.py:2265","message":"REST endpoint response","data":{"endpoint":endpoint,"status_code":response.status_code,"response_text":response.text[:500] if response.status_code != 200 else "success"},"timestamp":int(__import__('time').time()*1000)}) + '\n')
-                except: pass
-                # #endregion
+                logger.debug(f"REST endpoint {endpoint} response: {response.status_code}")
                 
                 if response.status_code == 200:
                     try:
                         data = response.json()
-                        # #region agent log
-                        try:
-                            with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
-                                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"F","location":"client_api.py:2270","message":"REST endpoint success - parsing response","data":{"endpoint":endpoint,"response_type":type(data).__name__,"is_list":isinstance(data, list),"is_dict":isinstance(data, dict),"keys":list(data.keys())[:10] if isinstance(data, dict) else "N/A","key_being_searched":key},"timestamp":int(__import__('time').time()*1000)}) + '\n')
-                        except: pass
-                        # #endregion
+                        logger.debug(f"Parsing response from {endpoint}, type: {type(data).__name__}")
+                        
                         # Try to find the key in the response
                         if isinstance(data, list):
-                            # #region agent log
-                            try:
-                                with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
-                                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"F","location":"client_api.py:2275","message":"Response is list, searching items","data":{"list_length":len(data),"first_item_keys":list(data[0].keys()) if data and isinstance(data[0], dict) else "N/A","key_being_searched":key},"timestamp":int(__import__('time').time()*1000)}) + '\n')
-                            except: pass
-                            # #endregion
                             for item in data:
                                 if isinstance(item, dict) and item.get('key') == key:
                                     value = item.get('value', '')
-                                    # #region agent log
-                                    try:
-                                        with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
-                                            f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"F","location":"client_api.py:2280","message":"Found key in list response","data":{"key":key,"value":value,"endpoint":endpoint},"timestamp":int(__import__('time').time()*1000)}) + '\n')
-                                    except: pass
-                                    # #endregion
+                                    logger.debug(f"Found key '{key}' in list response from {endpoint}")
                                     return str(value)
                         elif isinstance(data, dict):
                             # Check if key is directly in dict
                             if key in data:
                                 value = str(data[key])
-                                # #region agent log
-                                try:
-                                    with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
-                                        f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"F","location":"client_api.py:2288","message":"Found key directly in dict","data":{"key":key,"value":value,"endpoint":endpoint},"timestamp":int(__import__('time').time()*1000)}) + '\n')
-                                except: pass
-                                # #endregion
+                                logger.debug(f"Found key '{key}' directly in dict from {endpoint}")
                                 return value
                             # Check if there's a list of settings
                             if 'items' in data:
                                 for item in data['items']:
                                     if isinstance(item, dict) and item.get('key') == key:
                                         value = str(item.get('value', ''))
-                                        # #region agent log
-                                        try:
-                                            with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
-                                                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"F","location":"client_api.py:2295","message":"Found key in items list","data":{"key":key,"value":value,"endpoint":endpoint},"timestamp":int(__import__('time').time()*1000)}) + '\n')
-                                        except: pass
-                                        # #region agent log
-                                        try:
-                                            with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
-                                                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"F","location":"client_api.py:2324","message":"RETURNING value from items list","data":{"key":key,"value":value,"endpoint":endpoint},"timestamp":int(__import__('time').time()*1000)}) + '\n')
-                                        except: pass
-                                        # #endregion
+                                        logger.debug(f"Found key '{key}' in items list from {endpoint}")
                                         return value
                             # Check nested structures
                             for section_name, section in data.items():
                                 if isinstance(section, dict) and key in section:
                                     value = str(section[key])
-                                    # #region agent log
-                                    try:
-                                        with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
-                                            f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"F","location":"client_api.py:2303","message":"Found key in nested section","data":{"key":key,"value":value,"section":section_name,"endpoint":endpoint},"timestamp":int(__import__('time').time()*1000)}) + '\n')
-                                    except: pass
-                                    # #endregion
+                                    logger.debug(f"Found key '{key}' in nested section '{section_name}' from {endpoint}")
                                     return value
                     except ValueError:
                         # Response is not JSON
-                        # #region agent log
-                        try:
-                            with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
-                                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"F","location":"client_api.py:2310","message":"Response is not JSON","data":{"endpoint":endpoint,"response_text":response.text[:200]},"timestamp":int(__import__('time').time()*1000)}) + '\n')
-                        except: pass
-                        # #endregion
+                        logger.debug(f"Response from {endpoint} is not JSON")
                         pass
             except Exception as e:
                 logger.debug(f"REST endpoint {endpoint} failed: {e}")
                 continue
         
-        # #region agent log
-        try:
-            with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
-                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"F","location":"client_api.py:2345","message":"_get_kv_parameter_via_rest returning None - key not found in any REST endpoint","data":{"key":key},"timestamp":int(__import__('time').time()*1000)}) + '\n')
-        except: pass
-        # #endregion
+        logger.debug(f"Key '{key}' not found in any REST endpoint")
         return None
     
     def _get_kv_parameter_via_graphql(self, key):
@@ -2467,31 +2407,15 @@ class ClientApi:
                     headers=self.headers,
                     json=payload
                 )
-                # #region agent log
-                import json
-                try:
-                    with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
-                        f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"A","location":"client_api.py:2295","message":"GraphQL Pattern 1 response","data":{"status_code":response.status_code,"response_text":response.text[:500],"key":key},"timestamp":int(__import__('time').time()*1000)}) + '\n')
-                except: pass
-                # #endregion
+                logger.debug(f"GraphQL Pattern 1 response: {response.status_code}")
                 
                 result = response.json() if response.status_code == 200 else None
                 if response.status_code != 200:
-                    # #region agent log
-                    try:
-                        with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
-                            f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"A","location":"client_api.py:2300","message":"GraphQL Pattern 1 error response","data":{"status_code":response.status_code,"response_text":response.text,"response_headers":dict(response.headers)},"timestamp":int(__import__('time').time()*1000)}) + '\n')
-                    except: pass
-                    # #endregion
+                    logger.debug(f"GraphQL Pattern 1 error: HTTP {response.status_code}")
                     raise Exception(f"HTTP {response.status_code}: {response.text[:200]}")
                 
                 if 'errors' in result:
-                    # #region agent log
-                    try:
-                        with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
-                            f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"A","location":"client_api.py:2303","message":"GraphQL Pattern 1 GraphQL errors","data":{"errors":result.get('errors'),"key":key},"timestamp":int(__import__('time').time()*1000)}) + '\n')
-                    except: pass
-                    # #endregion
+                    logger.debug(f"GraphQL Pattern 1 returned errors: {result.get('errors')}")
                     # Check if it's a schema error (field doesn't exist)
                     errors = result['errors']
                     error_messages = ' '.join(str(e) for e in errors).lower()
@@ -2538,21 +2462,11 @@ class ClientApi:
                         headers=self.headers,
                         json=payload
                     )
-                    # #region agent log
-                    try:
-                        with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
-                            f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"client_api.py:2345","message":"GraphQL Pattern 2 response","data":{"status_code":response.status_code,"response_text":response.text[:500],"key":key},"timestamp":int(__import__('time').time()*1000)}) + '\n')
-                    except: pass
-                    # #endregion
+                    logger.debug(f"GraphQL Pattern 2 response: {response.status_code}")
                     
                     result = response.json() if response.status_code == 200 else None
                     if response.status_code != 200:
-                        # #region agent log
-                        try:
-                            with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
-                                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"client_api.py:2350","message":"GraphQL Pattern 2 error response","data":{"status_code":response.status_code,"response_text":response.text,"response_headers":dict(response.headers)},"timestamp":int(__import__('time').time()*1000)}) + '\n')
-                        except: pass
-                        # #endregion
+                        logger.debug(f"GraphQL Pattern 2 error: HTTP {response.status_code}")
                         raise Exception(f"HTTP {response.status_code}: {response.text[:200]}")
                     
                     if 'errors' not in result:
@@ -2563,12 +2477,7 @@ class ClientApi:
                                 logger.debug(f"Found KV parameter '{key}' via GraphQL (getSetting): {value}")
                                 return str(value)
                     else:
-                        # #region agent log
-                        try:
-                            with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
-                                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"client_api.py:2353","message":"GraphQL Pattern 2 GraphQL errors","data":{"errors":result.get('errors'),"key":key},"timestamp":int(__import__('time').time()*1000)}) + '\n')
-                        except: pass
-                        # #endregion
+                        logger.debug(f"GraphQL Pattern 2 returned errors: {result.get('errors')}")
                 except Exception as e2:
                     logger.debug(f"Pattern 2 (getSetting) failed: {e2}, trying Pattern 3...")
                     
@@ -2583,21 +2492,11 @@ class ClientApi:
                             headers=self.headers,
                             json=payload
                         )
-                        # #region agent log
-                        try:
-                            with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
-                                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"C","location":"client_api.py:2369","message":"GraphQL Pattern 3 response","data":{"status_code":response.status_code,"response_text":response.text[:500],"key":key},"timestamp":int(__import__('time').time()*1000)}) + '\n')
-                        except: pass
-                        # #endregion
+                        logger.debug(f"GraphQL Pattern 3 response: {response.status_code}")
                         
                         result = response.json() if response.status_code == 200 else None
                         if response.status_code != 200:
-                            # #region agent log
-                            try:
-                                with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
-                                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"C","location":"client_api.py:2374","message":"GraphQL Pattern 3 error response","data":{"status_code":response.status_code,"response_text":response.text,"response_headers":dict(response.headers)},"timestamp":int(__import__('time').time()*1000)}) + '\n')
-                            except: pass
-                            # #endregion
+                            logger.debug(f"GraphQL Pattern 3 error: HTTP {response.status_code}")
                             raise Exception(f"HTTP {response.status_code}: {response.text[:200]}")
                         
                         if 'errors' not in result:
@@ -2610,12 +2509,7 @@ class ClientApi:
                                             logger.debug(f"Found KV parameter '{key}' via GraphQL (direct query): {value}")
                                             return str(value)
                         else:
-                            # #region agent log
-                            try:
-                                with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
-                                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"C","location":"client_api.py:2377","message":"GraphQL Pattern 3 GraphQL errors","data":{"errors":result.get('errors'),"key":key},"timestamp":int(__import__('time').time()*1000)}) + '\n')
-                            except: pass
-                            # #endregion
+                            logger.debug(f"GraphQL Pattern 3 returned errors: {result.get('errors')}")
                     except Exception as e3:
                         logger.debug(f"Pattern 3 (direct keyValueSettings) also failed: {e3}, trying Pattern 4...")
                         
@@ -2630,21 +2524,11 @@ class ClientApi:
                                 headers=self.headers,
                                 json=payload
                             )
-                            # #region agent log
-                            try:
-                                with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
-                                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"D","location":"client_api.py:2390","message":"GraphQL Pattern 4 response","data":{"status_code":response.status_code,"response_text":response.text[:500],"key":key},"timestamp":int(__import__('time').time()*1000)}) + '\n')
-                            except: pass
-                            # #endregion
+                            logger.debug(f"GraphQL Pattern 4 response: {response.status_code}")
                             
                             result = response.json() if response.status_code == 200 else None
                             if response.status_code != 200:
-                                # #region agent log
-                                try:
-                                    with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
-                                        f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"D","location":"client_api.py:2395","message":"GraphQL Pattern 4 error response","data":{"status_code":response.status_code,"response_text":response.text,"response_headers":dict(response.headers)},"timestamp":int(__import__('time').time()*1000)}) + '\n')
-                                except: pass
-                                # #endregion
+                                logger.debug(f"GraphQL Pattern 4 error: HTTP {response.status_code}")
                                 raise Exception(f"HTTP {response.status_code}: {response.text[:200]}")
                             
                             if 'errors' not in result and 'data' in result:
@@ -2661,12 +2545,7 @@ class ClientApi:
                                                     logger.debug(f"Found KV parameter '{key}' via GraphQL (Pattern 4): {value}")
                                                     return str(value)
                             elif 'errors' in result:
-                                # #region agent log
-                                try:
-                                    with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
-                                        f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"D","location":"client_api.py:2408","message":"GraphQL Pattern 4 GraphQL errors","data":{"errors":result.get('errors'),"key":key},"timestamp":int(__import__('time').time()*1000)}) + '\n')
-                                except: pass
-                                # #endregion
+                                logger.debug(f"GraphQL Pattern 4 returned errors: {result.get('errors')}")
                         except Exception as e4:
                             logger.debug(f"Pattern 4 also failed: {e4}, trying Pattern 5...")
                             
@@ -2685,21 +2564,11 @@ class ClientApi:
                                     headers=self.headers,
                                     json=payload
                                 )
-                                # #region agent log
-                                try:
-                                    with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
-                                        f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"E","location":"client_api.py:2430","message":"GraphQL Pattern 5 response","data":{"status_code":response.status_code,"response_text":response.text[:500],"key":key},"timestamp":int(__import__('time').time()*1000)}) + '\n')
-                                except: pass
-                                # #endregion
+                                logger.debug(f"GraphQL Pattern 5 response: {response.status_code}")
                                 
                                 result = response.json() if response.status_code == 200 else None
                                 if response.status_code != 200:
-                                    # #region agent log
-                                    try:
-                                        with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
-                                            f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"E","location":"client_api.py:2435","message":"GraphQL Pattern 5 error response","data":{"status_code":response.status_code,"response_text":response.text,"response_headers":dict(response.headers)},"timestamp":int(__import__('time').time()*1000)}) + '\n')
-                                    except: pass
-                                    # #endregion
+                                    logger.debug(f"GraphQL Pattern 5 error: HTTP {response.status_code}")
                                     raise Exception(f"HTTP {response.status_code}: {response.text[:200]}")
                                 
                                 if 'errors' not in result:
@@ -2710,12 +2579,7 @@ class ClientApi:
                                             logger.debug(f"Found KV parameter '{key}' via GraphQL (getSingleSetting): {value}")
                                             return str(value)
                                 elif 'errors' in result:
-                                    # #region agent log
-                                    try:
-                                        with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
-                                            f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"E","location":"client_api.py:2445","message":"GraphQL Pattern 5 GraphQL errors","data":{"errors":result.get('errors'),"key":key},"timestamp":int(__import__('time').time()*1000)}) + '\n')
-                                    except: pass
-                                    # #endregion
+                                    logger.debug(f"GraphQL Pattern 5 returned errors: {result.get('errors')}")
                             except Exception as e5:
                                 logger.debug(f"Pattern 5 (getSingleSetting) also failed: {e5}")
             
@@ -2743,20 +2607,8 @@ class ClientApi:
         if key.startswith('DEFAULT/'):
             logger.debug(f"KV parameter key '{key}' uses DEFAULT prefix - trying REST endpoints first")
             rest_result = self._get_kv_parameter_via_rest(key)
-            # #region agent log
-            import json
-            try:
-                with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
-                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"F","location":"client_api.py:2709","message":"Checking REST result","data":{"key":key,"rest_result":rest_result,"rest_result_type":type(rest_result).__name__,"is_none":rest_result is None},"timestamp":int(__import__('time').time()*1000)}) + '\n')
-            except: pass
-            # #endregion
+            logger.debug(f"REST result for '{key}': {rest_result is not None}")
             if rest_result is not None:
-                # #region agent log
-                try:
-                    with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
-                        f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"F","location":"client_api.py:2711","message":"RETURNING REST result","data":{"key":key,"value":rest_result},"timestamp":int(__import__('time').time()*1000)}) + '\n')
-                except: pass
-                # #endregion
                 return rest_result
             logger.debug(f"REST endpoints failed for '{key}', trying GraphQL...")
             return self._get_kv_parameter_via_graphql(key)
@@ -2769,15 +2621,7 @@ class ClientApi:
                 response = self.session.get(settings_url, headers=self.headers)
                 response.raise_for_status()
                 self._settings_cache = response.json()
-                # #region agent log
-                import json
-                try:
-                    with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
-                        # Log top-level keys to see structure
-                        top_keys = list(self._settings_cache.keys())[:20] if isinstance(self._settings_cache, dict) else "not_dict"
-                        f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"G","location":"client_api.py:2481","message":"REST /settings endpoint structure","data":{"top_keys":top_keys,"total_keys":len(self._settings_cache) if isinstance(self._settings_cache, dict) else "N/A","key_being_searched":key},"timestamp":int(__import__('time').time()*1000)}) + '\n')
-                except: pass
-                # #endregion
+                logger.debug(f"Settings cache loaded, top-level keys: {list(self._settings_cache.keys())[:10] if isinstance(self._settings_cache, dict) else 'not_dict'}")
             
             settings_data = self._settings_cache
             

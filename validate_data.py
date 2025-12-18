@@ -132,13 +132,7 @@ class DataValidator:
             
             try:
                 actual_value = self.client_api.get_kv_parameter(key)
-                # #region agent log
-                import json
-                try:
-                    with open('/Users/deanzion/Work/DataPopulationOnWatch/.cursor/debug.log', 'a') as f:
-                        f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"H","location":"validate_data.py:111","message":"Validation comparison values","data":{"key":key,"expected_value":expected_value,"expected_type":type(expected_value).__name__,"actual_value":actual_value,"actual_type":type(actual_value).__name__ if actual_value is not None else "None","is_none":actual_value is None},"timestamp":int(__import__('time').time()*1000)}) + '\n')
-                except: pass
-                # #endregion
+                logger.debug(f"Validation comparison for '{key}': expected={expected_value} ({type(expected_value).__name__}), actual={actual_value} ({type(actual_value).__name__ if actual_value is not None else 'None'})")
                 
                 if actual_value is None:
                     self.results['failed'] += 1
