@@ -16,6 +16,7 @@ from constants import (
     INQUIRY_PRIORITY_HIGH,
     KV_PARAMETER_ENDPOINTS
 )
+from version_compat import VersionCompat
 
 # Disable SSL warnings for self-signed certificates
 urllib3.disable_warnings(InsecureRequestWarning)
@@ -44,7 +45,7 @@ class InquiryCaseAlreadyExists(Exception):
 class ClientApi:
     """Client API for interacting with OnWatch system."""
     
-    def __init__(self, ip_address, username, password):
+    def __init__(self, ip_address, username, password, version=None):
         """
         Initialize the ClientApi.
         
@@ -52,6 +53,7 @@ class ClientApi:
             ip_address: IP address of the OnWatch system
             username: Username for authentication
             password: Password for authentication
+            version: OnWatch version ("2.6" or "2.8"). If None, will auto-detect after login.
         """
         self.ip_address = ip_address
         self.username = username
@@ -67,6 +69,10 @@ class ClientApi:
             # Only disable warnings if SSL verification is disabled
             urllib3.disable_warnings(InsecureRequestWarning)
         self._settings_cache = None  # Cache for /settings endpoint response
+        
+        # Initialize version compatibility (will auto-detect after login if not specified)
+        self.version_compat = VersionCompat(version=version)
+        self._version_detected = False
         
     def login(self):
         """Login to the OnWatch system and set authentication headers."""
@@ -90,6 +96,15 @@ class ClientApi:
             
             # Update session headers
             self.session.headers.update(self.headers)
+            
+            # Auto-detect version after successful login (if not already set)
+            if not self.version_compat.version and not self._version_detected:
+                try:
+                    detected_version = self.version_compat.detect_version(self)
+                    logger.info(f"OnWatch version: {detected_version}")
+                    self._version_detected = True
+                except Exception as e:
+                    logger.debug(f"Version detection failed (will use default): {e}")
             
             logger.info(f"Successfully logged in to the OnWatch server at IP: {self.ip_address}")
             return response
@@ -806,7 +821,20 @@ class ClientApi:
             # GraphQL mutation endpoint
             graphql_url = f"{self.url}/graphql"  # This will be /bt/api/graphql
             
-            # GraphQL mutation - matches what the browser sends
+            # Get version-specific mutation (or use default)
+            try:
+                mutation = self.version_compat.get_graphql_mutation_for_kv()
+                # Parse mutation to extract operation name and structure
+                # For now, use the standard mutation format
+                mutation_query = mutation.strip()
+            except Exception:
+                # Fallback to default mutation
+                mutation_query = None
+            
+            # Default GraphQL mutation - matches what the browser sends
+            if not mutation_query:
+                mutation_query = "mutation updateSingleSetting($settingInput: KeyValueSettingInput!) {\n  updateSingleSetting(settingInput: $settingInput) {\n    code\n  }\n}\n"
+            
             payload = {
                 "operationName": "updateSingleSetting",
                 "variables": {
@@ -815,7 +843,7 @@ class ClientApi:
                         "value": str(value)  # Convert to string as API expects
                     }
                 },
-                "query": "mutation updateSingleSetting($settingInput: KeyValueSettingInput!) {\n  updateSingleSetting(settingInput: $settingInput) {\n    code\n  }\n}\n"
+                "query": mutation_query
             }
             
             response = self.session.post(
@@ -2274,8 +2302,13 @@ class ClientApi:
         """
         logger.debug(f"Trying REST endpoints for KV parameter: {key}")
         
-        # Try different REST endpoints
-        rest_endpoints = [f"{self.url}{endpoint}" for endpoint in KV_PARAMETER_ENDPOINTS]
+        # Get version-specific endpoints (or use defaults from constants)
+        try:
+            version_endpoints = self.version_compat.get_kv_parameter_endpoints()
+            rest_endpoints = [f"{self.url}{endpoint}" for endpoint in version_endpoints]
+        except Exception:
+            # Fallback to constants if version compat not available
+            rest_endpoints = [f"{self.url}{endpoint}" for endpoint in KV_PARAMETER_ENDPOINTS]
         
         for endpoint in rest_endpoints:
             try:

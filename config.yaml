@@ -12,6 +12,8 @@ onwatch:
   username: "Administrator"
   password: "pa$$word!"
   base_url: "https://10.1.71.14"
+  # OnWatch version: "2.6" or "2.8" (optional - will auto-detect if not specified)
+  # version: "2.6"  # Uncomment and set if auto-detection fails
 
 # SSH Configuration (for translation file upload)
 ssh:

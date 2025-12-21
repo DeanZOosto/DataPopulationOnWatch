@@ -46,6 +46,7 @@ class RunSummary:
         
         # Metadata for export
         self.onwatch_ip = None
+        self.onwatch_version = None  # OnWatch version (2.6 or 2.8)
         self.run_timestamp = None
     
     def record_step(self, step_num, step_name, status, message="", manual_action=False):
@@ -292,6 +293,7 @@ class RunSummary:
             'metadata': {
                 'generated_at': self.run_timestamp or datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                 'onwatch_ip': self.onwatch_ip or 'unknown',
+                'onwatch_version': getattr(self, 'onwatch_version', None),  # Version if available
                 'total_duration': self.format_duration(self.get_total_duration()),
                 'run_status': {
                     'total_steps': len(self.steps),

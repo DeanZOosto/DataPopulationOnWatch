@@ -2,6 +2,8 @@
 
 Automated tool for populating OnWatch on-premise systems with configuration and data via API.
 
+**Supports OnWatch 2.6 and 2.8** - See [VERSION_COMPATIBILITY.md](VERSION_COMPATIBILITY.md) for details.
+
 ## Quick Start
 
 ```bash
