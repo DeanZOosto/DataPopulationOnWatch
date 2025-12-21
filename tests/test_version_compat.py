@@ -124,3 +124,27 @@ class TestVersionCompat:
         detected = compat.detect_version(mock_client)
         # Should default to 2.6
         assert detected == "2.6"
+    
+    def test_find_version_in_data(self):
+        """Test recursive version search in nested data structures."""
+        compat = VersionCompat()
+        
+        # Test with version in nested dict
+        data1 = {"system": {"info": {"version": "2.8.0-0"}}}
+        result = compat._find_version_in_data(data1)
+        assert result == "2.8"
+        
+        # Test with version at top level
+        data2 = {"version": "2.8.0-0", "other": "data"}
+        result = compat._find_version_in_data(data2)
+        assert result == "2.8"
+        
+        # Test with version in list
+        data3 = [{"name": "item1"}, {"version": "2.6.1"}]
+        result = compat._find_version_in_data(data3)
+        assert result == "2.6"
+        
+        # Test with no version
+        data4 = {"other": "data", "no_version": "here"}
+        result = compat._find_version_in_data(data4)
+        assert result is None

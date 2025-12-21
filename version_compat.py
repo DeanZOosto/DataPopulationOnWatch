@@ -34,6 +34,8 @@ class VersionCompat:
         """
         Attempt to detect OnWatch version from API.
         
+        Tries multiple endpoints and searches recursively in responses.
+        
         Args:
             client_api: ClientApi instance (must be logged in)
             
@@ -43,78 +45,189 @@ class VersionCompat:
         if self._detected_version:
             return self._detected_version
         
-        # Try to detect from system settings or API info endpoint
+        logger.debug("Starting version detection...")
+        
+        # Method 1: Try /settings endpoint first (most likely - UI shows version on settings page)
         try:
-            # Try /api/info or /bt/api/info endpoint (if available)
-            try:
-                response = client_api.session.get(
-                    f"{client_api.url}/info",
-                    headers=client_api.headers
-                )
-                if response.status_code == 200:
-                    data = response.json()
-                    version_str = data.get('version', '')
-                    if version_str:
-                        detected = self._parse_version(version_str)
-                        if detected:
-                            self._detected_version = detected
-                            logger.info(f"Detected OnWatch version: {detected}")
-                            return detected
-            except Exception:
-                pass
-            
-            # Try /api/system/info or similar
-            try:
-                response = client_api.session.get(
-                    f"{client_api.url}/system/info",
-                    headers=client_api.headers
-                )
-                if response.status_code == 200:
-                    data = response.json()
-                    version_str = data.get('version', '') or data.get('systemVersion', '')
-                    if version_str:
-                        detected = self._parse_version(version_str)
-                        if detected:
-                            self._detected_version = detected
-                            logger.info(f"Detected OnWatch version: {detected}")
-                            return detected
-            except Exception:
-                pass
-            
-            # Try to infer from GraphQL schema (if available)
-            try:
-                response = client_api.session.post(
-                    f"{client_api.url}/graphql",
-                    headers=client_api.headers,
-                    json={"query": "query { __schema { queryType { name } } }"}
-                )
-                if response.status_code == 200:
-                    # If GraphQL works, likely 2.6+ (both versions support it)
-                    # Default to 2.6 if we can't determine
-                    logger.info("Could not determine exact version, defaulting to 2.6")
-                    self._detected_version = self.VERSION_2_6
-                    return self.VERSION_2_6
-            except Exception:
-                pass
-            
+            logger.debug("Trying /settings endpoint for version detection...")
+            response = client_api.session.get(
+                f"{client_api.url}/settings",
+                headers=client_api.headers
+            )
+            logger.debug(f"/settings endpoint response: {response.status_code}")
+            if response.status_code == 200:
+                data = response.json()
+                # Recursively search for version in the response
+                version_str = self._find_version_in_data(data)
+                if version_str:
+                    detected = self._parse_version(version_str)
+                    if detected:
+                        self._detected_version = detected
+                        logger.info(f"Detected OnWatch version from /settings: {detected}")
+                        return detected
+                else:
+                    logger.debug("No version found in /settings response")
         except Exception as e:
-            logger.debug(f"Version detection failed: {e}")
+            logger.debug(f"Version detection via /settings failed: {e}")
+        
+        # Method 2: Try /info endpoint
+        try:
+            logger.debug("Trying /info endpoint for version detection...")
+            response = client_api.session.get(
+                f"{client_api.url}/info",
+                headers=client_api.headers
+            )
+            logger.debug(f"/info endpoint response: {response.status_code}")
+            if response.status_code == 200:
+                data = response.json()
+                version_str = data.get('version', '') or self._find_version_in_data(data)
+                if version_str:
+                    detected = self._parse_version(version_str)
+                    if detected:
+                        self._detected_version = detected
+                        logger.info(f"Detected OnWatch version from /info: {detected}")
+                        return detected
+        except Exception as e:
+            logger.debug(f"Version detection via /info failed: {e}")
+        
+        # Method 3: Try /system/info endpoint
+        try:
+            logger.debug("Trying /system/info endpoint for version detection...")
+            response = client_api.session.get(
+                f"{client_api.url}/system/info",
+                headers=client_api.headers
+            )
+            logger.debug(f"/system/info endpoint response: {response.status_code}")
+            if response.status_code == 200:
+                data = response.json()
+                version_str = data.get('version', '') or data.get('systemVersion', '') or self._find_version_in_data(data)
+                if version_str:
+                    detected = self._parse_version(version_str)
+                    if detected:
+                        self._detected_version = detected
+                        logger.info(f"Detected OnWatch version from /system/info: {detected}")
+                        return detected
+        except Exception as e:
+            logger.debug(f"Version detection via /system/info failed: {e}")
+        
+        # Method 4: Try /version endpoint
+        try:
+            logger.debug("Trying /version endpoint for version detection...")
+            response = client_api.session.get(
+                f"{client_api.url}/version",
+                headers=client_api.headers
+            )
+            logger.debug(f"/version endpoint response: {response.status_code}")
+            if response.status_code == 200:
+                data = response.json()
+                version_str = data.get('version', '') or self._find_version_in_data(data)
+                if version_str:
+                    detected = self._parse_version(version_str)
+                    if detected:
+                        self._detected_version = detected
+                        logger.info(f"Detected OnWatch version from /version: {detected}")
+                        return detected
+        except Exception as e:
+            logger.debug(f"Version detection via /version failed: {e}")
+        
+        # Method 5: Try GraphQL query for version
+        try:
+            logger.debug("Trying GraphQL query for version detection...")
+            graphql_queries = [
+                "query { system { version } }",
+                "query { version }",
+                "query { settings { version } }",
+            ]
+            for query in graphql_queries:
+                try:
+                    response = client_api.session.post(
+                        f"{client_api.url}/graphql",
+                        headers=client_api.headers,
+                        json={"query": query}
+                    )
+                    if response.status_code == 200:
+                        result = response.json()
+                        if 'data' in result:
+                            version_str = self._find_version_in_data(result['data'])
+                            if version_str:
+                                detected = self._parse_version(version_str)
+                                if detected:
+                                    self._detected_version = detected
+                                    logger.info(f"Detected OnWatch version from GraphQL: {detected}")
+                                    return detected
+                except Exception:
+                    continue
+        except Exception as e:
+            logger.debug(f"Version detection via GraphQL failed: {e}")
         
         # Default to 2.6 if detection fails (backward compatible)
         logger.warning("Could not auto-detect OnWatch version, defaulting to 2.6")
         logger.warning("  → Set 'onwatch.version' in config.yaml to specify version explicitly")
+        logger.debug("  → Tried endpoints: /settings, /info, /system/info, /version, GraphQL")
         self._detected_version = self.VERSION_2_6
         return self.VERSION_2_6
     
     def _parse_version(self, version_str: str) -> Optional[str]:
         """Parse version string to extract major.minor version."""
-        # Try to extract version like "2.6.0" or "2.8.1" or "v2.6"
-        match = re.search(r'(\d+)\.(\d+)', str(version_str))
+        if not version_str:
+            return None
+        
+        version_str = str(version_str).strip()
+        
+        # Handle formats like "2.8.0-0", "2.8.0", "v2.8.0", "Version 2.8.0-0"
+        # Extract major.minor (e.g., "2.8" from "2.8.0-0" or "Version 2.8.0-0")
+        match = re.search(r'(\d+)\.(\d+)', version_str)
         if match:
             major, minor = match.groups()
             version = f"{major}.{minor}"
             if version in self.SUPPORTED_VERSIONS:
                 return version
+        return None
+    
+    def _find_version_in_data(self, data, max_depth=5, current_depth=0):
+        """
+        Recursively search for version strings in nested dictionaries and lists.
+        
+        Args:
+            data: Data structure to search (dict, list, or primitive)
+            max_depth: Maximum recursion depth
+            current_depth: Current recursion depth
+            
+        Returns:
+            Version string if found, None otherwise
+        """
+        if current_depth >= max_depth:
+            return None
+        
+        if isinstance(data, dict):
+            # Check common version field names first
+            for key in ['version', 'systemVersion', 'appVersion', 'onwatchVersion', 'productVersion']:
+                if key in data:
+                    value = data[key]
+                    if value and isinstance(value, str):
+                        parsed = self._parse_version(value)
+                        if parsed:
+                            logger.debug(f"Found version in field '{key}': {value} -> {parsed}")
+                            return parsed
+            
+            # Recursively search all values
+            for value in data.values():
+                result = self._find_version_in_data(value, max_depth, current_depth + 1)
+                if result:
+                    return result
+        elif isinstance(data, list):
+            # Search each item in the list
+            for item in data:
+                result = self._find_version_in_data(item, max_depth, current_depth + 1)
+                if result:
+                    return result
+        elif isinstance(data, str):
+            # Check if the string itself looks like a version
+            parsed = self._parse_version(data)
+            if parsed:
+                logger.debug(f"Found version in string: {data} -> {parsed}")
+                return parsed
+        
         return None
     
     def get_version(self, client_api=None) -> str:
