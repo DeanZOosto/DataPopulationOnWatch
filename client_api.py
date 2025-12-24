@@ -1145,44 +1145,29 @@ class ClientApi:
         """
         Get current white label settings to preserve existing values.
         Returns dict with whiteLabel fields or None if not available.
+        
+        Uses REST /bt/api/settings endpoint instead of GraphQL for better compatibility.
         """
         try:
-            graphql_url = f"{self.url}/graphql"
-            query = """
-            query {
-              settings {
-                whiteLabel {
-                  productName
-                  companyLogo
-                  sidebarLogo
-                  favicon
-                }
-              }
-            }
-            """
-            payload = {
-                "query": query
-            }
+            # Use REST endpoint instead of GraphQL (more reliable across versions)
+            settings_url = f"{self.url}/settings"
             
-            response = self.session.post(
-                graphql_url,
-                headers=self.headers,
-                json=payload
-            )
-            response.raise_for_status()
+            # Use cached settings if available
+            if self._settings_cache is None:
+                response = self.session.get(settings_url, headers=self.headers)
+                response.raise_for_status()
+                self._settings_cache = response.json()
             
-            result = response.json()
-            if 'errors' in result:
-                logger.debug(f"Could not get current white label settings: {result['errors']}")
-                return None
+            settings_data = self._settings_cache
             
-            if 'data' in result and 'settings' in result['data']:
-                return result['data']['settings'].get('whiteLabel', {})
+            # Extract whiteLabel from settings
+            if isinstance(settings_data, dict) and 'whiteLabel' in settings_data:
+                return settings_data['whiteLabel']
             
-            return None
+            return {}
         except Exception as e:
             logger.debug(f"Could not get current white label settings: {e}")
-            return None
+            return {}
     
     def get_camera_groups(self):
         """
