@@ -1638,8 +1638,57 @@ class OnWatchAutomation:
                     except Exception as e:
                         logger.warning(f"Could not configure files or start analysis: {e}")
                 
-                # Final status check - wait a moment and verify all files
-                time.sleep(RETRY_DELAY)
+                # Wait for all files to complete analysis (with timeout)
+                logger.info(f"Waiting for all {len(successful_uploads)} file(s) to complete analysis...")
+                start_wait_time = time.time()
+                max_wait_time = FILE_ANALYSIS_MAX_WAIT
+                all_done = False
+                last_status_log = 0
+                
+                while time.time() - start_wait_time < max_wait_time:
+                    try:
+                        final_case_files = self.client_api.get_inquiry_case_files(case_id)
+                        final_status_counts = {}
+                        final_files_by_status = {}
+                        for case_file in final_case_files:
+                            status = case_file.get('status', 'UNKNOWN').upper()
+                            filename = case_file.get('fileName', 'unknown')
+                            final_status_counts[status] = final_status_counts.get(status, 0) + 1
+                            if status not in final_files_by_status:
+                                final_files_by_status[status] = []
+                            final_files_by_status[status].append(filename)
+                        
+                        final_done = final_status_counts.get('DONE', 0)
+                        final_analyzing = final_status_counts.get('ANALYZING', 0)
+                        final_queued = final_status_counts.get('QUEUED', 0)
+                        final_failed = final_status_counts.get('ANALYSIS_FAILED', 0)
+                        final_total = len(final_case_files)
+                        
+                        # Log status every 10 seconds
+                        elapsed = time.time() - start_wait_time
+                        if elapsed - last_status_log >= 10:
+                            logger.info(f"  Analysis progress: {final_done}/{final_total} DONE, {final_analyzing} ANALYZING, {final_queued} QUEUED (elapsed: {int(elapsed)}s)")
+                            last_status_log = elapsed
+                        
+                        # Check if all files are done
+                        if final_done == final_total:
+                            all_done = True
+                            logger.info(f"✓ All {final_done} file(s) completed analysis successfully")
+                            break
+                        elif final_failed > 0:
+                            # Some files failed - don't wait forever
+                            logger.warning(f"⚠️  {final_failed} file(s) failed analysis - stopping wait")
+                            break
+                        
+                        # Wait before next check
+                        time.sleep(FILE_ANALYSIS_CHECK_INTERVAL)
+                        
+                    except Exception as e:
+                        logger.debug(f"Error checking analysis status: {e}")
+                        time.sleep(FILE_ANALYSIS_CHECK_INTERVAL)
+                        continue
+                
+                # Final status report
                 try:
                     final_case_files = self.client_api.get_inquiry_case_files(case_id)
                     final_status_counts = {}
@@ -1655,9 +1704,10 @@ class OnWatchAutomation:
                     final_done = final_status_counts.get('DONE', 0)
                     final_analyzing = final_status_counts.get('ANALYZING', 0)
                     final_queued = final_status_counts.get('QUEUED', 0)
+                    final_failed = final_status_counts.get('ANALYSIS_FAILED', 0)
                     final_total = len(final_case_files)
                     
-                    if final_done == final_total:
+                    if all_done or final_done == final_total:
                         logger.info(f"✓ Completed inquiry case: {inquiry_name} ({len(successful_uploads)} file(s) uploaded, all {final_done} completed analysis)")
                     elif final_done > 0 or final_analyzing > 0:
                         status_msg = f"✓ Completed inquiry case: {inquiry_name} ({len(successful_uploads)} file(s) uploaded)"
@@ -1666,6 +1716,8 @@ class OnWatchAutomation:
                             status_msg += f", {final_analyzing} ANALYZING"
                         if final_queued > 0:
                             status_msg += f", {final_queued} QUEUED"
+                        if final_failed > 0:
+                            status_msg += f", {final_failed} FAILED"
                         logger.info(status_msg)
                         
                         if final_queued > 0:
@@ -1674,6 +1726,10 @@ class OnWatchAutomation:
                                 logger.warning(f"   - {queued_file}")
                             logger.warning(f"   Please check the UI and manually start analysis if needed")
                             self.summary.add_warning(f"Inquiry '{inquiry_name}': {final_queued} file(s) are QUEUED - may need manual analysis")
+                        
+                        if final_analyzing > 0:
+                            logger.info(f"  Note: {final_analyzing} file(s) are still analyzing - they will complete in the background")
+                            self.summary.add_warning(f"Inquiry '{inquiry_name}': {final_analyzing} file(s) still analyzing - will complete in background")
                     else:
                         logger.info(f"✓ Completed inquiry case: {inquiry_name} ({len(successful_uploads)} file(s) uploaded)")
                         logger.warning(f"⚠️  File analysis status unclear - please verify in UI")
