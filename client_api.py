@@ -650,15 +650,85 @@ class ClientApi:
                 logger.error(f"Failed to create subject group '{name}': {e}")
             raise
     
-    def get_subjects(self):
-        """Get all subjects."""
+    def get_subjects(self, limit=None, offset=None, fetch_all=True):
+        """
+        Get all subjects.
+        
+        Args:
+            limit: Maximum number of subjects to return per request (for pagination)
+            offset: Offset for pagination
+            fetch_all: If True, fetch all subjects by paginating through results (default: True)
+            
+        Returns:
+            List of subjects or dict with 'items' key, depending on API response format
+        """
         try:
-            response = self.session.get(
-                f"{self.url}/subjects",
-                headers=self.headers
-            )
-            response.raise_for_status()
-            return response.json()
+            all_subjects = []
+            current_offset = offset or 0
+            page_size = limit or 100  # Default page size for pagination
+            
+            while True:
+                params = {}
+                if limit is not None or fetch_all:
+                    params['limit'] = page_size
+                    params['offset'] = current_offset
+                
+                response = self.session.get(
+                    f"{self.url}/subjects",
+                    headers=self.headers,
+                    params=params if params else None
+                )
+                response.raise_for_status()
+                data = response.json()
+                
+                # Handle different response formats
+                if isinstance(data, list):
+                    # Direct list response
+                    page_subjects = data
+                    all_subjects.extend(page_subjects)
+                    # If we got fewer than page_size, we've reached the end
+                    if not fetch_all or len(page_subjects) < page_size:
+                        break
+                    current_offset += page_size
+                elif isinstance(data, dict):
+                    # Dict response - could have 'items', 'data', or pagination info
+                    if 'items' in data:
+                        page_subjects = data['items']
+                        all_subjects.extend(page_subjects)
+                        # Check if there are more pages
+                        total = data.get('total', len(page_subjects))
+                        if not fetch_all or current_offset + len(page_subjects) >= total or len(page_subjects) < page_size:
+                            break
+                        current_offset += page_size
+                    elif 'data' in data:
+                        page_subjects = data['data'] if isinstance(data['data'], list) else [data['data']]
+                        all_subjects.extend(page_subjects)
+                        if not fetch_all or len(page_subjects) < page_size:
+                            break
+                        current_offset += page_size
+                    else:
+                        # Unknown dict format - return as-is
+                        if not fetch_all:
+                            return data
+                        # Try to extract items if possible
+                        logger.warning(f"Unexpected response format from get_subjects: {data.keys()}")
+                        break
+                else:
+                    # Unknown format - return as-is
+                    if not fetch_all:
+                        return data
+                    logger.warning(f"Unexpected response type from get_subjects: {type(data)}")
+                    break
+            
+            # Return in the same format as the original API response
+            if fetch_all and all_subjects:
+                # Return as list if we fetched all, or as dict with 'items' if original was dict
+                return all_subjects
+            elif not fetch_all:
+                return data
+            else:
+                return all_subjects if all_subjects else []
+                
         except requests.exceptions.RequestException as e:
             logger.error(f"Failed to get subjects: {e}")
             raise

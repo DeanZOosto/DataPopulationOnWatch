@@ -580,9 +580,11 @@ class OnWatchAutomation:
         skipped_count = 0
         
         # Get existing subjects to check for duplicates
+        # Use fetch_all=True to ensure we get ALL subjects (handles pagination on 2.8)
         existing_subject_names = set()
+        existing_subjects = None
         try:
-            existing_subjects = self.client_api.get_subjects()
+            existing_subjects = self.client_api.get_subjects(fetch_all=True)
             # Handle different response formats
             if isinstance(existing_subjects, list):
                 subjects_list = existing_subjects
@@ -597,9 +599,11 @@ class OnWatchAutomation:
                     if subj_name:
                         existing_subject_names.add(subj_name.lower())
             
-            logger.debug(f"Found {len(existing_subject_names)} existing subjects")
+            logger.info(f"Found {len(existing_subject_names)} existing subjects in system (for duplicate check)")
+            logger.debug(f"Existing subject names: {sorted(existing_subject_names)}")
         except Exception as e:
-            logger.debug(f"Could not fetch existing subjects for duplicate check: {e}")
+            logger.warning(f"Could not fetch existing subjects for duplicate check: {e}")
+            logger.warning("Continuing anyway - will try to add subjects and handle duplicate errors if they occur")
             # Continue anyway - will try to add and handle errors if duplicate
         
         for subject in watch_list:
@@ -645,6 +649,7 @@ class OnWatchAutomation:
                 if name.lower() in existing_subject_names:
                     # Get the actual subject to check images
                     try:
+                        # existing_subjects is already a list when fetch_all=True
                         existing_subjects_list = existing_subjects if isinstance(existing_subjects, list) else (existing_subjects.get('items', []) if isinstance(existing_subjects, dict) else [])
                         existing_subject = next((s for s in existing_subjects_list if isinstance(s, dict) and s.get('name', '').lower() == name.lower()), None)
                         
