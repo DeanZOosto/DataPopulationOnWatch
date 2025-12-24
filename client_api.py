@@ -2223,80 +2223,122 @@ class ClientApi:
     
     def _update_white_label(self, white_label_updates):
         """
-        Update white label settings via GraphQL mutation.
+        Update white label settings via REST PATCH endpoint (preferred) or GraphQL mutation (fallback).
         
         Args:
             white_label_updates: Dict with whiteLabel fields to update
                 e.g., {"productName": "...", "favicon": "...", "companyLogo": "...", "sidebarLogo": "..."}
         """
+        # Log what we're trying to update
+        logger.debug(f"Updating white label with: {white_label_updates}")
+        
+        # Try REST PATCH first (more reliable, especially for 2.8)
         try:
-            graphql_url = f"{self.url}/graphql"
-            
-            # Log what we're trying to update
-            logger.debug(f"Updating white label with: {white_label_updates}")
-            
-            # GraphQL mutation - matches what the browser sends
-            mutation = """
-            mutation updateWhiteLabel($applicationSettings: ApplicationSettingsInput) {
-              updateSettings(applicationSettings: $applicationSettings) {
-                defaultLanguage
-                whiteLabel {
-                  productName
-                  companyLogo
-                  sidebarLogo
-                  favicon
-                }
-              }
-            }
-            """
-            
+            settings_url = f"{self.url}/settings"
             payload = {
-                "operationName": "updateWhiteLabel",
-                "variables": {
-                    "applicationSettings": {
-                        "whiteLabel": white_label_updates
-                    }
-                },
-                "query": mutation
+                "whiteLabel": white_label_updates
             }
             
-            # Log the payload for debugging
-            logger.debug(f"White label GraphQL payload: {payload}")
+            logger.debug(f"Updating white label via REST PATCH: {payload}")
             
-            response = self.session.post(
-                graphql_url,
+            response = self.session.patch(
+                settings_url,
                 headers=self.headers,
                 json=payload
             )
             response.raise_for_status()
             
-            result = response.json()
-            if 'errors' in result:
-                logger.error(f"GraphQL errors for updateWhiteLabel: {result['errors']}")
-                # Log full error details
-                logger.error(f"Full error response: {result}")
-                raise Exception(f"GraphQL error: {result['errors']}")
+            # Verify the update by getting the settings back
+            verify_response = self.session.get(settings_url, headers=self.headers)
+            verify_response.raise_for_status()
+            updated_settings = verify_response.json()
             
-            # Log the response for debugging (especially for 2.8)
-            logger.debug(f"White label update response: {result}")
-            if 'data' in result and 'updateSettings' in result['data']:
-                updated_white_label = result['data']['updateSettings'].get('whiteLabel', {})
-                logger.debug(f"Updated white label settings from response: {updated_white_label}")
-                # Verify the update actually worked
-                for key, expected_value in white_label_updates.items():
-                    actual_value = updated_white_label.get(key)
-                    if actual_value != expected_value:
-                        logger.warning(f"White label field '{key}' mismatch: expected '{expected_value}', got '{actual_value}'")
-                    else:
-                        logger.debug(f"White label field '{key}' updated correctly: '{actual_value}'")
+            # Clear cache so next GET gets fresh data
+            self._settings_cache = None
             
-            return result
-        except Exception as e:
-            logger.error(f"Failed to update white label settings: {e}")
-            if hasattr(e, 'response') and e.response is not None:
-                logger.error(f"Response status: {e.response.status_code}")
-                logger.error(f"Response body: {e.response.text}")
-            raise
+            updated_white_label = updated_settings.get('whiteLabel', {})
+            logger.debug(f"Updated white label settings from REST response: {updated_white_label}")
+            
+            # Verify the update actually worked
+            for key, expected_value in white_label_updates.items():
+                actual_value = updated_white_label.get(key)
+                if actual_value != expected_value:
+                    logger.warning(f"White label field '{key}' mismatch: expected '{expected_value}', got '{actual_value}'")
+                else:
+                    logger.debug(f"White label field '{key}' updated correctly: '{actual_value}'")
+            
+            logger.info("✓ White label settings updated via REST PATCH")
+            return updated_settings
+            
+        except Exception as rest_error:
+            logger.debug(f"REST PATCH failed for white label update: {rest_error}, trying GraphQL fallback...")
+            
+            # Fallback to GraphQL mutation
+            try:
+                graphql_url = f"{self.url}/graphql"
+                
+                # GraphQL mutation - matches what the browser sends
+                mutation = """
+                mutation updateWhiteLabel($applicationSettings: ApplicationSettingsInput) {
+                  updateSettings(applicationSettings: $applicationSettings) {
+                    defaultLanguage
+                    whiteLabel {
+                      productName
+                      companyLogo
+                      sidebarLogo
+                      favicon
+                    }
+                  }
+                }
+                """
+                
+                payload = {
+                    "operationName": "updateWhiteLabel",
+                    "variables": {
+                        "applicationSettings": {
+                            "whiteLabel": white_label_updates
+                        }
+                    },
+                    "query": mutation
+                }
+                
+                # Log the payload for debugging
+                logger.debug(f"White label GraphQL payload (fallback): {payload}")
+                
+                response = self.session.post(
+                    graphql_url,
+                    headers=self.headers,
+                    json=payload
+                )
+                response.raise_for_status()
+                
+                result = response.json()
+                if 'errors' in result:
+                    logger.error(f"GraphQL errors for updateWhiteLabel: {result['errors']}")
+                    # Log full error details
+                    logger.error(f"Full error response: {result}")
+                    raise Exception(f"GraphQL error: {result['errors']}")
+                
+                # Log the response for debugging
+                logger.debug(f"White label update response (GraphQL): {result}")
+                if 'data' in result and 'updateSettings' in result['data']:
+                    updated_white_label = result['data']['updateSettings'].get('whiteLabel', {})
+                    logger.debug(f"Updated white label settings from GraphQL response: {updated_white_label}")
+                    # Verify the update actually worked
+                    for key, expected_value in white_label_updates.items():
+                        actual_value = updated_white_label.get(key)
+                        if actual_value != expected_value:
+                            logger.warning(f"White label field '{key}' mismatch: expected '{expected_value}', got '{actual_value}'")
+                        else:
+                            logger.debug(f"White label field '{key}' updated correctly: '{actual_value}'")
+                
+                logger.info("✓ White label settings updated via GraphQL (fallback)")
+                return result
+            except Exception as graphql_error:
+                logger.error(f"Both REST PATCH and GraphQL failed for white label update")
+                logger.error(f"REST error: {rest_error}")
+                logger.error(f"GraphQL error: {graphql_error}")
+                raise Exception(f"Failed to update white label settings via both REST and GraphQL: REST={rest_error}, GraphQL={graphql_error}")
     
     def _get_kv_parameter_via_rest(self, key):
         """
