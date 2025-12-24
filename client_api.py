@@ -685,8 +685,15 @@ class ClientApi:
                     data = response.json()
                     
                     # Handle response format
+                    # On 2.8, response is: {"items": [{"subject": {...}, "score": null}, ...]}
                     if isinstance(data, list):
-                        page_subjects = data
+                        # Direct list - extract subjects from nested structure
+                        page_subjects = []
+                        for item in data:
+                            if isinstance(item, dict) and 'subject' in item:
+                                page_subjects.append(item['subject'])
+                            elif isinstance(item, dict):
+                                page_subjects.append(item)
                         all_subjects.extend(page_subjects)
                         # If we got fewer than page_size, we've reached the end
                         if not fetch_all or len(page_subjects) < page_size:
@@ -694,7 +701,14 @@ class ClientApi:
                         current_offset += page_size
                     elif isinstance(data, dict):
                         if 'items' in data:
-                            page_subjects = data['items']
+                            # Extract subjects from nested structure: items[].subject
+                            page_items = data['items']
+                            page_subjects = []
+                            for item in page_items:
+                                if isinstance(item, dict) and 'subject' in item:
+                                    page_subjects.append(item['subject'])
+                                elif isinstance(item, dict):
+                                    page_subjects.append(item)
                             all_subjects.extend(page_subjects)
                             # Check if there are more pages
                             total = data.get('total', len(page_subjects))
@@ -702,7 +716,17 @@ class ClientApi:
                                 break
                             current_offset += page_size
                         elif 'data' in data:
-                            page_subjects = data['data'] if isinstance(data['data'], list) else [data['data']]
+                            page_data = data['data']
+                            if isinstance(page_data, list):
+                                # Extract subjects from nested structure
+                                page_subjects = []
+                                for item in page_data:
+                                    if isinstance(item, dict) and 'subject' in item:
+                                        page_subjects.append(item['subject'])
+                                    elif isinstance(item, dict):
+                                        page_subjects.append(item)
+                            else:
+                                page_subjects = [page_data.get('subject', page_data) if isinstance(page_data, dict) else page_data]
                             all_subjects.extend(page_subjects)
                             if not fetch_all or len(page_subjects) < page_size:
                                 break
