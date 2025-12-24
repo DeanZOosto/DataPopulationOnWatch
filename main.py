@@ -91,10 +91,12 @@ class OnWatchAutomation:
             Exception: If authentication fails or connection cannot be established
         """
         onwatch_config = self.config['onwatch']
-        # Get version from config (optional - will auto-detect if not specified)
+        # Get version from config (required)
         version = onwatch_config.get('version')
-        if version:
-            logger.info(f"Using OnWatch version from config: {version}")
+        if not version:
+            raise ValueError("OnWatch version is required. Set 'onwatch.version' in config.yaml (e.g., '2.6' or '2.8')")
+        
+        logger.info(f"Using OnWatch version from config: {version}")
         
         self.client_api = ClientApi(
             ip_address=onwatch_config['ip_address'],
@@ -104,9 +106,8 @@ class OnWatchAutomation:
         )
         self.client_api.login()
         
-        # Log detected/configured version and store in summary
-        detected_version = self.client_api.version_compat.get_version(self.client_api)
-        self.summary.onwatch_version = detected_version
+        # Store version in summary
+        self.summary.onwatch_version = version
         logger.info(f"API client initialized and logged in (OnWatch {detected_version})")
     
     async def set_kv_parameters(self):

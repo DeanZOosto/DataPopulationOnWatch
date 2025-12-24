@@ -4,24 +4,11 @@ This project supports both **OnWatch 2.6** and **OnWatch 2.8** systems.
 
 ## Overview
 
-The automation tool automatically detects the OnWatch version or can be configured manually. Most functionality works identically across both versions, but some API endpoints and behaviors may differ.
+The automation tool requires you to manually specify the OnWatch version in `config.yaml`. Most functionality works identically across both versions, but some API endpoints and behaviors may differ.
 
-## Version Detection
+## Version Configuration (Required)
 
-### Automatic Detection (Recommended)
-
-The tool will automatically detect the OnWatch version after login by querying the API:
-
-```bash
-python3 main.py
-# Output: API client initialized and logged in (OnWatch 2.6)
-# or
-# Output: API client initialized and logged in (OnWatch 2.8)
-```
-
-### Manual Configuration
-
-If auto-detection fails or you want to specify the version explicitly, add it to `config.yaml`:
+**You must specify the OnWatch version in `config.yaml`:**
 
 ```yaml
 onwatch:
@@ -29,8 +16,15 @@ onwatch:
   username: "Administrator"
   password: "pa$$word!"
   base_url: "https://10.1.71.14"
-  version: "2.8"  # Specify "2.6" or "2.8"
+  version: "2.8"  # Required: Specify "2.6" or "2.8"
 ```
+
+**Important:** The version field is **required**. The tool will raise an error if version is not specified.
+
+To determine your OnWatch version:
+- Check the UI (usually shown in Settings page or About section)
+- Look for version string like "Version 2.8.0-0" or "Version 2.6.5"
+- Use the major.minor version (e.g., "2.8" or "2.6")
 
 ## Supported Versions
 
@@ -66,10 +60,6 @@ Inquiry case priorities use the same mapping for both versions:
 ### For OnWatch 2.6
 
 ```bash
-# Option 1: Let it auto-detect
-python3 main.py
-
-# Option 2: Specify explicitly
 # Edit config.yaml: version: "2.6"
 python3 main.py
 ```
@@ -77,10 +67,6 @@ python3 main.py
 ### For OnWatch 2.8
 
 ```bash
-# Option 1: Let it auto-detect
-python3 main.py
-
-# Option 2: Specify explicitly
 # Edit config.yaml: version: "2.8"
 python3 main.py
 ```
@@ -101,24 +87,24 @@ Some endpoints may be available in one version but not the other. The tool grace
 
 ## Troubleshooting
 
-### Version Detection Fails
+### Version Not Specified
 
-**Symptom:** Tool defaults to 2.6 even on 2.8 system
+**Symptom:** Error: "OnWatch version is required. Set 'onwatch.version' in config.yaml"
 
 **Solution:**
-1. Manually specify version in `config.yaml`:
+1. Add version to `config.yaml`:
    ```yaml
    onwatch:
-     version: "2.8"
+     version: "2.8"  # or "2.6"
    ```
-2. Check API connectivity (version detection requires API access)
+2. Determine your OnWatch version from the UI (Settings or About page)
 
 ### API Calls Fail on 2.8
 
 **Symptom:** Errors like "Endpoint not found" or "GraphQL error"
 
 **Solution:**
-1. Verify version is correctly detected/specified
+1. Verify version is correctly specified in `config.yaml`
 2. Check if endpoint exists in 2.8 (may have changed)
 3. Run with `--verbose` to see detailed API calls
 4. Report the issue with version and error details
@@ -146,11 +132,19 @@ metadata:
 
 This helps ensure validation uses the correct version-specific logic.
 
-## Backward Compatibility
+## Migration from Previous Versions
 
-- **Default behavior**: If version is not specified, defaults to 2.6 (backward compatible)
-- **Auto-detection**: Attempts to detect version but falls back to 2.6 if detection fails
-- **Existing configs**: Work without modification (version is optional)
+If you're upgrading from a version that had auto-detection:
+
+1. **Add version to config.yaml** - This is now required:
+   ```yaml
+   onwatch:
+     version: "2.6"  # or "2.8"
+   ```
+
+2. **Determine your OnWatch version** - Check the UI or system documentation
+
+3. **Update all config files** - Ensure version is set in any config files you use
 
 ## Contributing Version-Specific Fixes
 

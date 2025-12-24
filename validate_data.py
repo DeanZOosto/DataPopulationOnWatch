@@ -56,10 +56,12 @@ class DataValidator:
     def initialize_api_client(self):
         """Initialize and authenticate with OnWatch API."""
         onwatch_config = self.config['onwatch']
-        # Get version from config (optional - will auto-detect if not specified)
+        # Get version from config (required)
         version = onwatch_config.get('version')
-        if version:
-            logger.info(f"Using OnWatch version from config: {version}")
+        if not version:
+            raise ValueError("OnWatch version is required. Set 'onwatch.version' in config.yaml (e.g., '2.6' or '2.8')")
+        
+        logger.info(f"Using OnWatch version from config: {version}")
         
         self.client_api = ClientApi(
             ip_address=onwatch_config['ip_address'],
@@ -70,7 +72,7 @@ class DataValidator:
         self.client_api.login()
         
         # Log detected/configured version
-        detected_version = self.client_api.version_compat.get_version(self.client_api)
+        detected_version = self.client_api.version_compat.get_version()
         logger.info(f"✓ Connected to OnWatch API (OnWatch {detected_version})")
     
     def initialize_rancher_api(self):

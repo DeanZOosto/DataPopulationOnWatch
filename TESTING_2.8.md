@@ -23,12 +23,10 @@ python3 main.py --set-ip YOUR_2.8_IP_ADDRESS
 # Update: onwatch.ip_address, onwatch.base_url, ssh.ip_address, rancher.base_url
 ```
 
-**Important:** For initial testing, you can either:
-- **Option A:** Let it auto-detect version (recommended for first test)
-- **Option B:** Explicitly set version in config.yaml:
+**Important:** You must set the version in config.yaml:
   ```yaml
   onwatch:
-    version: "2.8"  # Uncomment and set this
+    version: "2.8"  # Required: Set to "2.6" or "2.8"
   ```
 
 ### Step 2: Validate Configuration
@@ -39,18 +37,18 @@ python3 main.py --validate
 
 This ensures your config is valid before running.
 
-### Step 3: Test Version Detection (Dry Run)
+### Step 3: Verify Version Configuration (Dry Run)
 
-Run with verbose mode to see version detection:
+Run with verbose mode to verify version is set correctly:
 
 ```bash
 python3 main.py --verbose --dry-run
 ```
 
 Look for:
-- `Using OnWatch version from config: 2.8` (if manually set)
-- `Detected OnWatch version: 2.8` (if auto-detected)
-- `API client initialized and logged in (OnWatch 2.8)`
+- `Using OnWatch version from config: 2.8`
+- `OnWatch version: 2.8`
+- `API client initialized and logged in`
 
 ### Step 4: Test a Single Step First
 
@@ -251,13 +249,14 @@ python3 validate_data.py $(ls -t onwatch_data_export_*.yaml | head -1) --verbose
 
 ## Expected Behavior
 
-### On First Run (Auto-Detection)
+### On First Run (Version Configuration)
 
 ```
 [Step 1/11] Initializing API client...
-Detected OnWatch version: 2.8
+Using OnWatch version from config: 2.8
 ✓ Successfully logged in to the OnWatch server at IP: YOUR_IP
-API client initialized and logged in (OnWatch 2.8)
+OnWatch version: 2.8
+API client initialized and logged in
 ```
 
 ### In Export File

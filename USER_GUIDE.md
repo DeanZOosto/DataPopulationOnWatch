@@ -2,7 +2,7 @@
 
 Automated tool for populating OnWatch on-premise systems with configuration and data via API.
 
-**Supports OnWatch 2.6 and 2.8** - Version is auto-detected or can be specified in config.yaml. See [VERSION_COMPATIBILITY.md](VERSION_COMPATIBILITY.md) for version-specific details.
+**Supports OnWatch 2.6 and 2.8** - Version must be manually specified in config.yaml. See [VERSION_COMPATIBILITY.md](VERSION_COMPATIBILITY.md) for version-specific details.
 
 ## Prerequisites
 
@@ -43,7 +43,7 @@ pip3 install -r requirements.txt
 
 ### Step 2: Configure
 
-**Note:** The tool supports both OnWatch 2.6 and 2.8. Version is auto-detected after login, or you can specify it in config.yaml (see [VERSION_COMPATIBILITY.md](VERSION_COMPATIBILITY.md)).
+**Note:** The tool supports both OnWatch 2.6 and 2.8. You must specify the version in config.yaml (see [VERSION_COMPATIBILITY.md](VERSION_COMPATIBILITY.md)).
 
 #### Option A: Quick IP Configuration (Recommended)
 

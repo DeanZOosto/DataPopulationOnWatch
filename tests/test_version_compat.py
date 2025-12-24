@@ -24,23 +24,19 @@ class TestVersionCompat:
         assert compat.is_version_2_6() is False
     
     def test_initialization_without_version(self):
-        """Test initializing without version (auto-detect)."""
-        compat = VersionCompat()
-        assert compat.version is None
-        # Should default to 2.6 when no client_api provided
-        assert compat.get_version() == "2.6"
+        """Test initializing without version raises error."""
+        with pytest.raises((TypeError, ValueError), match="version"):
+            VersionCompat()
     
-    def test_version_parsing(self):
-        """Test version string parsing."""
-        compat = VersionCompat()
-        
-        # Test various version string formats
-        assert compat._parse_version("2.6.0") == "2.6"
-        assert compat._parse_version("2.8.1") == "2.8"
-        assert compat._parse_version("v2.6") == "2.6"
-        assert compat._parse_version("OnWatch 2.8.0") == "2.8"
-        assert compat._parse_version("invalid") is None
-        assert compat._parse_version("3.0") is None  # Not supported
+    def test_initialization_with_invalid_version(self):
+        """Test initializing with invalid version raises error."""
+        with pytest.raises(ValueError, match="Unsupported OnWatch version"):
+            VersionCompat(version="3.0")
+    
+    def test_initialization_with_empty_version(self):
+        """Test initializing with empty version raises error."""
+        with pytest.raises(ValueError, match="version is required"):
+            VersionCompat(version="")
     
     def test_get_api_base_path(self):
         """Test API base path is consistent across versions."""
@@ -89,62 +85,10 @@ class TestVersionCompat:
         assert "medium" in mapping
         assert "high" in mapping
     
-    def test_version_detection_with_mock(self):
-        """Test version detection with mocked API."""
-        compat = VersionCompat()
+    def test_get_version(self):
+        """Test getting version."""
+        compat_26 = VersionCompat(version="2.6")
+        compat_28 = VersionCompat(version="2.8")
         
-        # Create mock client_api
-        mock_client = Mock()
-        mock_client.session = Mock()
-        mock_client.url = "https://10.1.1.1/bt/api"
-        mock_client.headers = {}
-        
-        # Mock successful version detection
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {"version": "2.8.0"}
-        mock_client.session.get.return_value = mock_response
-        
-        detected = compat.detect_version(mock_client)
-        assert detected == "2.8"
-    
-    def test_version_detection_fallback(self):
-        """Test version detection falls back to default."""
-        compat = VersionCompat()
-        
-        # Create mock client_api that fails detection
-        mock_client = Mock()
-        mock_client.session = Mock()
-        mock_client.url = "https://10.1.1.1/bt/api"
-        mock_client.headers = {}
-        
-        # Mock failed detection
-        mock_client.session.get.side_effect = Exception("Connection failed")
-        
-        detected = compat.detect_version(mock_client)
-        # Should default to 2.6
-        assert detected == "2.6"
-    
-    def test_find_version_in_data(self):
-        """Test recursive version search in nested data structures."""
-        compat = VersionCompat()
-        
-        # Test with version in nested dict
-        data1 = {"system": {"info": {"version": "2.8.0-0"}}}
-        result = compat._find_version_in_data(data1)
-        assert result == "2.8"
-        
-        # Test with version at top level
-        data2 = {"version": "2.8.0-0", "other": "data"}
-        result = compat._find_version_in_data(data2)
-        assert result == "2.8"
-        
-        # Test with version in list
-        data3 = [{"name": "item1"}, {"version": "2.6.1"}]
-        result = compat._find_version_in_data(data3)
-        assert result == "2.6"
-        
-        # Test with no version
-        data4 = {"other": "data", "no_version": "here"}
-        result = compat._find_version_in_data(data4)
-        assert result is None
+        assert compat_26.get_version() == "2.6"
+        assert compat_28.get_version() == "2.8"

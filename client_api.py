@@ -53,8 +53,14 @@ class ClientApi:
             ip_address: IP address of the OnWatch system
             username: Username for authentication
             password: Password for authentication
-            version: OnWatch version ("2.6" or "2.8"). If None, will auto-detect after login.
+            version: OnWatch version ("2.6" or "2.8"). Required.
+            
+        Raises:
+            ValueError: If version is not provided or not supported.
         """
+        if not version:
+            raise ValueError("OnWatch version is required. Set 'onwatch.version' in config.yaml (e.g., '2.6' or '2.8')")
+        
         self.ip_address = ip_address
         self.username = username
         self.password = password
@@ -70,9 +76,8 @@ class ClientApi:
             urllib3.disable_warnings(InsecureRequestWarning)
         self._settings_cache = None  # Cache for /settings endpoint response
         
-        # Initialize version compatibility (will auto-detect after login if not specified)
+        # Initialize version compatibility
         self.version_compat = VersionCompat(version=version)
-        self._version_detected = False
         
     def login(self):
         """Login to the OnWatch system and set authentication headers."""
@@ -97,16 +102,8 @@ class ClientApi:
             # Update session headers
             self.session.headers.update(self.headers)
             
-            # Auto-detect version after successful login (if not already set)
-            if not self.version_compat.version and not self._version_detected:
-                try:
-                    detected_version = self.version_compat.detect_version(self)
-                    logger.info(f"OnWatch version: {detected_version}")
-                    self._version_detected = True
-                except Exception as e:
-                    logger.debug(f"Version detection failed (will use default): {e}")
-            
             logger.info(f"Successfully logged in to the OnWatch server at IP: {self.ip_address}")
+            logger.info(f"OnWatch version: {self.version_compat.get_version()}")
             return response
             
         except requests.exceptions.RequestException as e:
