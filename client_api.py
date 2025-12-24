@@ -2232,6 +2232,9 @@ class ClientApi:
         try:
             graphql_url = f"{self.url}/graphql"
             
+            # Log what we're trying to update
+            logger.debug(f"Updating white label with: {white_label_updates}")
+            
             # GraphQL mutation - matches what the browser sends
             mutation = """
             mutation updateWhiteLabel($applicationSettings: ApplicationSettingsInput) {
@@ -2257,6 +2260,9 @@ class ClientApi:
                 "query": mutation
             }
             
+            # Log the payload for debugging
+            logger.debug(f"White label GraphQL payload: {payload}")
+            
             response = self.session.post(
                 graphql_url,
                 headers=self.headers,
@@ -2267,11 +2273,29 @@ class ClientApi:
             result = response.json()
             if 'errors' in result:
                 logger.error(f"GraphQL errors for updateWhiteLabel: {result['errors']}")
+                # Log full error details
+                logger.error(f"Full error response: {result}")
                 raise Exception(f"GraphQL error: {result['errors']}")
+            
+            # Log the response for debugging (especially for 2.8)
+            logger.debug(f"White label update response: {result}")
+            if 'data' in result and 'updateSettings' in result['data']:
+                updated_white_label = result['data']['updateSettings'].get('whiteLabel', {})
+                logger.debug(f"Updated white label settings from response: {updated_white_label}")
+                # Verify the update actually worked
+                for key, expected_value in white_label_updates.items():
+                    actual_value = updated_white_label.get(key)
+                    if actual_value != expected_value:
+                        logger.warning(f"White label field '{key}' mismatch: expected '{expected_value}', got '{actual_value}'")
+                    else:
+                        logger.debug(f"White label field '{key}' updated correctly: '{actual_value}'")
             
             return result
         except Exception as e:
             logger.error(f"Failed to update white label settings: {e}")
+            if hasattr(e, 'response') and e.response is not None:
+                logger.error(f"Response status: {e.response.status_code}")
+                logger.error(f"Response body: {e.response.text}")
             raise
     
     def _get_kv_parameter_via_rest(self, key):
