@@ -1589,12 +1589,58 @@ class OnWatchAutomation:
                                 if files_with_custom_settings:
                                     time.sleep(0.5)
                                 
-                                self.client_api.start_analyze_files_case(case_id, all_file_ids)
-                                logger.info(f"✓ Started/verified analysis for all {len(all_file_ids)} file(s)")
+                                # Try to start all files together first
+                                try:
+                                    self.client_api.start_analyze_files_case(case_id, all_file_ids)
+                                    logger.info(f"✓ Started/verified analysis for all {len(all_file_ids)} file(s)")
+                                except Exception as batch_error:
+                                    # Check if it's the "ERR_FAILED_TO_UPDATE_PROGRESS" error - this is often non-critical
+                                    error_str = str(batch_error).lower()
+                                    if 'err_failed_to_update_progress' in error_str or "couldn't toggle enable" in error_str:
+                                        logger.debug(f"Batch analysis start returned expected error (files may already be analyzing): {batch_error}")
+                                    else:
+                                        logger.debug(f"Batch analysis start error: {batch_error}")
                                 
                                 # Brief wait and re-check status
                                 time.sleep(FILE_STATUS_CHECK_DELAY)
                                 case_files = self.client_api.get_inquiry_case_files(case_id)
+                                
+                                # Check which files didn't start analyzing and retry individually
+                                files_not_started = []
+                                for case_file in case_files:
+                                    file_id = case_file.get('cameraId')
+                                    filename = case_file.get('fileName', 'unknown')
+                                    status = case_file.get('status', '').upper()
+                                    if file_id and status not in ['ANALYZING', 'DONE']:
+                                        files_not_started.append((file_id, filename))
+                                
+                                # Retry starting analysis individually for files that didn't start
+                                if files_not_started:
+                                    logger.info(f"Retrying analysis start for {len(files_not_started)} file(s) individually...")
+                                    for file_id, filename in files_not_started:
+                                        try:
+                                            # Refresh file state first
+                                            try:
+                                                self.client_api.get_file_media_data(file_id)
+                                                time.sleep(0.3)  # Brief delay
+                                            except Exception:
+                                                pass  # Non-critical
+                                            
+                                            # Start analysis for this file individually
+                                            self.client_api.start_analyze_files_case(case_id, [file_id])
+                                            logger.info(f"✓ Started analysis for {filename}")
+                                            time.sleep(0.3)  # Brief delay between individual starts
+                                        except Exception as individual_error:
+                                            error_str = str(individual_error).lower()
+                                            if 'err_failed_to_update_progress' in error_str or "couldn't toggle enable" in error_str:
+                                                logger.debug(f"Individual start for {filename} returned expected error: {individual_error}")
+                                            else:
+                                                logger.warning(f"Failed to start analysis for {filename}: {individual_error}")
+                                    
+                                    # Final check after individual retries
+                                    time.sleep(FILE_STATUS_CHECK_DELAY)
+                                    case_files = self.client_api.get_inquiry_case_files(case_id)
+                                
                             except Exception as start_error:
                                 # Check if it's the "ERR_FAILED_TO_UPDATE_PROGRESS" error - this is often non-critical
                                 error_str = str(start_error).lower()
