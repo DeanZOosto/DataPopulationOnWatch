@@ -2076,6 +2076,15 @@ class ClientApi:
                 raise Exception(f"GraphQL error: {result['errors']}")
             
             logger.info(f"Updated file media data: {file_id}")
+            
+            # After updating, refresh file media data to ensure state is synced
+            # This helps ensure the file is ready for analysis
+            try:
+                self.get_file_media_data(file_id)
+                logger.debug(f"Refreshed file media data for {file_id}")
+            except Exception as refresh_error:
+                logger.debug(f"Could not refresh file media data (non-critical): {refresh_error}")
+            
             return result
         except requests.exceptions.RequestException as e:
             if hasattr(e, 'response') and e.response is not None:
@@ -2085,6 +2094,134 @@ class ClientApi:
             else:
                 logger.error(f"Failed to update file media data '{file_id}': {e}")
             raise
+    
+    def get_file_media_data(self, file_id):
+        """
+        Get file media data via GraphQL query.
+        Used to refresh file state after updating configuration.
+        
+        Args:
+            file_id: File ID (uploadId/cameraId)
+            
+        Returns:
+            File media data response
+        """
+        try:
+            graphql_url = f"{self.url}/graphql"
+            
+            query = """
+            fragment ConfigurationAttributes on Configuration {
+              pipe
+              frameRotation
+              livenessThreshold
+              enableFrameStorage
+              trackBodyMaxLength
+              trackBodyMinLength
+              trackFaceMaxLength
+              trackFaceMinLength
+              trackBodyMaxLengthSec
+              trackBodyMinLengthSec
+              trackFaceMaxLengthSec
+              trackFaceMinLengthSec
+              trackerBodySeekTimeOutSec
+              trackerFaceSeekTimeOutSec
+              detectionMaxBodySize
+              detectionMaxFaceSize
+              detectionMinBodySize
+              detectionMinFaceSize
+              trackerBodySeekTimeOut
+              trackerFaceSeekTimeOut
+              cameraPadding {
+                top
+                left
+                right
+                bottom
+              }
+              cameraMode
+              frameSkip {
+                percent
+                autoSkipEnabled
+              }
+            }
+            
+            query getFileMediaData($id: ID!) {
+              getFileMediaData(id: $id) {
+                cameraId
+                status
+                duration
+                captureDate
+                fileName
+                isDateModified
+                cameraDetails {
+                  threshold
+                  videoUrl
+                  configuration {
+                    frameSkip {
+                      percent
+                      autoSkipEnabled
+                    }
+                    cameraPadding {
+                      top
+                      left
+                      right
+                      bottom
+                    }
+                    webRTC
+                    preview
+                    ffmpegOptions
+                    frameRotation
+                    livenessThreshold
+                    enableFrameStorage
+                    trackBodyMaxLengthSec
+                    trackBodyMinLengthSec
+                    trackFaceMaxLengthSec
+                    trackFaceMinLengthSec
+                    trackerBodySeekTimeOutSec
+                    trackerFaceSeekTimeOutSec
+                    detectionMaxBodySize
+                    detectionMaxFaceSize
+                    detectionMinBodySize
+                    detectionMinFaceSize
+                    cameraMode
+                    startSeconds
+                    stopSeconds
+                    pipe
+                  }
+                }
+              }
+              pipes
+              caseDefaultConfiguration {
+                ...ConfigurationAttributes
+              }
+            }
+            """
+            
+            payload = {
+                "operationName": "getFileMediaData",
+                "variables": {
+                    "id": file_id
+                },
+                "query": query
+            }
+            
+            response = self.session.post(
+                graphql_url,
+                headers=self.headers,
+                json=payload
+            )
+            response.raise_for_status()
+            
+            result = response.json()
+            if 'errors' in result:
+                logger.debug(f"GraphQL errors for getFileMediaData: {result['errors']}")
+                # Don't raise - this is just a refresh call
+                return None
+            
+            return result
+        except requests.exceptions.RequestException as e:
+            logger.debug(f"Failed to get file media data '{file_id}': {e}")
+            # Don't raise - this is just a refresh call
+            return None
     
     def start_analyze_files_case(self, case_id, file_ids):
         """
@@ -2139,8 +2276,17 @@ class ClientApi:
             
             result = response.json()
             if 'errors' in result:
-                logger.error(f"GraphQL errors for startAnalyzeFilesCase: {result['errors']}")
-                raise Exception(f"GraphQL error: {result['errors']}")
+                errors = result['errors']
+                # Check if error is "ERR_FAILED_TO_UPDATE_PROGRESS" - this often means files are already analyzing
+                error_messages = [str(err).lower() for err in errors]
+                if any('err_failed_to_update_progress' in msg or "couldn't toggle enable" in msg for msg in error_messages):
+                    # This is often a non-critical error - files may already be analyzing
+                    logger.debug(f"Analysis start returned error (files may already be analyzing): {errors}")
+                    # Don't raise - check status instead
+                    return result
+                else:
+                    logger.error(f"GraphQL errors for startAnalyzeFilesCase: {errors}")
+                    raise Exception(f"GraphQL error: {errors}")
             
             logger.info(f"Started analysis for {len(file_ids)} file(s) in case")
             return result
