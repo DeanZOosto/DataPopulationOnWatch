@@ -108,7 +108,7 @@ class OnWatchAutomation:
         
         # Store version in summary
         self.summary.onwatch_version = version
-        logger.info(f"API client initialized and logged in (OnWatch {detected_version})")
+        logger.info(f"API client initialized and logged in (OnWatch {version})")
     
     async def set_kv_parameters(self):
         """
