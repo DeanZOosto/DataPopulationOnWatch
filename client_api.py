@@ -818,30 +818,32 @@ class ClientApi:
             # GraphQL mutation endpoint
             graphql_url = f"{self.url}/graphql"  # This will be /bt/api/graphql
             
-            # Get version-specific mutation (or use default)
-            try:
-                mutation = self.version_compat.get_graphql_mutation_for_kv()
-                # Parse mutation to extract operation name and structure
-                # For now, use the standard mutation format
-                mutation_query = mutation.strip()
-            except Exception:
-                # Fallback to default mutation
-                mutation_query = None
+            # Get version-specific mutation
+            mutation_query = self.version_compat.get_graphql_mutation_for_kv().strip()
             
-            # Default GraphQL mutation - matches what the browser sends
-            if not mutation_query:
-                mutation_query = "mutation updateSingleSetting($settingInput: KeyValueSettingInput!) {\n  updateSingleSetting(settingInput: $settingInput) {\n    code\n  }\n}\n"
-            
-            payload = {
-                "operationName": "updateSingleSetting",
-                "variables": {
-                    "settingInput": {
+            # Build payload based on version
+            if self.version_compat.is_version_2_8():
+                # OnWatch 2.8 uses KeyValueSettingInput object
+                payload = {
+                    "operationName": "updateSingleSetting",
+                    "variables": {
+                        "settingInput": {
+                            "key": key,
+                            "value": str(value)  # Convert to string as API expects
+                        }
+                    },
+                    "query": mutation_query
+                }
+            else:
+                # OnWatch 2.6 uses separate key and value parameters
+                payload = {
+                    "operationName": "updateSingleSetting",
+                    "variables": {
                         "key": key,
                         "value": str(value)  # Convert to string as API expects
-                    }
-                },
-                "query": mutation_query
-            }
+                    },
+                    "query": mutation_query
+                }
             
             response = self.session.post(
                 graphql_url,

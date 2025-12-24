@@ -97,16 +97,21 @@ class VersionCompat:
         Returns:
             GraphQL mutation string
         """
-        # Both versions use the same mutation currently
-        # This can be version-specific if needed
-        return """
-        mutation updateSingleSetting($key: String!, $value: String!) {
-          updateSingleSetting(key: $key, value: $value) {
-            key
-            value
-          }
-        }
-        """
+        if self.is_version_2_8():
+            # OnWatch 2.8 uses KeyValueSettingInput object
+            return """mutation updateSingleSetting($settingInput: KeyValueSettingInput!) {
+  updateSingleSetting(settingInput: $settingInput) {
+    code
+  }
+}"""
+        else:
+            # OnWatch 2.6 uses separate key and value parameters
+            return """mutation updateSingleSetting($key: String!, $value: String!) {
+  updateSingleSetting(key: $key, value: $value) {
+    key
+    value
+  }
+}"""
     
     def get_graphql_query_patterns_for_kv(self) -> List[Dict[str, str]]:
         """
