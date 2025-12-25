@@ -2042,12 +2042,19 @@ class OnWatchAutomation:
                 logger.error("Translation file upload requires SSH configuration")
                 return
             
-            # Validate SSH config
-            required_ssh_fields = ['ip_address', 'username', 'translation_util_path']
+            # Validate SSH config (translation_util_path is optional - will auto-detect if not provided)
+            required_ssh_fields = ['ip_address', 'username']
             missing_fields = [field for field in required_ssh_fields if not ssh_config.get(field)]
             if missing_fields:
                 logger.error(f"Missing required SSH configuration fields: {', '.join(missing_fields)}")
                 return
+            
+            # translation_util_path is optional - will auto-detect if not provided
+            translation_util_path = ssh_config.get('translation_util_path')
+            if translation_util_path:
+                logger.info(f"Using configured translation-util path: {translation_util_path}")
+            else:
+                logger.info("No translation_util_path configured - will auto-detect from device")
             
             # Get project root for resolving relative paths
             project_root = os.path.dirname(os.path.abspath(__file__))
@@ -2090,7 +2097,7 @@ class OnWatchAutomation:
                 
                 success = ssh_util.upload_translation_file(
                     local_file_path=local_file_path,
-                    translation_util_path=ssh_config['translation_util_path'],
+                    translation_util_path=translation_util_path,
                     sudo_password=sudo_password
                 )
                 

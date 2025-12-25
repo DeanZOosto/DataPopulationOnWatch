@@ -170,7 +170,64 @@ class SSHUtil:
             logger.error(f"SSH error: {e}")
             return False, "", str(e)
     
-    def upload_translation_file(self, local_file_path, translation_util_path, sudo_password=None):
+    def find_ansible_installer_directory(self, sudo_password=None):
+        """
+        Auto-detect the ansible-installer directory on the device.
+        Lists /opt/ and finds the latest directory matching ansible-installer-*.
+        
+        Args:
+            sudo_password: Password for sudo (if needed)
+        
+        Returns:
+            Path to support-scripts directory, or None if not found
+        """
+        try:
+            ssh = paramiko.SSHClient()
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            
+            # Connect to SSH
+            if self.ssh_key_path and os.path.exists(self.ssh_key_path):
+                ssh.connect(
+                    self.ip_address,
+                    username=self.username,
+                    key_filename=self.ssh_key_path,
+                    timeout=30
+                )
+            else:
+                if not self.password:
+                    logger.error("SSH password is required for auto-detection")
+                    return None
+                ssh.connect(
+                    self.ip_address,
+                    username=self.username,
+                    password=self.password,
+                    timeout=30
+                )
+            
+            # List /opt/ directories matching ansible-installer-*
+            stdin, stdout, stderr = ssh.exec_command("ls -d /opt/ansible-installer-* 2>/dev/null | sort -V | tail -1")
+            exit_status = stdout.channel.recv_exit_status()
+            
+            if exit_status == 0:
+                ansible_dir = stdout.read().decode('utf-8').strip()
+                if ansible_dir:
+                    support_scripts_path = os.path.join(ansible_dir, 'support-scripts')
+                    # Verify the directory exists
+                    stdin, stdout, stderr = ssh.exec_command(f"test -d {support_scripts_path} && echo 'exists'")
+                    if stdout.read().decode('utf-8').strip() == 'exists':
+                        logger.info(f"Auto-detected ansible-installer directory: {ansible_dir}")
+                        ssh.close()
+                        return support_scripts_path
+            
+            ssh.close()
+            logger.warning("Could not auto-detect ansible-installer directory in /opt/")
+            return None
+            
+        except Exception as e:
+            logger.debug(f"Error auto-detecting ansible-installer directory: {e}")
+            return None
+    
+    def upload_translation_file(self, local_file_path, translation_util_path=None, sudo_password=None):
         """
         Upload translation file to device via SSH/SCP.
         
@@ -181,7 +238,7 @@ class SSHUtil:
         
         Args:
             local_file_path: Local path to translation file
-            translation_util_path: Path to translation-util script on device
+            translation_util_path: Path to translation-util script on device (optional, will auto-detect if not provided)
             sudo_password: Password for sudo (if needed)
         
         Returns:
@@ -189,6 +246,28 @@ class SSHUtil:
         """
         filename = os.path.basename(local_file_path)
         remote_tmp_path = f"/tmp/{filename}"
+        
+        # Auto-detect translation_util_path if not provided
+        if not translation_util_path:
+            logger.info("Translation util path not provided, auto-detecting...")
+            support_scripts_dir = self.find_ansible_installer_directory(sudo_password)
+            if support_scripts_dir:
+                translation_util_path = os.path.join(support_scripts_dir, 'translation-util')
+                logger.info(f"Using auto-detected path: {translation_util_path}")
+            else:
+                logger.error("Could not auto-detect translation-util path. Please specify translation_util_path in config.yaml")
+                return False
+        else:
+            # Verify the provided path exists, if not try auto-detection
+            logger.debug(f"Verifying provided translation-util path: {translation_util_path}")
+            # We'll verify during SSH connection, but also try auto-detection as fallback
+            support_scripts_dir = self.find_ansible_installer_directory(sudo_password)
+            if support_scripts_dir:
+                auto_detected_path = os.path.join(support_scripts_dir, 'translation-util')
+                # Use auto-detected path if provided path seems wrong (different version)
+                if translation_util_path != auto_detected_path:
+                    logger.info(f"Provided path may be outdated, using auto-detected path instead: {auto_detected_path}")
+                    translation_util_path = auto_detected_path
         
         # Step 1: SCP file to /tmp/
         logger.info(f"Step 1: Copying translation file to /tmp/ on device...")

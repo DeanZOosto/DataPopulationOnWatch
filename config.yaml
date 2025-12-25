@@ -8,28 +8,29 @@
 # OnWatch API Connection
 # Required: All fields must be configured for the automation to work
 onwatch:
-  ip_address: "10.1.71.16"
+  ip_address: "10.1.71.14"
   username: "Administrator"
   password: "pa$$word!"
-  base_url: "https://10.1.71.16"
+  base_url: "https://10.1.71.14"
   # OnWatch version: "2.6" or "2.8" (required - must be set manually)
   version: "2.8"  # Set to "2.6" or "2.8" based on your OnWatch system version
 
 # SSH Configuration (for translation file upload)
 ssh:
-  ip_address: "10.1.71.16"  # Usually same as onwatch IP
+  ip_address: "10.1.71.14"  # Usually same as onwatch IP
   username: "user"  # SSH user (will sudo to root for translation-util)
   password: "user1!"  # SSH password (default for user "user")
   sudo_password: "user1!"  # Sudo password (if different from SSH password, leave empty to use SSH password)
-  # Path to translation-util script on the device
-  translation_util_path: "/opt/ansible-installer-1.4.0-8/support-scripts/translation-util"
+  # Path to translation-util script on the device (optional - will auto-detect if not provided)
+  # Auto-detection finds the latest ansible-installer-* directory in /opt/
+  # translation_util_path: "/opt/ansible-installer-1.4.0-8/support-scripts/translation-util"
 
 rancher:
   ip_address: "10.1.25.90"
   port: 9443
   username: "admin"
   password: "admin"
-  base_url: "https://10.1.71.16:9443"
+  base_url: "https://10.1.71.14:9443"
   # Workload URL path (relative to base_url) - update workloadId if needed
   # Format: /p/local:p-p6l45/workloads/run?launchConfigIndex=-1&namespaceId=default&upgrade=true&workloadId=statefulset%3Adefault%3Acv-engine
   workload_path: "/p/local:p-p6l45/workloads/run?launchConfigIndex=-1&namespaceId=default&upgrade=true&workloadId=statefulset%3Adefault%3Acv-engine"
