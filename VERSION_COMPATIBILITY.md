@@ -33,6 +33,17 @@ To determine your OnWatch version:
 
 ## Version-Specific Behavior
 
+### Default Passwords
+
+- **OnWatch 2.6**: 
+  - OnWatch default password: `"admin"` (short form)
+  - Rancher default password: `"admin"` (short form)
+- **OnWatch 2.8**: 
+  - OnWatch default password: `"administrator"` (full word)
+  - Rancher default password: `"administrator"` (full word)
+
+**Note:** These are the default passwords for the Administrator account. You should update the passwords in `config.yaml` with your actual passwords.
+
 ### API Endpoints
 
 Both versions use the same base API path (`/bt/api`), but endpoint priorities may differ:

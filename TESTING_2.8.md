@@ -7,6 +7,7 @@ This guide helps you test the version compatibility features on an OnWatch 2.8 s
 - [ ] OnWatch 2.8 system is accessible
 - [ ] You have the IP address of the 2.8 system
 - [ ] You have admin credentials for the 2.8 system
+  - **Note:** OnWatch 2.8 default passwords are `"administrator"` (full word) for both OnWatch and Rancher, unlike 2.6 which uses `"admin"` (short form)
 - [ ] Network connectivity is verified
 
 ## Step-by-Step Testing
