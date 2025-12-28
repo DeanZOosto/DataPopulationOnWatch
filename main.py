@@ -1954,6 +1954,19 @@ class OnWatchAutomation:
             logger.info("No Rancher environment variables to set")
             return
         
+        # Check if OnWatch version is 2.8 - Rancher env vars not supported
+        onwatch_config = self.config.get('onwatch', {})
+        version = onwatch_config.get('version')
+        if version == "2.8":
+            logger.warning("⚠️  Rancher environment variables are not supported on OnWatch 2.8")
+            logger.warning("   This step will be skipped. Environment variables must be configured manually.")
+            logger.info("   To configure manually:")
+            logger.info("   1. Access Rancher UI at the configured base_url")
+            logger.info("   2. Navigate to the cv-engine workload")
+            logger.info("   3. Edit environment variables in the workload configuration")
+            # Still track env_vars in export for transparency
+            return
+        
         rancher_config = self.config.get('rancher', {})
         if not rancher_config:
             logger.warning("Rancher configuration not found in config.yaml")

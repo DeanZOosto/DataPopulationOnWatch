@@ -44,6 +44,17 @@ To determine your OnWatch version:
 
 **Note:** These are the default passwords for the Administrator account. You should update the passwords in `config.yaml` with your actual passwords.
 
+### Rancher Environment Variables
+
+- **OnWatch 2.6**: ✅ Supported - Environment variables can be configured via Rancher API
+- **OnWatch 2.8**: ❌ Not Supported - Rancher environment variables must be configured manually via Rancher UI
+
+**For OnWatch 2.8 users:**
+If you have `env_vars` configured in `config.yaml`, the automation will skip this step and display instructions for manual configuration. You'll need to:
+1. Access Rancher UI at your configured base_url
+2. Navigate to the cv-engine workload
+3. Edit environment variables in the workload configuration manually
+
 ### API Endpoints
 
 Both versions use the same base API path (`/bt/api`), but endpoint priorities may differ:

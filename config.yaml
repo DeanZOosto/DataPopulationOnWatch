@@ -29,7 +29,7 @@ rancher:
   ip_address: "10.1.25.90"
   port: 9443
   username: "admin"
-  password: "admin"
+  password: "administrator"
   base_url: "https://10.1.71.14:9443"
   # Workload URL path (relative to base_url) - update workloadId if needed
   # Format: /p/local:p-p6l45/workloads/run?launchConfigIndex=-1&namespaceId=default&upgrade=true&workloadId=statefulset%3Adefault%3Acv-engine
@@ -84,6 +84,8 @@ system_settings:
 
 # Environment Variables (set via Rancher/Kubernetes)
 # These are set in the cv-engine workload via Rancher API.
+# NOTE: OnWatch 2.8 does NOT support automated Rancher env var configuration.
+# For 2.8, these must be configured manually via Rancher UI.
 # All environment variables will be validated after population.
 env_vars:
   ENABLE_DVR: "True"
