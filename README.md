@@ -43,7 +43,7 @@ python3 main.py --step populate-watchlist
 python3 main.py --step configure-system
 
 # Upload translation file
-python3 main.py --step upload-files
+python3 main.py --step upload-translation-file
 ```
 
 ### Preview Changes

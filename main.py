@@ -2452,7 +2452,7 @@ Examples:
         choices=[
             'init-api', 'set-kv-params', 'configure-system', 'configure-groups',
             'configure-accounts', 'populate-watchlist', 'configure-devices',
-            'configure-inquiries', 'upload-mass-import', 'configure-rancher', 'upload-files'
+            'configure-inquiries', 'upload-mass-import', 'configure-rancher', 'upload-translation-file'
         ],
         help='Run only a specific step. Use --list-steps to see descriptions.'
     )
@@ -2525,7 +2525,7 @@ Examples:
             ("configure-inquiries", "Configure Inquiries", "Create inquiry cases with file uploads and ROI settings"),
             ("upload-mass-import", "Upload Mass Import", "Upload mass import file for bulk subject import"),
             ("configure-rancher", "Configure Rancher", "Set Kubernetes environment variables via Rancher API"),
-            ("upload-files", "Upload Translation File", "Upload translation file to device via SSH")
+            ("upload-translation-file", "Upload Translation File", "Upload translation file to device via SSH")
         ]
         print("\nAvailable Automation Steps:")
         print("=" * 70)
@@ -2855,7 +2855,7 @@ Examples:
             'configure-inquiries': lambda: asyncio.run(automation.configure_inquiries()),
             'upload-mass-import': lambda: asyncio.run(automation.configure_mass_import()),
             'configure-rancher': lambda: automation.configure_rancher(),
-            'upload-files': lambda: asyncio.run(automation.upload_files())
+            'upload-translation-file': lambda: asyncio.run(automation.upload_files())
         }
         
         # Some steps need API client initialized first
@@ -2918,7 +2918,7 @@ Examples:
             'configure-inquiries': lambda: asyncio.run(automation.configure_inquiries()),
             'upload-mass-import': lambda: asyncio.run(automation.configure_mass_import()),
             'configure-rancher': lambda: automation.configure_rancher(),
-            'upload-files': lambda: asyncio.run(automation.upload_files())
+            'upload-translation-file': lambda: asyncio.run(automation.upload_files())
         }
         
         # Some steps need API client initialized first

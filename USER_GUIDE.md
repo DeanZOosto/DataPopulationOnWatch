@@ -249,7 +249,7 @@ python3 main.py --list-steps
 - `configure-inquiries` - Create inquiry cases
 - `upload-mass-import` - Upload mass import file
 - `configure-rancher` - Set Kubernetes environment variables
-- `upload-files` - Upload translation file via SSH
+- `upload-translation-file` - Upload translation file via SSH
 
 ### Custom Configuration
 
@@ -347,7 +347,7 @@ python3 main.py --config my-config.yaml
 **Scenario:** Updating translation file on the device.
 
 1. Ensure translation file path is correct in `config.yaml`
-2. Run: `python3 main.py --step upload-files`
+2. Run: `python3 main.py --step upload-translation-file`
 
 ## Preview Dataset
 

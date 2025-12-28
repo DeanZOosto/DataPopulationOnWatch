@@ -178,9 +178,9 @@ We'll test each automation step individually on a 2.8 system, identify failures,
 ---
 
 ### ✅ Step 11: Translation File Upload
-**Command:** `python3 main.py --step upload-files --verbose`
+**Command:** `python3 main.py --step upload-translation-file --verbose`
 
-**Step ID:** `upload-files`
+**Step ID:** `upload-translation-file`
 
 ---
 
