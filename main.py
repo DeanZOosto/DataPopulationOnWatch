@@ -1841,6 +1841,8 @@ class OnWatchAutomation:
             logger.info(f"⏭️  Mass import '{mass_import_name}' already exists (id: {existing_id}, status: {existing_status}), skipping")
             self.summary.add_skipped("Mass Import", mass_import_name, f"already exists (status: {existing_status})")
             return
+        else:
+            logger.info(f"✓ Mass import '{mass_import_name}' does not exist, proceeding with upload")
         
         # Step 1: Prepare mass import upload
         logger.info(f"Preparing mass import upload: {mass_import_name}")

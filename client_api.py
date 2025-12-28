@@ -2401,9 +2401,21 @@ class ClientApi:
             if response.status_code == 400:
                 try:
                     error_data = response.json()
-                    if error_data.get('code') == 'ERR_MASS_IMPORT_IN_PROGRESS_OR_WITH_ISSUES':
-                        # Mass import with same name already exists - this is a skip, not an error
-                        raise MassImportAlreadyExists(f"Mass import with the same name already exists: {error_data.get('message', '')}")
+                    error_code = error_data.get('code', '')
+                    error_message = error_data.get('message', '')
+                    logger.debug(f"Upload returned 400 error: code={error_code}, message={error_message}")
+                    
+                    if error_code == 'ERR_MASS_IMPORT_IN_PROGRESS_OR_WITH_ISSUES':
+                        # This error code might mean different things - check the message
+                        # Only treat as "already exists" if message indicates name conflict
+                        if 'name' in error_message.lower() or 'already' in error_message.lower() or 'exists' in error_message.lower():
+                            logger.debug(f"Error indicates name conflict: {error_message}")
+                            raise MassImportAlreadyExists(f"Mass import with the same name already exists: {error_message}")
+                        else:
+                            # This might be a different issue (in progress, has issues, etc.)
+                            # Log it but don't treat as "already exists" - let it raise as a normal error
+                            logger.warning(f"Mass import error (not a name conflict): {error_message}")
+                            # Continue to raise_for_status() to handle it as a normal error
                 except ValueError:
                     pass  # Not JSON, continue with normal error handling
             
