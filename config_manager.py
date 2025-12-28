@@ -284,6 +284,7 @@ class ConfigManager:
         - onwatch.ip_address
         - onwatch.base_url (replaces IP in URL)
         - ssh.ip_address
+        - rancher.ip_address
         - rancher.base_url (replaces IP in URL)
         
         Does NOT update:
@@ -347,6 +348,14 @@ class ConfigManager:
                 self.config['ssh']['ip_address'] = new_ip
                 replacement_count += 1
                 logger.debug(f"Updated ssh.ip_address: {old_ip} -> {new_ip}")
+        
+        # Update rancher.ip_address
+        if 'rancher' in self.config and 'ip_address' in self.config['rancher']:
+            old_ip = self.config['rancher']['ip_address']
+            if old_ip != new_ip:
+                self.config['rancher']['ip_address'] = new_ip
+                replacement_count += 1
+                logger.debug(f"Updated rancher.ip_address: {old_ip} -> {new_ip}")
         
         # Update rancher.base_url (IP in URL)
         if 'rancher' in self.config and 'base_url' in self.config['rancher']:
@@ -423,6 +432,12 @@ class ConfigManager:
                     line = re.sub(ip_pattern, new_ip, line)
                     replacement_count += 1
                     logger.debug(f"Updated ssh.ip_address line: {original_line.strip()} -> {line.strip()}")
+                
+                # Update rancher.ip_address line
+                elif in_rancher_section and re.match(r'^\s*ip_address:\s*"' + ip_pattern, line):
+                    line = re.sub(ip_pattern, new_ip, line)
+                    replacement_count += 1
+                    logger.debug(f"Updated rancher.ip_address line: {original_line.strip()} -> {line.strip()}")
                 
                 # Update rancher.base_url line - simple string replacement
                 elif in_rancher_section and 'base_url' in line and 'https://' in line:
