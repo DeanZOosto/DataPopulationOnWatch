@@ -2429,6 +2429,91 @@ class ClientApi:
                 logger.error(f"Failed to upload mass import file '{file_path}': {e}")
             raise
     
+    def check_mass_import_exists_by_name(self, mass_import_name):
+        """
+        Check if a mass import with the given name already exists.
+        
+        Args:
+            mass_import_name: Name of the mass import to check
+        
+        Returns:
+            Mass import item if found, None otherwise
+        """
+        try:
+            graphql_url = f"{self.url}/graphql"
+            
+            query = """
+            query getMassImportLists($offset: Int, $limit: Int, $sortOrder: String, $withJobFileMetrics: Boolean, $filters: [Filter]) {
+              getMassImportLists(
+                offset: $offset
+                limit: $limit
+                sortOrder: $sortOrder
+                withJobFileMetrics: $withJobFileMetrics
+                filters: $filters
+              ) {
+                items {
+                  id
+                  name
+                  status
+                  progress
+                  reportUrl
+                  metadata {
+                    isIssuesResolved
+                    initialIssueCount
+                    initialSubjectsCount
+                  }
+                }
+                total
+              }
+            }
+            """
+            
+            # Get current date range (last 30 days to current)
+            from_date = (datetime.utcnow() - timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+            to_date = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+            
+            payload = {
+                "operationName": "getMassImportLists",
+                "variables": {
+                    "offset": 0,
+                    "limit": 200,
+                    "sortOrder": "desc",
+                    "withJobFileMetrics": True,
+                    "filters": [
+                        {"field": "from", "value": from_date},
+                        {"field": "to", "value": to_date}
+                    ]
+                },
+                "query": query
+            }
+            
+            response = self.session.post(
+                graphql_url,
+                headers=self.headers,
+                json=payload
+            )
+            response.raise_for_status()
+            result = response.json()
+            if 'errors' in result:
+                logger.error(f"GraphQL errors for getMassImportLists: {result['errors']}")
+                raise Exception(f"GraphQL error: {result['errors']}")
+            
+            # Find the mass import by name (exact match)
+            items = result.get('data', {}).get('getMassImportLists', {}).get('items', [])
+            for item in items:
+                if item.get('name') == mass_import_name:
+                    return item
+            
+            return None
+        except requests.exceptions.RequestException as e:
+            if hasattr(e, 'response') and e.response is not None:
+                logger.error(f"Failed to check mass import by name: {e}")
+                logger.error(f"Response status: {e.response.status_code}")
+                logger.error(f"Response body: {e.response.text}")
+            else:
+                logger.error(f"Failed to check mass import by name: {e}")
+            return None
+    
     def get_mass_import_status(self, mass_import_id):
         """
         Get mass import status via GraphQL query.

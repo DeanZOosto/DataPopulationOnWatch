@@ -1832,6 +1832,16 @@ class OnWatchAutomation:
         except Exception as e:
             logger.debug(f"Quota check skipped: {e}")
         
+        # Step 0.5: Check if mass import with this name already exists
+        logger.info(f"Checking if mass import '{mass_import_name}' already exists...")
+        existing_mass_import = self.client_api.check_mass_import_exists_by_name(mass_import_name)
+        if existing_mass_import:
+            existing_id = existing_mass_import.get('id')
+            existing_status = existing_mass_import.get('status', 'UNKNOWN')
+            logger.info(f"⏭️  Mass import '{mass_import_name}' already exists (id: {existing_id}, status: {existing_status}), skipping")
+            self.summary.add_skipped("Mass Import", mass_import_name, f"already exists (status: {existing_status})")
+            return
+        
         # Step 1: Prepare mass import upload
         logger.info(f"Preparing mass import upload: {mass_import_name}")
         try:
