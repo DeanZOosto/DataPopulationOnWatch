@@ -26,7 +26,7 @@ ssh:
   # translation_util_path: "/opt/ansible-installer-1.4.0-8/support-scripts/translation-util"
 
 rancher:
-  ip_address: "10.1.25.90"
+  ip_address: "10.1.71.14"
   port: 9443
   username: "admin"
   password: "administrator"
