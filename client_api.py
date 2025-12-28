@@ -2412,9 +2412,36 @@ class ClientApi:
                             logger.debug(f"Error indicates name conflict: {error_message}")
                             raise MassImportAlreadyExists(f"Mass import with the same name already exists: {error_message}")
                         else:
-                            # This might be a different issue (in progress, has issues, etc.)
-                            # Log it but don't treat as "already exists" - let it raise as a normal error
-                            logger.warning(f"Mass import error (not a name conflict): {error_message}")
+                            # This means there are other mass imports with unresolved issues
+                            # Get list of mass imports with issues to provide helpful guidance
+                            mass_imports_with_issues = self._get_mass_imports_with_issues()
+                            
+                            error_msg = f"❌ Cannot upload mass import: {error_message}\n"
+                            error_msg += "\n📋 Action Required:\n"
+                            error_msg += "   The system requires all existing mass imports to be resolved before uploading a new one.\n"
+                            
+                            if mass_imports_with_issues:
+                                error_msg += f"\n⚠️  Found {len(mass_imports_with_issues)} mass import(s) that need attention:\n"
+                                for mi in mass_imports_with_issues:
+                                    mi_name = mi.get('name', 'Unknown')
+                                    mi_status = mi.get('status', 'UNKNOWN')
+                                    mi_id = mi.get('id', '')
+                                    issues_resolved = mi.get('metadata', {}).get('isIssuesResolved', None)
+                                    
+                                    if issues_resolved is False:
+                                        error_msg += f"   • '{mi_name}' (id: {mi_id[:8]}...) - Status: {mi_status}, Issues: NOT RESOLVED\n"
+                                    elif mi_status in ['IN_PROGRESS', 'PROCESSING']:
+                                        error_msg += f"   • '{mi_name}' (id: {mi_id[:8]}...) - Status: {mi_status} (still processing)\n"
+                                    else:
+                                        error_msg += f"   • '{mi_name}' (id: {mi_id[:8]}...) - Status: {mi_status}\n"
+                            
+                            error_msg += "\n🔧 Next Steps:\n"
+                            error_msg += "   1. Go to the OnWatch UI → Mass Import section\n"
+                            error_msg += "   2. Review and resolve any issues in the existing mass import(s)\n"
+                            error_msg += "   3. Wait for any in-progress mass imports to complete\n"
+                            error_msg += "   4. Once all issues are resolved, run this step again\n"
+                            
+                            logger.error(error_msg)
                             # Continue to raise_for_status() to handle it as a normal error
                 except ValueError:
                     pass  # Not JSON, continue with normal error handling
@@ -2440,6 +2467,87 @@ class ClientApi:
             else:
                 logger.error(f"Failed to upload mass import file '{file_path}': {e}")
             raise
+    
+    def _get_mass_imports_with_issues(self):
+        """
+        Get list of mass imports that are in progress or have unresolved issues.
+        
+        Returns:
+            List of mass import items with issues
+        """
+        try:
+            graphql_url = f"{self.url}/graphql"
+            
+            query = """
+            query getMassImportLists($offset: Int, $limit: Int, $sortOrder: String, $withJobFileMetrics: Boolean, $filters: [Filter]) {
+              getMassImportLists(
+                offset: $offset
+                limit: $limit
+                sortOrder: $sortOrder
+                withJobFileMetrics: $withJobFileMetrics
+                filters: $filters
+              ) {
+                items {
+                  id
+                  name
+                  status
+                  progress
+                  metadata {
+                    isIssuesResolved
+                    initialIssueCount
+                  }
+                }
+                total
+              }
+            }
+            """
+            
+            # Get current date range (last 30 days to current)
+            from_date = (datetime.utcnow() - timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+            to_date = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+            
+            payload = {
+                "operationName": "getMassImportLists",
+                "variables": {
+                    "offset": 0,
+                    "limit": 200,
+                    "sortOrder": "desc",
+                    "withJobFileMetrics": True,
+                    "filters": [
+                        {"field": "from", "value": from_date},
+                        {"field": "to", "value": to_date}
+                    ]
+                },
+                "query": query
+            }
+            
+            response = self.session.post(
+                graphql_url,
+                headers=self.headers,
+                json=payload
+            )
+            response.raise_for_status()
+            result = response.json()
+            if 'errors' in result:
+                logger.debug(f"GraphQL errors for getMassImportLists: {result['errors']}")
+                return []
+            
+            # Find mass imports that are in progress or have unresolved issues
+            items = result.get('data', {}).get('getMassImportLists', {}).get('items', [])
+            problematic_imports = []
+            
+            for item in items:
+                status = item.get('status', '').upper()
+                issues_resolved = item.get('metadata', {}).get('isIssuesResolved', None)
+                
+                # Include if in progress or has unresolved issues
+                if status in ['IN_PROGRESS', 'PROCESSING'] or issues_resolved is False:
+                    problematic_imports.append(item)
+            
+            return problematic_imports
+        except Exception as e:
+            logger.debug(f"Failed to get mass imports with issues: {e}")
+            return []
     
     def check_mass_import_exists_by_name(self, mass_import_name):
         """
