@@ -68,6 +68,37 @@ class OnWatchAutomation:
         self.client_api = None
         self.rancher_automation = None
         self.summary = RunSummary()
+        
+        # Auto-sync Rancher password with version if version is set
+        self._sync_rancher_password_with_version()
+    
+    def _sync_rancher_password_with_version(self):
+        """
+        Automatically sync Rancher password with OnWatch version.
+        If version is set, ensure Rancher password matches the default for that version.
+        """
+        onwatch_config = self.config.get('onwatch', {})
+        rancher_config = self.config.get('rancher', {})
+        
+        version = onwatch_config.get('version')
+        if not version or version not in ['2.6', '2.8']:
+            return  # Version not set or invalid, skip sync
+        
+        # Determine expected Rancher password based on version
+        expected_password = "administrator" if version == "2.8" else "admin"
+        current_password = rancher_config.get('password', '')
+        
+        # Only update if password is the default for the other version
+        # (to avoid overwriting custom passwords)
+        if current_password in ['admin', 'administrator'] and current_password != expected_password:
+            logger.info(f"Auto-syncing Rancher password with version {version}...")
+            success, message = self.config_manager.update_version(version, backup=False)
+            if success:
+                # Reload config to get updated password
+                self.config = self.config_manager.load_config()
+                logger.info(f"✓ {message}")
+            else:
+                logger.warning(f"Could not auto-sync Rancher password: {message}")
     
     def validate_config(self, verbose=False):
         """
@@ -2454,6 +2485,13 @@ Examples:
         help='Update all IP addresses in config.yaml to the specified IP address. Updates onwatch, ssh, and rancher IPs automatically. Creates a backup of the original config file.'
     )
     parser.add_argument(
+        '--set-version',
+        type=str,
+        metavar='VERSION',
+        choices=['2.6', '2.8'],
+        help='Update OnWatch version in config.yaml (2.6 or 2.8). Automatically updates Rancher password based on version (2.6="admin", 2.8="administrator"). Can be used with --set-ip or independently.'
+    )
+    parser.add_argument(
         '--preview-data',
         action='store_true',
         help='Preview the dataset that will be populated (shows all configured data) and exit'
@@ -2760,6 +2798,26 @@ Examples:
     if args.set_ip:
         config_manager = ConfigManager(config_path=args.config)
         success, message = config_manager.update_ip_address(args.set_ip, backup=True)
+        if success:
+            logger.info(f"✓ {message}")
+            logger.info(f"✓ Configuration file updated: {args.config}")
+            logger.info("✓ You can now run the automation with: python3 main.py")
+            # If version is also provided, update it
+            if args.set_version:
+                success2, message2 = config_manager.update_version(args.set_version, backup=False)
+                if success2:
+                    logger.info(f"✓ {message2}")
+                else:
+                    logger.warning(f"⚠️  {message2}")
+        else:
+            logger.error(f"❌ {message}")
+            sys.exit(1)
+        sys.exit(0)
+    
+    # Handle --set-version option (can be used independently or with --set-ip)
+    if args.set_version:
+        config_manager = ConfigManager(config_path=args.config)
+        success, message = config_manager.update_version(args.set_version, backup=True)
         if success:
             logger.info(f"✓ {message}")
             logger.info(f"✓ Configuration file updated: {args.config}")

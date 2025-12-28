@@ -70,6 +70,19 @@ python3 main.py --set-ip 192.168.1.100
 # Creates a backup of the original config file automatically
 ```
 
+### Set OnWatch Version
+```bash
+# Set OnWatch version (automatically updates Rancher password)
+python3 main.py --set-version 2.8
+
+# Or combine with IP update
+python3 main.py --set-ip 192.168.1.100 --set-version 2.8
+```
+
+This automatically updates:
+- `onwatch.version` (2.6 or 2.8)
+- `rancher.password` (2.6="admin", 2.8="administrator")
+
 ### Validate Data (Post-Upgrade)
 
 See [VALIDATION_GUIDE.md](VALIDATION_GUIDE.md) for complete validation instructions.

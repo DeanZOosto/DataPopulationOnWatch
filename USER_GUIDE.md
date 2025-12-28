@@ -70,6 +70,22 @@ This automatically updates:
 
 A backup of your original `config.yaml` is created automatically (e.g., `config.yaml.backup.20231209_181500`).
 
+**Set OnWatch Version (Optional):**
+
+You can also set the OnWatch version, which automatically updates the Rancher password:
+
+```bash
+# Set version only
+python3 main.py --set-version 2.8
+
+# Or combine with IP update
+python3 main.py --set-ip 192.168.1.100 --set-version 2.8
+```
+
+This automatically updates:
+- `onwatch.version` (2.6 or 2.8)
+- `rancher.password` (2.6="admin", 2.8="administrator")
+
 #### Option B: Manual Configuration
 
 If you prefer to edit manually:

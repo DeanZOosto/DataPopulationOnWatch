@@ -449,4 +449,134 @@ class ConfigManager:
             return True, f"Successfully updated {replacement_count} connection IP address(es) to {new_ip} (camera IPs preserved)"
         except Exception as e:
             return False, f"Failed to write config file: {e}"
+    
+    def update_version(self, version, backup=True):
+        """
+        Update OnWatch version in config.yaml and automatically update Rancher password based on version.
+        
+        Version-specific updates:
+        - onwatch.version: Set to the specified version
+        - rancher.password: Auto-updated based on version
+          - 2.6: "admin" (short form)
+          - 2.8: "administrator" (full word)
+        
+        Args:
+            version: OnWatch version ("2.6" or "2.8")
+            backup: If True, create a backup of the original config file
+            
+        Returns:
+            tuple: (success: bool, message: str)
+        """
+        # Validate version
+        if version not in ["2.6", "2.8"]:
+            return False, f"Invalid version: {version}. Must be '2.6' or '2.8'"
+        
+        # Load current config
+        if self.config is None:
+            self.load_config()
+        
+        # Create backup if requested
+        if backup:
+            import shutil
+            from datetime import datetime
+            backup_path = f"{self.config_path}.backup.{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            try:
+                shutil.copy2(self.config_path, backup_path)
+                logger.info(f"Created backup: {backup_path}")
+            except Exception as e:
+                logger.warning(f"Could not create backup: {e}")
+        
+        # Determine Rancher password based on version
+        rancher_password = "administrator" if version == "2.8" else "admin"
+        
+        # Read file as lines for line-by-line replacement
+        try:
+            with open(self.config_path, 'r') as f:
+                lines = f.readlines()
+            
+            updated_lines = []
+            i = 0
+            in_onwatch_section = False
+            in_rancher_section = False
+            version_updated = False
+            rancher_password_updated = False
+            
+            while i < len(lines):
+                line = lines[i]
+                original_line = line
+                
+                # Track which section we're in
+                if re.match(r'^onwatch:\s*$', line):
+                    in_onwatch_section = True
+                    in_rancher_section = False
+                elif re.match(r'^rancher:\s*$', line):
+                    in_onwatch_section = False
+                    in_rancher_section = True
+                elif line.strip() and not line.strip().startswith('#'):
+                    # If we hit a new top-level key, reset section flags
+                    if re.match(r'^[a-z_]+:\s*$', line):
+                        in_onwatch_section = False
+                        in_rancher_section = False
+                
+                # Update onwatch.version line
+                if in_onwatch_section and re.match(r'^\s*version:\s*', line):
+                    # Replace version value, preserving comments
+                    if '#' in line:
+                        comment = line[line.index('#'):]
+                        line = f'  version: "{version}"  {comment}'
+                    else:
+                        line = f'  version: "{version}"\n'
+                    version_updated = True
+                    logger.debug(f"Updated onwatch.version: {original_line.strip()} -> {line.strip()}")
+                
+                # Update rancher.password line
+                elif in_rancher_section and re.match(r'^\s*password:\s*', line):
+                    # Replace password value, preserving comments
+                    if '#' in line:
+                        comment = line[line.index('#'):]
+                        line = f'  password: "{rancher_password}"  {comment}'
+                    else:
+                        line = f'  password: "{rancher_password}"\n'
+                    rancher_password_updated = True
+                    logger.debug(f"Updated rancher.password: {original_line.strip()} -> {line.strip()}")
+                
+                updated_lines.append(line)
+                i += 1
+            
+            # If version wasn't found, add it to onwatch section
+            if not version_updated:
+                # Find the onwatch section and add version after base_url
+                for i, line in enumerate(updated_lines):
+                    if in_onwatch_section and 'base_url' in line:
+                        # Insert version after base_url
+                        indent = len(line) - len(line.lstrip())
+                        updated_lines.insert(i + 1, f'{" " * indent}version: "{version}"  # Set to "2.6" or "2.8" based on your OnWatch system version\n')
+                        version_updated = True
+                        break
+                    elif re.match(r'^onwatch:\s*$', line):
+                        in_onwatch_section = True
+                    elif line.strip() and not line.strip().startswith('#') and re.match(r'^[a-z_]+:\s*$', line):
+                        in_onwatch_section = False
+            
+            # Write back
+            with open(self.config_path, 'w') as f:
+                f.writelines(updated_lines)
+            
+            # Reload config to reflect changes
+            self.config = None
+            self.load_config()
+            
+            messages = []
+            if version_updated:
+                messages.append(f"Updated onwatch.version to {version}")
+            if rancher_password_updated:
+                messages.append(f"Updated rancher.password to '{rancher_password}' (default for {version})")
+            
+            if messages:
+                return True, "Successfully updated: " + ", ".join(messages)
+            else:
+                return False, "Could not find version or rancher.password fields to update"
+                
+        except Exception as e:
+            return False, f"Failed to write config file: {e}"
 
