@@ -2530,8 +2530,8 @@ Examples:
         print("\nAvailable Automation Steps:")
         print("=" * 70)
         for step_id, step_name, description in steps:
-            print(f"  --step {step_id:20s}  {step_name}")
-            print(f"  {'':22s}  {description}\n")
+            print(f"  --step {step_id:24s}  {step_name}")
+            print(f"  {'':26s}  {description}\n")
         sys.exit(0)
     
     # Handle preview-data
