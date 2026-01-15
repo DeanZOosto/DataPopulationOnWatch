@@ -351,10 +351,17 @@ class RunSummary:
                 for logo_item in cleaned_interface['logos']:
                     logo_type = logo_item.get('type')
                     if logo_type:
-                        logos_dict[logo_type] = {
+                        logo_entry = {
                             'source_file': logo_item.get('source_file', ''),
                             'path': logo_item.get('path', '')  # Config path (relative)
                         }
+                        # Include registration status if available (for tracking failures)
+                        if 'registered' in logo_item:
+                            logo_entry['registered'] = logo_item['registered']
+                        # Include error message if registration failed
+                        if 'error' in logo_item:
+                            logo_entry['error'] = logo_item['error']
+                        logos_dict[logo_type] = logo_entry
                 if logos_dict:
                     cleaned_interface['logos'] = logos_dict
             cleaned['system_interface'] = cleaned_interface

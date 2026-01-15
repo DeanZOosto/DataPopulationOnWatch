@@ -1187,6 +1187,11 @@ class ClientApi:
         Args:
             logo_path: Path to the logo image file
             folder_name: Folder name - "company", "sidebar", or "favicon"
+        
+        Returns:
+            Tuple of (response, registration_success):
+            - response: HTTP response object from file upload
+            - registration_success: Boolean indicating if logo was successfully registered in white label settings
         """
         try:
             filename = os.path.basename(logo_path)
@@ -1263,18 +1268,30 @@ class ClientApi:
                         
                         # Update the specific logo field
                         white_label_update = current_settings.copy() if current_settings else {}
+                        
+                        # OnWatch 2.8 requires ALL logo fields to be strings (not null)
+                        # Ensure all logo fields are strings (empty string if missing/None)
+                        for logo_key in ["companyLogo", "sidebarLogo", "favicon"]:
+                            if logo_key not in white_label_update or white_label_update[logo_key] is None:
+                                white_label_update[logo_key] = ""
+                        
+                        # Now update the specific logo field we want to set
                         white_label_update[logo_field] = f"/storage/{file_location}"
                         
                         # Call GraphQL mutation to update white label settings
                         self._update_white_label(white_label_update)
                         logger.info(f"✓ Registered {folder_name} logo via GraphQL")
+                        return response, True  # Return response and registration success status
                     else:
                         logger.warning(f"Unknown folder name: {folder_name}, skipping GraphQL update")
+                        return response, False  # File uploaded but not registered
                 except Exception as e:
                     logger.warning(f"Could not register {folder_name} logo via GraphQL: {e}")
                     logger.warning("Logo file uploaded but may not appear in UI until registered")
-            
-            return response
+                    return response, False  # File uploaded but registration failed
+            else:
+                # File uploaded but no file_location returned
+                return response, False
         except FileNotFoundError:
             logger.error(f"Logo file not found: {logo_path}")
             raise

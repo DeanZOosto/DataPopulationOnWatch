@@ -294,18 +294,32 @@ class OnWatchAutomation:
                         
                         if os.path.exists(logo_path):
                             try:
-                                self.client_api.upload_logo(logo_path, logo_type)
-                                logger.info(f"✓ Uploaded {logo_type} logo from: {logo_path_config}")
-                                # Track uploaded logo under system_interface
+                                response, registration_success = self.client_api.upload_logo(logo_path, logo_type)
+                                if registration_success:
+                                    logger.info(f"✓ Uploaded {logo_type} logo from: {logo_path_config}")
+                                else:
+                                    logger.warning(f"⚠️  Uploaded {logo_type} logo file but registration failed: {logo_path_config}")
+                                    logger.warning("Logo file uploaded but may not appear in UI until registered")
+                                # Track uploaded logo under system_interface (include registration status)
                                 self.summary.add_created_item('logo', {
                                     'type': logo_type,
                                     'source_file': os.path.basename(logo_path),
                                     'path': logo_path_config,  # Store relative path for config consistency
-                                    'resolved_path': logo_path
+                                    'resolved_path': logo_path,
+                                    'registered': registration_success  # Track if registration succeeded
                                 })
                             except Exception as e:
                                 logger.warning(f"Could not upload {logo_type} logo from '{logo_path_config}': {e}")
                                 logger.warning("Continuing with other settings...")
+                                # Track failed upload in export file
+                                self.summary.add_created_item('logo', {
+                                    'type': logo_type,
+                                    'source_file': os.path.basename(logo_path),
+                                    'path': logo_path_config,
+                                    'resolved_path': logo_path,
+                                    'registered': False,
+                                    'error': str(e)
+                                })
                         else:
                             logger.warning(f"Logo file not found: {logo_path_config} (resolved: {logo_path})")
                     else:
@@ -324,17 +338,31 @@ class OnWatchAutomation:
                 
                 if os.path.exists(favicon_path):
                     try:
-                        self.client_api.upload_logo(favicon_path, "favicon")
-                        logger.info(f"✓ Uploaded favicon from: {favicon_path_config}")
-                        # Track uploaded favicon under system_interface
+                        response, registration_success = self.client_api.upload_logo(favicon_path, "favicon")
+                        if registration_success:
+                            logger.info(f"✓ Uploaded favicon from: {favicon_path_config}")
+                        else:
+                            logger.warning(f"⚠️  Uploaded favicon file but registration failed: {favicon_path_config}")
+                            logger.warning("Favicon file uploaded but may not appear in UI until registered")
+                        # Track uploaded favicon under system_interface (include registration status)
                         self.summary.add_created_item('logo', {
                             'type': 'favicon',
                             'source_file': os.path.basename(favicon_path),
                             'path': favicon_path_config,  # Store relative path for config consistency
-                            'resolved_path': favicon_path
+                            'resolved_path': favicon_path,
+                            'registered': registration_success  # Track if registration succeeded
                         })
                     except Exception as e:
                         logger.warning(f"Could not upload favicon from '{favicon_path_config}': {e}")
+                        # Track failed upload in export file
+                        self.summary.add_created_item('logo', {
+                            'type': 'favicon',
+                            'source_file': os.path.basename(favicon_path),
+                            'path': favicon_path_config,
+                            'resolved_path': favicon_path,
+                            'registered': False,
+                            'error': str(e)
+                        })
                 else:
                     logger.warning(f"Favicon file not found: {favicon_path_config} (resolved: {favicon_path})")
             else:
