@@ -9,9 +9,7 @@ import sys
 import logging
 import time
 from pathlib import Path
-from client_api import ClientApi
-from rancher_api import RancherApi
-from ssh_util import SSHUtil
+# ClientApi, RancherApi, SSHUtil imported lazily where used (so --list-steps, --dry-run work without requests)
 from run_summary import RunSummary
 from config_manager import ConfigManager
 from constants import (
@@ -49,12 +47,57 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-# RunSummary class moved to run_summary.py
+# ---- Automation steps: single source of truth for run(), --list-steps, --dry-run, and step mapping ----
+STEP_LIST = [
+    ("init-api", "Initialize API Client", "Connect and authenticate with OnWatch API"),
+    ("set-kv-params", "Set KV Parameters", "Configure key-value system parameters"),
+    ("configure-system", "Configure System Settings", "Set general, map, engine, and interface settings"),
+    ("configure-groups", "Configure Groups", "Create subject groups with authorization and visibility"),
+    ("configure-accounts", "Configure Accounts", "Create user accounts and user groups"),
+    ("populate-watchlist", "Populate Watch List", "Add subjects to watch list with images"),
+    ("configure-devices", "Configure Devices", "Create cameras/devices with thresholds and calibration"),
+    ("configure-inquiries", "Configure Inquiries", "Create inquiry cases with file uploads and ROI settings"),
+    ("upload-mass-import", "Upload Mass Import", "Upload mass import file for bulk subject import"),
+    ("upload-translation-file", "Upload Translation File", "Upload translation file to device via SSH"),
+    ("configure-rancher", "Configure Rancher", "Set Kubernetes environment variables via Rancher API"),
+]
+# Step definitions for run(): num, name, method_name, is_async, fatal_if_fail, success_detail, manual_action_msg
+AUTOMATION_STEPS = [
+    (1, "Initialize API Client", "initialize_api_client", False, True, "API client initialized and logged in",
+     "Cannot proceed without API client. Please check credentials and network connectivity."),
+    (2, "Set KV Parameters", "set_kv_parameters", True, False, None,
+     "Please set KV parameters manually in the UI at /bt/settings/kv"),
+    (3, "Configure System Settings", "configure_system_settings", True, False, None,
+     "Please configure system settings manually in the UI"),
+    (4, "Configure Groups", "configure_groups", True, False, None,
+     "Please configure groups manually in the UI"),
+    (5, "Configure Accounts", "configure_accounts", True, False, None,
+     "Please configure accounts manually in the UI"),
+    (6, "Populate Watch List", "populate_watch_list", False, False, None,
+     "Please add watch list subjects manually in the UI"),
+    (7, "Configure Devices", "configure_devices", True, False, None,
+     "Please configure devices manually in the UI"),
+    (8, "Configure Inquiries", "configure_inquiries", True, False, None,
+     "Please configure inquiries manually in the UI"),
+    (9, "Upload Mass Import", "configure_mass_import", True, False, "File uploaded, processing continues in background",
+     "Please upload mass import file manually in the UI"),
+    (10, "Upload Translation File", "upload_files", True, False, None,
+     "Please upload translation file manually via SSH"),
+    (11, "Configure Rancher", "configure_rancher", False, False, None,
+     "Please configure Rancher environment variables manually"),
+]
+NUM_STEPS = len(AUTOMATION_STEPS)
+
+
+class StepSkipped(Exception):
+    """Raised when a step is intentionally skipped (e.g. not supported on this version). Records as skipped, not success."""
+    pass
 
 
 class OnWatchAutomation:
     """Main automation orchestrator."""
-    
+
+    # ---- Configuration & API ----
     def __init__(self, config_path="config.yaml"):
         """
         Initialize automation with configuration.
@@ -111,7 +154,7 @@ class OnWatchAutomation:
             tuple: (is_valid, errors_list)
         """
         return self.config_manager.validate_config(verbose=verbose)
-    
+
     def initialize_api_client(self):
         """
         Initialize the OnWatch API client and authenticate.
@@ -129,19 +172,23 @@ class OnWatchAutomation:
             raise ValueError("OnWatch version is required. Set 'onwatch.version' in config.yaml (e.g., '2.6' or '2.8')")
         
         logger.info(f"Using OnWatch version from config: {version}")
-        
+
+        from client_api import ClientApi
+        bind_address = onwatch_config.get('bind_address')
         self.client_api = ClientApi(
             ip_address=onwatch_config['ip_address'],
             username=onwatch_config['username'],
             password=onwatch_config['password'],
-            version=version
+            version=version,
+            bind_address=bind_address
         )
         self.client_api.login()
         
         # Store version in summary
         self.summary.onwatch_version = version
         logger.info(f"API client initialized and logged in (OnWatch {version})")
-    
+
+    # ---- System settings & groups ----
     async def set_kv_parameters(self):
         """
         Set key-value parameters via GraphQL API.
@@ -202,176 +249,127 @@ class OnWatchAutomation:
         if not system_settings:
             logger.info("No system settings to configure")
             return
-        
+
         logger.info("Configuring system settings...")
-        
-        # Try API first - initialize client if needed
         if not self.client_api:
             self.initialize_api_client()
-        
+
         try:
             self.client_api.update_system_settings(system_settings)
             logger.info("✓ System settings configured via API")
-            
-            # Verify and store actual values that were set (not just config values)
-            # Query back the actual system settings to store what's really in the system
-            time.sleep(FILE_STATUS_CHECK_DELAY)  # Brief wait for settings to be saved
-            actual_system_settings = self.client_api.get_system_settings()
-            
-            # Build verified system settings dict with actual values
-            verified_settings = {}
-            if actual_system_settings:
-                # Map actual values back to config structure
-                if 'general' in system_settings:
-                    verified_general = {}
-                    if 'default_face_threshold' in system_settings['general']:
-                        actual_value = actual_system_settings.get('defaultFaceThreshold')
-                        if actual_value is not None:
-                            verified_general['default_face_threshold'] = float(actual_value)
-                    if 'default_body_threshold' in system_settings['general']:
-                        actual_value = actual_system_settings.get('defaultBodyThreshold')
-                        if actual_value is not None:
-                            verified_general['default_body_threshold'] = float(actual_value)
-                    if 'default_liveness_threshold' in system_settings['general']:
-                        actual_value = actual_system_settings.get('cameraDefaultLivenessTh')
-                        if actual_value is not None:
-                            verified_general['default_liveness_threshold'] = float(actual_value)
-                    if verified_general:
-                        verified_settings['general'] = verified_general
-                
-                if 'system_interface' in system_settings:
-                    verified_interface = {}
-                    if 'product_name' in system_settings['system_interface']:
-                        actual_value = actual_system_settings.get('whiteLabel', {}).get('productName')
-                        if actual_value:
-                            verified_interface['product_name'] = actual_value
-                    if verified_interface:
-                        verified_settings['system_interface'] = verified_interface
-            
-            # Track system settings with verified actual values (fallback to config if verification failed)
-            settings_to_store = verified_settings if verified_settings else system_settings
-            self.summary.add_created_item('system_settings', settings_to_store)
-            
-            # Handle acknowledge actions separately
-            if 'map' in system_settings:
-                map_settings = system_settings['map']
-                if 'acknowledge' in map_settings and map_settings['acknowledge']:
-                    try:
-                        self.client_api.enable_acknowledge_actions(True)
-                        logger.info("✓ Acknowledge actions enabled")
-                    except Exception as e:
-                        logger.warning(f"Could not enable acknowledge actions: {e}")
-                        logger.warning("Continuing with other settings...")
-                
-                if 'action_title' in map_settings and map_settings['action_title']:
-                    try:
-                        from client_api import AcknowledgeActionAlreadyExists
-                        try:
-                            self.client_api.create_acknowledge_action(map_settings['action_title'], description="")
-                            logger.info(f"✓ Created acknowledge action: {map_settings['action_title']}")
-                        except AcknowledgeActionAlreadyExists:
-                            logger.info(f"⏭️  Acknowledge action '{map_settings['action_title']}' already exists, skipping")
-                            self.summary.add_skipped("Acknowledge Action", map_settings['action_title'], "already exists")
-                    except Exception as e:
-                        logger.warning(f"Could not create acknowledge action: {e}")
-                        logger.warning("Continuing with other settings...")
-            
-            # Handle logo and favicon uploads (read from config.yaml)
-            system_interface = system_settings.get('system_interface', {})
-            project_root = os.path.dirname(os.path.abspath(self.config_path))
-            
-            # Upload company and sidebar logos
-            logos = system_interface.get('logos', {})
-            if logos:
-                for logo_type in ["company", "sidebar"]:
-                    logo_path_config = logos.get(logo_type)
-                    if logo_path_config:
-                        # Resolve path (relative to project root or absolute)
-                        if not os.path.isabs(logo_path_config):
-                            logo_path = os.path.join(project_root, logo_path_config)
-                        else:
-                            logo_path = logo_path_config
-                        
-                        if os.path.exists(logo_path):
-                            try:
-                                response, registration_success = self.client_api.upload_logo(logo_path, logo_type)
-                                if registration_success:
-                                    logger.info(f"✓ Uploaded {logo_type} logo from: {logo_path_config}")
-                                else:
-                                    logger.warning(f"⚠️  Uploaded {logo_type} logo file but registration failed: {logo_path_config}")
-                                    logger.warning("Logo file uploaded but may not appear in UI until registered")
-                                # Track uploaded logo under system_interface (include registration status)
-                                self.summary.add_created_item('logo', {
-                                    'type': logo_type,
-                                    'source_file': os.path.basename(logo_path),
-                                    'path': logo_path_config,  # Store relative path for config consistency
-                                    'resolved_path': logo_path,
-                                    'registered': registration_success  # Track if registration succeeded
-                                })
-                            except Exception as e:
-                                logger.warning(f"Could not upload {logo_type} logo from '{logo_path_config}': {e}")
-                                logger.warning("Continuing with other settings...")
-                                # Track failed upload in export file
-                                self.summary.add_created_item('logo', {
-                                    'type': logo_type,
-                                    'source_file': os.path.basename(logo_path),
-                                    'path': logo_path_config,
-                                    'resolved_path': logo_path,
-                                    'registered': False,
-                                    'error': str(e)
-                                })
-                        else:
-                            logger.warning(f"Logo file not found: {logo_path_config} (resolved: {logo_path})")
-                    else:
-                        logger.debug(f"No {logo_type} logo configured in config.yaml (optional, skipping)")
-            else:
-                logger.debug("No logos configured in config.yaml (optional, skipping)")
-            
-            # Upload favicon
-            favicon_path_config = system_interface.get('favicon')
-            if favicon_path_config:
-                # Resolve path (relative to project root or absolute)
-                if not os.path.isabs(favicon_path_config):
-                    favicon_path = os.path.join(project_root, favicon_path_config)
-                else:
-                    favicon_path = favicon_path_config
-                
-                if os.path.exists(favicon_path):
-                    try:
-                        response, registration_success = self.client_api.upload_logo(favicon_path, "favicon")
-                        if registration_success:
-                            logger.info(f"✓ Uploaded favicon from: {favicon_path_config}")
-                        else:
-                            logger.warning(f"⚠️  Uploaded favicon file but registration failed: {favicon_path_config}")
-                            logger.warning("Favicon file uploaded but may not appear in UI until registered")
-                        # Track uploaded favicon under system_interface (include registration status)
-                        self.summary.add_created_item('logo', {
-                            'type': 'favicon',
-                            'source_file': os.path.basename(favicon_path),
-                            'path': favicon_path_config,  # Store relative path for config consistency
-                            'resolved_path': favicon_path,
-                            'registered': registration_success  # Track if registration succeeded
-                        })
-                    except Exception as e:
-                        logger.warning(f"Could not upload favicon from '{favicon_path_config}': {e}")
-                        # Track failed upload in export file
-                        self.summary.add_created_item('logo', {
-                            'type': 'favicon',
-                            'source_file': os.path.basename(favicon_path),
-                            'path': favicon_path_config,
-                            'resolved_path': favicon_path,
-                            'registered': False,
-                            'error': str(e)
-                        })
-                else:
-                    logger.warning(f"Favicon file not found: {favicon_path_config} (resolved: {favicon_path})")
-            else:
-                logger.debug("No favicon configured in config.yaml (optional, skipping)")
-                
+            time.sleep(FILE_STATUS_CHECK_DELAY)
+            self._verify_and_store_system_settings(system_settings)
+            self._apply_acknowledge_from_config(system_settings)
+            self._upload_system_logos_and_favicon(system_settings)
+            logger.warning("→ Refresh the system settings page in the browser to see the updated data.")
         except Exception as e:
             logger.error(f"Failed to configure system settings via API: {e}")
             raise
-    
+
+    def _verify_and_store_system_settings(self, system_settings):
+        """Query back actual system settings and store verified values in summary."""
+        actual_system_settings = self.client_api.get_system_settings()
+        verified_settings = {}
+        if actual_system_settings:
+            if 'general' in system_settings:
+                verified_general = {}
+                if 'default_face_threshold' in system_settings['general']:
+                    v = actual_system_settings.get('defaultFaceThreshold')
+                    if v is not None:
+                        verified_general['default_face_threshold'] = float(v)
+                if 'default_body_threshold' in system_settings['general']:
+                    v = actual_system_settings.get('defaultBodyThreshold')
+                    if v is not None:
+                        verified_general['default_body_threshold'] = float(v)
+                if 'default_liveness_threshold' in system_settings['general']:
+                    v = actual_system_settings.get('cameraDefaultLivenessTh')
+                    if v is not None:
+                        verified_general['default_liveness_threshold'] = float(v)
+                if verified_general:
+                    verified_settings['general'] = verified_general
+            if 'system_interface' in system_settings:
+                verified_interface = {}
+                if 'product_name' in system_settings['system_interface']:
+                    v = actual_system_settings.get('whiteLabel', {}).get('productName')
+                    if v:
+                        verified_interface['product_name'] = v
+                if verified_interface:
+                    verified_settings['system_interface'] = verified_interface
+        settings_to_store = verified_settings if verified_settings else system_settings
+        self.summary.add_created_item('system_settings', settings_to_store)
+
+    def _apply_acknowledge_from_config(self, system_settings):
+        """Enable acknowledge actions and create acknowledge action from map config."""
+        if 'map' not in system_settings:
+            return
+        map_settings = system_settings['map']
+        if map_settings.get('acknowledge'):
+            try:
+                self.client_api.enable_acknowledge_actions(True)
+                logger.info("✓ Acknowledge actions enabled")
+            except Exception as e:
+                logger.warning(f"Could not enable acknowledge actions: {e}")
+                logger.warning("Continuing with other settings...")
+        if map_settings.get('action_title'):
+            try:
+                from client_api import AcknowledgeActionAlreadyExists
+                try:
+                    self.client_api.create_acknowledge_action(map_settings['action_title'], description="")
+                    logger.info(f"✓ Created acknowledge action: {map_settings['action_title']}")
+                except AcknowledgeActionAlreadyExists:
+                    logger.info(f"⏭️  Acknowledge action '{map_settings['action_title']}' already exists, skipping")
+                    self.summary.add_skipped("Acknowledge Action", map_settings['action_title'], "already exists")
+            except Exception as e:
+                logger.warning(f"Could not create acknowledge action: {e}")
+                logger.warning("Continuing with other settings...")
+
+    def _upload_system_logos_and_favicon(self, system_settings):
+        """Upload company/sidebar logos and favicon from system_interface config."""
+        system_interface = system_settings.get('system_interface', {})
+        project_root = os.path.dirname(os.path.abspath(self.config_path))
+
+        for logo_type in ["company", "sidebar"]:
+            logo_path_config = system_interface.get('logos', {}).get(logo_type)
+            if not logo_path_config:
+                continue
+            logo_path = os.path.join(project_root, logo_path_config) if not os.path.isabs(logo_path_config) else logo_path_config
+            if not os.path.exists(logo_path):
+                logger.warning(f"Logo file not found: {logo_path_config} (resolved: {logo_path})")
+                continue
+            try:
+                response, registration_success = self.client_api.upload_logo(logo_path, logo_type)
+                if registration_success:
+                    logger.info(f"✓ Uploaded {logo_type} logo from: {logo_path_config}")
+                    self.summary.add_created_item('logo', {
+                        'type': logo_type, 'source_file': os.path.basename(logo_path),
+                        'path': logo_path_config, 'resolved_path': logo_path, 'registered': True
+                    })
+                else:
+                    logger.warning(f"⚠️  Uploaded {logo_type} logo file but registration failed: {logo_path_config}")
+            except Exception as e:
+                logger.warning(f"Could not upload {logo_type} logo from '{logo_path_config}': {e}")
+
+        favicon_path_config = system_interface.get('favicon')
+        if not favicon_path_config:
+            return
+        favicon_path = os.path.join(project_root, favicon_path_config) if not os.path.isabs(favicon_path_config) else favicon_path_config
+        if not os.path.exists(favicon_path):
+            logger.warning(f"Favicon file not found: {favicon_path_config} (resolved: {favicon_path})")
+            return
+        try:
+            response, registration_success = self.client_api.upload_logo(favicon_path, "favicon")
+            if registration_success:
+                logger.info(f"✓ Uploaded favicon from: {favicon_path_config}")
+                self.summary.add_created_item('logo', {
+                    'type': 'favicon', 'source_file': os.path.basename(favicon_path),
+                    'path': favicon_path_config, 'resolved_path': favicon_path, 'registered': True
+                })
+            else:
+                logger.warning(f"⚠️  Uploaded favicon file but registration failed: {favicon_path_config}")
+        except Exception as e:
+            logger.warning(f"Could not upload favicon from '{favicon_path_config}': {e}")
+
+    # ---- Watch list & devices ----
     async def configure_devices(self):
         """
         Configure cameras/devices via GraphQL API.
@@ -546,13 +544,20 @@ class OnWatchAutomation:
                 camera_name = device_config.get('name', 'unknown')
                 error_detail = str(e)
                 logger.error(f"❌ Failed to create camera '{camera_name}': {error_detail}")
-                logger.warning(f"⚠️  Camera '{camera_name}' was not created. You may need to create it manually in the UI.")
+                logger.warning(f"→ Camera '{camera_name}' was not created. You may need to create it manually in the UI.")
                 self.summary.add_warning(f"Camera '{camera_name}' was not created - manual action may be needed")
                 self.summary.add_error("Camera", camera_name, error_detail)
                 skipped_count += 1
         
         logger.info(f"Devices configuration complete: {created_count} created, {skipped_count} skipped")
-    
+        if created_count >= 1:
+            logger.warning("")
+            logger.warning("⚠️  IMPORTANT – DO NOT SKIP:")
+            logger.warning("   Remember to disable streams before running the upgrade to have a steady state of alerts to remember.")
+            logger.warning("")
+        if devices and created_count == 0:
+            raise StepSkipped("All cameras already exist")
+
     def populate_watch_list(self):
         """
         Populate watch list with subjects via REST API.
@@ -584,7 +589,7 @@ class OnWatchAutomation:
             return
         
         logger.info(f"Populating watch list with {len(watch_list)} subjects...")
-        
+
         # Initialize API client if not already done
         if not self.client_api:
             self.initialize_api_client()
@@ -849,7 +854,7 @@ class OnWatchAutomation:
                                         except Exception as e:
                                             error_detail = str(e)
                                             logger.error(f"❌ Failed to add additional image '{additional_img_path}' to subject '{name}': {error_detail}")
-                                            logger.warning(f"⚠️  Subject '{name}' was created but additional image was not added. You may need to add it manually in the UI.")
+                                            logger.warning(f"→ Subject '{name}' was created but additional image was not added. You may need to add it manually in the UI.")
                                             self.summary.add_warning(f"Subject '{name}': Additional image '{os.path.basename(additional_img_path)}' not added - manual action may be needed")
                                     else:
                                         logger.warning(f"Additional image file not found: {additional_img_path}")
@@ -864,7 +869,7 @@ class OnWatchAutomation:
                 subject_name = subject.get('name', 'unknown') if isinstance(subject, dict) else 'unknown'
                 error_detail = str(e)
                 logger.error(f"❌ Failed to add subject '{subject_name}': {error_detail}")
-                logger.warning(f"⚠️  Subject '{subject_name}' was not added. You may need to add it manually in the UI.")
+                logger.warning(f"→ Subject '{subject_name}' was not added. You may need to add it manually in the UI.")
                 self.summary.add_warning(f"Subject '{subject_name}' was not added - manual action may be needed")
                 self.summary.add_error("Subject", subject_name, error_detail)
                 failed_count += 1
@@ -878,7 +883,11 @@ class OnWatchAutomation:
             logger.warning(f"⚠️  Watch list population partial: {success_count} succeeded, {failed_count} failed, {skipped_count} skipped")
         else:
             logger.error(f"❌ Watch list population failed: all {failed_count} subjects failed, {skipped_count} skipped")
-    
+        
+        if watch_list and success_count == 0 and failed_count == 0:
+            raise StepSkipped("All subjects already in watch list")
+
+    # ---- Groups & accounts ----
     async def configure_groups(self):
         """
         Configure subject groups via REST API.
@@ -908,6 +917,7 @@ class OnWatchAutomation:
         
         # Process subject groups
         subject_groups = groups.get('subject_groups', [])
+        groups_created = 0
         if subject_groups:
             logger.debug(f"Creating {len(subject_groups)} subject groups...")
             
@@ -992,6 +1002,7 @@ class OnWatchAutomation:
                         camera_groups=camera_groups
                     )
                     logger.info(f"✓ Created subject group: {name}")
+                    groups_created += 1
                     
                     # Track created group
                     try:
@@ -1017,13 +1028,16 @@ class OnWatchAutomation:
                     group_name = group_config.get('name', 'unknown')
                     error_detail = str(e)
                     logger.error(f"❌ Failed to create subject group '{group_name}': {error_detail}")
-                    logger.warning(f"⚠️  Subject group '{group_name}' was not created. You may need to create it manually in the UI.")
+                    logger.warning(f"→ Subject group '{group_name}' was not created. You may need to create it manually in the UI.")
                     self.summary.add_warning(f"Subject group '{group_name}' was not created - manual action may be needed")
         
         # Device groups - TODO: implement once endpoint is available
         device_groups = groups.get('device_groups', [])
         if device_groups:
             logger.debug(f"Device groups configuration not yet implemented ({len(device_groups)} groups skipped)")
+        
+        if subject_groups and groups_created == 0:
+            raise StepSkipped("All subject groups already exist")
     
     async def configure_accounts(self):
         """Configure user accounts and user groups via API."""
@@ -1037,6 +1051,9 @@ class OnWatchAutomation:
         # Initialize API client if needed
         if not self.client_api:
             self.initialize_api_client()
+        
+        users_created = 0
+        user_groups_created = 0
         
         # Get roles and user groups for mapping
         role_map = {}  # role name (lowercase) -> roleId
@@ -1183,6 +1200,7 @@ class OnWatchAutomation:
                         password=password
                     )
                     logger.info(f"✓ Created user: {username}")
+                    users_created += 1
                     
                     # Track created user
                     try:
@@ -1210,7 +1228,7 @@ class OnWatchAutomation:
                     username = user_config.get('username', 'unknown')
                     error_detail = str(e)
                     logger.error(f"❌ Failed to create user '{username}': {error_detail}")
-                    logger.warning(f"⚠️  User '{username}' was not created. You may need to create it manually in the UI.")
+                    logger.warning(f"→ User '{username}' was not created. You may need to create it manually in the UI.")
                     self.summary.add_warning(f"User '{username}' was not created - manual action may be needed")
                     self.summary.add_error("User", username, error_detail)
         
@@ -1293,6 +1311,7 @@ class OnWatchAutomation:
                         camera_groups=camera_group_ids
                     )
                     logger.info(f"✓ Created user group: {title}")
+                    user_groups_created += 1
                     
                     # Track created user group
                     try:
@@ -1318,10 +1337,16 @@ class OnWatchAutomation:
                     title = ug_config.get('title', 'unknown') or ug_config.get('name', 'unknown')
                     error_detail = str(e)
                     logger.error(f"❌ Failed to create user group '{title}': {error_detail}")
-                    logger.warning(f"⚠️  User group '{title}' was not created. You may need to create it manually in the UI.")
+                    logger.warning(f"→ User group '{title}' was not created. You may need to create it manually in the UI.")
                     self.summary.add_warning(f"User group '{title}' was not created - manual action may be needed")
                     self.summary.add_error("User Group", title, error_detail)
-    
+        
+        users_config = accounts.get('users', [])
+        user_groups_config = accounts.get('user_groups', [])
+        if (users_config or user_groups_config) and users_created == 0 and user_groups_created == 0:
+            raise StepSkipped("All accounts and user groups already exist")
+
+    # ---- Inquiries & mass import ----
     async def configure_inquiries(self):
         """
         Configure inquiry cases via REST API and GraphQL.
@@ -1345,6 +1370,7 @@ class OnWatchAutomation:
             logger.info("No inquiries to configure")
             return
         
+        inquiries_created = 0
         logger.debug(f"Configuring {len(inquiries)} inquiry cases...")
         
         # Initialize API client if needed
@@ -1406,7 +1432,7 @@ class OnWatchAutomation:
                         logger.info(f"✓ Set inquiry priority to: {priority}")
                     except Exception as e:
                         logger.warning(f"Could not set priority for inquiry '{inquiry_name}': {e}")
-                        logger.warning(f"  → Priority may need to be set manually in the UI")
+                        logger.warning("→ Priority may need to be set manually in the UI")
                 except InquiryCaseAlreadyExists:
                     logger.info(f"⏭️  Inquiry case '{inquiry_name}' already exists, skipping")
                     self.summary.add_skipped("Inquiry Case", inquiry_name, "already exists")
@@ -1602,7 +1628,7 @@ class OnWatchAutomation:
                                         })
                                     except Exception as update_error:
                                         logger.error(f"Failed to update {filename} configuration: {update_error}")
-                                        logger.warning(f"You may need to manually update the ROI configuration for {filename} in the UI")
+                                        logger.warning(f"→ You may need to manually update the ROI configuration for {filename} in the UI")
                                 else:
                                     logger.warning(f"Could not find {filename} in case to configure custom settings")
                         
@@ -1725,9 +1751,9 @@ class OnWatchAutomation:
                             elif analyzing_count > 0 or done_count > 0:
                                 logger.info(f"✓ Analysis status: {done_count} DONE, {analyzing_count} ANALYZING")
                                 if queued_count > 0:
-                                    logger.warning(f"⚠️  {queued_count} file(s) are QUEUED - may need manual attention")
+                                    logger.warning(f"→ {queued_count} file(s) are QUEUED - may need manual attention")
                             else:
-                                logger.warning(f"⚠️  Could not verify all files started analyzing - please check UI")
+                                logger.warning("→ Could not verify all files started analyzing - please check UI")
                         else:
                             logger.debug("No file IDs found to start analysis")
                     except Exception as e:
@@ -1767,16 +1793,16 @@ class OnWatchAutomation:
                         logger.info(status_msg)
                         
                         if final_queued > 0:
-                            logger.warning(f"⚠️  {final_queued} file(s) are QUEUED and may need manual analysis:")
+                            logger.warning(f"→ {final_queued} file(s) are QUEUED and may need manual analysis:")
                             for queued_file in final_files_by_status.get('QUEUED', []):
-                                logger.warning(f"   - {queued_file}")
+                                logger.warning(f"     • {queued_file}")
                         if final_failed > 0:
-                            logger.warning(f"⚠️  {final_failed} file(s) failed analysis:")
+                            logger.warning(f"→ {final_failed} file(s) failed analysis:")
                             for failed_file in final_files_by_status.get('ANALYSIS_FAILED', []):
-                                logger.warning(f"   - {failed_file}")
+                                logger.warning(f"     • {failed_file}")
                     else:
                         logger.info(f"✓ Completed inquiry case: {inquiry_name} ({len(successful_uploads)} file(s) uploaded)")
-                        logger.warning(f"⚠️  File analysis status unclear - please verify in UI")
+                        logger.warning("→ File analysis status unclear - please verify in UI")
                 except Exception as e:
                     # If we can't check final status, just log completion
                     logger.info(f"✓ Completed inquiry case: {inquiry_name} ({len(successful_uploads)} file(s) uploaded)")
@@ -1786,17 +1812,20 @@ class OnWatchAutomation:
                 if inquiry_tracking is not None:
                     inquiry_tracking['files_count'] = len(successful_uploads)
                     self.summary.add_created_item('inquiries', inquiry_tracking)
+                    inquiries_created += 1
                 
             except Exception as e:
                 inquiry_name = inquiry_config.get('name', 'unknown')
                 error_detail = str(e)
                 logger.error(f"❌ Failed to configure inquiry '{inquiry_name}': {error_detail}")
-                logger.warning(f"⚠️  Inquiry '{inquiry_name}' was not configured. You may need to create it manually in the UI.")
+                logger.warning(f"→ Inquiry '{inquiry_name}' was not configured. You may need to create it manually in the UI.")
                 self.summary.add_warning(f"Inquiry '{inquiry_name}' was not configured - manual action may be needed")
                 continue
         
         logger.info("Inquiries configuration complete")
-    
+        if inquiries_created == 0:
+            raise StepSkipped("All inquiry cases already exist")
+
     async def configure_mass_import(self):
         """
         Upload mass import file via REST API.
@@ -1899,7 +1928,7 @@ class OnWatchAutomation:
             existing_status = existing_mass_import.get('status', 'UNKNOWN')
             logger.info(f"⏭️  Mass import '{mass_import_name}' already exists (id: {existing_id}, status: {existing_status}), skipping")
             self.summary.add_skipped("Mass Import", mass_import_name, f"already exists (status: {existing_status})")
-            return
+            raise StepSkipped("Mass import already exists")
         else:
             logger.info(f"✓ Mass import '{mass_import_name}' does not exist, proceeding with upload")
         
@@ -1931,8 +1960,8 @@ class OnWatchAutomation:
                 self.client_api.upload_mass_import_file(full_file_path, upload_id)
                 logger.info(f"✓ Uploaded mass import file: {filename}")
                 logger.info(f"✓ Mass import '{mass_import_name}' upload started successfully")
-                logger.info("Processing will continue in the background. Check the UI for status updates.")
-                logger.info("Note: You may need to manually resolve issues in the mass import report after processing completes.")
+                logger.warning("→ Processing continues in the background. Check the UI for status updates.")
+                logger.warning("→ You may need to manually resolve issues in the mass import report after processing completes.")
                 
                 # Track mass import
                 self.summary.add_created_item('mass_import', {
@@ -1943,13 +1972,14 @@ class OnWatchAutomation:
             except MassImportAlreadyExists as e:
                 logger.info(f"⏭️  Mass import '{mass_import_name}' already exists, skipping")
                 self.summary.add_skipped("Mass Import", mass_import_name, "already exists")
-                return
+                raise StepSkipped("Mass import already exists")
         except Exception as e:
             logger.error(f"Failed to upload mass import file: {e}")
             return
         
         logger.info("Mass import configuration complete")
-    
+
+    # ---- Rancher & file upload ----
     def configure_rancher(self):
         """
         Configure Rancher environment variables via REST API (Step 11 - last step).
@@ -1969,18 +1999,9 @@ class OnWatchAutomation:
         """
         env_vars = self.config.get('env_vars', {})
         
-        # Track env_vars from config.yaml for export (for transparency, even if step fails)
-        # This ensures they appear in the export file regardless of success/failure
-        if env_vars:
-            for key, value in env_vars.items():
-                self.summary.add_created_item('rancher_env_vars', {
-                    'key': key,
-                    'value': str(value)  # Convert to string for export
-                })
-        
         if not env_vars:
             logger.info("No Rancher environment variables to set")
-            return
+            raise StepSkipped("No Rancher environment variables to set")
         
         # Check if OnWatch version is 2.8 - Rancher env vars not supported
         onwatch_config = self.config.get('onwatch', {})
@@ -1988,26 +2009,25 @@ class OnWatchAutomation:
         if version == "2.8":
             logger.warning("⚠️  Rancher environment variables are not supported on OnWatch 2.8")
             logger.warning("   This step will be skipped. Environment variables must be configured manually.")
-            logger.info("   To configure manually:")
-            logger.info("   1. Access Rancher UI at the configured base_url")
-            logger.info("   2. Navigate to the cv-engine workload")
-            logger.info("   3. Edit environment variables in the workload configuration")
-            # Still track env_vars in export for transparency
-            return
+            logger.warning("   To configure manually:")
+            logger.warning("   1. Access Rancher UI at the configured base_url")
+            logger.warning("   2. Navigate to the cv-engine workload")
+            logger.warning("   3. Edit environment variables in the workload configuration")
+            raise StepSkipped("Not supported on OnWatch 2.8")
         
         rancher_config = self.config.get('rancher', {})
         if not rancher_config:
             logger.warning("Rancher configuration not found in config.yaml")
             logger.warning("Skipping Rancher environment variable configuration")
-            return
+            raise StepSkipped("Rancher configuration not found in config.yaml")
         
         # Validate required Rancher config fields (ip_address not needed - uses onwatch.ip_address)
         required_fields = ['port', 'username', 'password']
         missing_fields = [field for field in required_fields if not rancher_config.get(field)]
         if missing_fields:
-            logger.error(f"Missing required Rancher configuration fields: {', '.join(missing_fields)}")
-            logger.error("Skipping Rancher environment variable configuration")
-            return
+            logger.warning(f"Missing required Rancher configuration fields: {', '.join(missing_fields)}")
+            logger.warning("Skipping Rancher environment variable configuration")
+            raise StepSkipped(f"Missing required Rancher config: {', '.join(missing_fields)}")
         
         logger.info("Configuring Rancher environment variables via API...")
         
@@ -2021,7 +2041,7 @@ class OnWatchAutomation:
         base_url = rancher_config.get('base_url') or f"https://{onwatch_ip}:{rancher_port}"
         
         try:
-            # Initialize Rancher API client
+            from rancher_api import RancherApi
             rancher_api = RancherApi(
                 base_url=base_url,
             username=rancher_config['username'],
@@ -2077,9 +2097,12 @@ class OnWatchAutomation:
                 project_id=project_id
             )
             logger.info(f"✓ Successfully configured {len(env_vars)} environment variables in Rancher")
-            
-            # Note: Rancher env vars are already tracked at the start of this method
-            # for export transparency (so they appear even if step fails)
+            # Track only what was actually applied (for export / post-upgrade validation)
+            for key, value in env_vars.items():
+                self.summary.add_created_item('rancher_env_vars', {
+                    'key': key,
+                    'value': str(value)
+                })
         except Exception as e:
             logger.error(f"Failed to configure Rancher environment variables: {e}")
             raise
@@ -2165,7 +2188,7 @@ class OnWatchAutomation:
                         logger.error("SSH password is required")
                         return
                 
-                # Initialize SSH utility
+                from ssh_util import SSHUtil
                 ssh_util = SSHUtil(
                     ip_address=ssh_config['ip_address'],
                     username=ssh_config['username'],
@@ -2205,205 +2228,64 @@ class OnWatchAutomation:
         # Handle icons directory (not yet implemented)
         if icons:
             logger.warning("Icons directory upload is not yet implemented")
-            logger.info(f"Icons directory configured: {icons} (requires manual upload or future implementation)")
+            logger.warning(f"→ Icons directory configured: {icons} (requires manual upload or future implementation)")
     
+    def _check_populate_watch_list_partial(self):
+        """If some subjects failed to add, return (status, detail, manual_action) for step 6; else None."""
+        subject_warnings = [w for w in self.summary.warnings if "Subject" in w and "was not added" in w]
+        if subject_warnings:
+            return ("partial", "Some subjects failed - see warnings", True)
+        return None
+    
+    async def _run_step(self, step_num, name, method_name, is_async, fatal, success_detail, manual_msg):
+        """Run one automation step: call method, record timing and success/failure. Raises on fatal failure."""
+        step_start = time.time()
+        logger.info(f"\n[Step {step_num}/{NUM_STEPS}] {name}...")
+        callable_fn = getattr(self, method_name)
+        try:
+            if is_async:
+                await callable_fn()
+            else:
+                callable_fn()
+            step_end = time.time()
+            self.summary.record_step_timing(step_num, step_start, step_end)
+            # Step 6: optional partial success when some subjects failed
+            if step_num == 6:
+                override = self._check_populate_watch_list_partial()
+                if override:
+                    status, detail, manual_action = override
+                    self.summary.record_step(step_num, name, status, detail, manual_action=manual_action)
+                else:
+                    self.summary.record_step(step_num, name, "success", success_detail)
+            else:
+                self.summary.record_step(step_num, name, "success", success_detail)
+        except StepSkipped as e:
+            step_end = time.time()
+            self.summary.record_step_timing(step_num, step_start, step_end)
+            self.summary.record_step(step_num, name, "skipped", str(e))
+        except Exception as e:
+            step_end = time.time()
+            self.summary.record_step_timing(step_num, step_start, step_end)
+            error_msg = f"Failed to {name.lower()}: {str(e)}"
+            logger.error(f"❌ {error_msg}")
+            logger.warning(f"→ MANUAL ACTION REQUIRED: {manual_msg}")
+            self.summary.record_step(step_num, name, "failed", error_msg, manual_action=True)
+            if fatal:
+                raise
+
+    # ---- Run loop ----
     async def run(self):
         """Run the complete automation process."""
         logger.info("=" * 80)
         logger.info("Starting OnWatch Data Population Automation")
         logger.info("=" * 80)
         
-        # Get OnWatch IP for export metadata
         onwatch_ip = self.config.get('onwatch', {}).get('ip_address', 'unknown')
-        
-        # Start timing
         self.summary.start_timing(onwatch_ip=onwatch_ip)
         
         try:
-            # Step 1: Initialize API client
-            step_start = time.time()
-            logger.info("\n[Step 1/11] Initializing API client...")
-            try:
-                self.initialize_api_client()
-                step_end = time.time()
-                self.summary.record_step_timing(1, step_start, step_end)
-                self.summary.record_step(1, "Initialize API Client", "success", "API client initialized and logged in")
-            except Exception as e:
-                step_end = time.time()
-                self.summary.record_step_timing(1, step_start, step_end)
-                error_msg = f"Failed to initialize API client: {str(e)}"
-                logger.error(f"❌ {error_msg}")
-                logger.error("⚠️  MANUAL ACTION REQUIRED: Cannot proceed without API client. Please check credentials and network connectivity.")
-                self.summary.record_step(1, "Initialize API Client", "failed", error_msg, manual_action=True)
-                # Store the exception to re-raise later (but we'll catch it cleanly in outer handler)
-                raise  # Cannot continue without API client
-            
-            # Step 2: Set KV parameters
-            step_start = time.time()
-            logger.info("\n[Step 2/11] Setting KV parameters...")
-            try:
-                await self.set_kv_parameters()
-                step_end = time.time()
-                self.summary.record_step_timing(2, step_start, step_end)
-                self.summary.record_step(2, "Set KV Parameters", "success")
-            except Exception as e:
-                step_end = time.time()
-                self.summary.record_step_timing(2, step_start, step_end)
-                error_msg = f"Failed to set KV parameters: {str(e)}"
-                logger.error(f"❌ {error_msg}")
-                logger.error("⚠️  MANUAL ACTION REQUIRED: Please set KV parameters manually in the UI at /bt/settings/kv")
-                self.summary.record_step(2, "Set KV Parameters", "failed", error_msg, manual_action=True)
-            
-            # Step 3: Configure system settings
-            step_start = time.time()
-            logger.info("\n[Step 3/11] Configuring system settings...")
-            try:
-                await self.configure_system_settings()
-                step_end = time.time()
-                self.summary.record_step_timing(3, step_start, step_end)
-                self.summary.record_step(3, "Configure System Settings", "success")
-            except Exception as e:
-                step_end = time.time()
-                self.summary.record_step_timing(3, step_start, step_end)
-                error_msg = f"Failed to configure system settings: {str(e)}"
-                logger.error(f"❌ {error_msg}")
-                logger.error("⚠️  MANUAL ACTION REQUIRED: Please configure system settings manually in the UI")
-                self.summary.record_step(3, "Configure System Settings", "failed", error_msg, manual_action=True)
-            
-            # Step 4: Configure groups and profiles
-            step_start = time.time()
-            logger.info("\n[Step 4/11] Configuring groups and profiles...")
-            try:
-                await self.configure_groups()
-                step_end = time.time()
-                self.summary.record_step_timing(4, step_start, step_end)
-                self.summary.record_step(4, "Configure Groups", "success")
-            except Exception as e:
-                step_end = time.time()
-                self.summary.record_step_timing(4, step_start, step_end)
-                error_msg = f"Failed to configure groups: {str(e)}"
-                logger.error(f"❌ {error_msg}")
-                logger.error("⚠️  MANUAL ACTION REQUIRED: Please configure groups manually in the UI")
-                self.summary.record_step(4, "Configure Groups", "failed", error_msg, manual_action=True)
-            
-            # Step 5: Configure accounts
-            step_start = time.time()
-            logger.info("\n[Step 5/11] Configuring accounts...")
-            try:
-                await self.configure_accounts()
-                step_end = time.time()
-                self.summary.record_step_timing(5, step_start, step_end)
-                self.summary.record_step(5, "Configure Accounts", "success")
-            except Exception as e:
-                step_end = time.time()
-                self.summary.record_step_timing(5, step_start, step_end)
-                error_msg = f"Failed to configure accounts: {str(e)}"
-                logger.error(f"❌ {error_msg}")
-                logger.error("⚠️  MANUAL ACTION REQUIRED: Please configure accounts manually in the UI")
-                self.summary.record_step(5, "Configure Accounts", "failed", error_msg, manual_action=True)
-            
-            # Step 6: Populate watch list
-            step_start = time.time()
-            logger.info("\n[Step 6/11] Populating watch list...")
-            try:
-                self.populate_watch_list()
-                step_end = time.time()
-                self.summary.record_step_timing(6, step_start, step_end)
-                # Check if there were any failures (tracked in populate_watch_list)
-                # If warnings exist for subjects, mark as partial
-                subject_warnings = [w for w in self.summary.warnings if "Subject" in w and "was not added" in w]
-                if subject_warnings:
-                    self.summary.record_step(6, "Populate Watch List", "partial", f"Some subjects failed - see warnings", manual_action=True)
-                else:
-                    self.summary.record_step(6, "Populate Watch List", "success")
-            except Exception as e:
-                step_end = time.time()
-                self.summary.record_step_timing(6, step_start, step_end)
-                error_msg = f"Failed to populate watch list: {str(e)}"
-                logger.error(f"❌ {error_msg}")
-                logger.error("⚠️  MANUAL ACTION REQUIRED: Please add watch list subjects manually in the UI")
-                self.summary.record_step(6, "Populate Watch List", "failed", error_msg, manual_action=True)
-            
-            # Step 7: Configure devices
-            step_start = time.time()
-            logger.info("\n[Step 7/11] Configuring devices...")
-            try:
-                await self.configure_devices()
-                step_end = time.time()
-                self.summary.record_step_timing(7, step_start, step_end)
-                self.summary.record_step(7, "Configure Devices", "success")
-            except Exception as e:
-                step_end = time.time()
-                self.summary.record_step_timing(7, step_start, step_end)
-                error_msg = f"Failed to configure devices: {str(e)}"
-                logger.error(f"❌ {error_msg}")
-                logger.error("⚠️  MANUAL ACTION REQUIRED: Please configure devices manually in the UI")
-                self.summary.record_step(7, "Configure Devices", "failed", error_msg, manual_action=True)
-            
-            # Step 8: Configure inquiries
-            step_start = time.time()
-            logger.info("\n[Step 8/11] Configuring inquiries...")
-            try:
-                await self.configure_inquiries()
-                step_end = time.time()
-                self.summary.record_step_timing(8, step_start, step_end)
-                self.summary.record_step(8, "Configure Inquiries", "success")
-            except Exception as e:
-                step_end = time.time()
-                self.summary.record_step_timing(8, step_start, step_end)
-                error_msg = f"Failed to configure inquiries: {str(e)}"
-                logger.error(f"❌ {error_msg}")
-                logger.error("⚠️  MANUAL ACTION REQUIRED: Please configure inquiries manually in the UI")
-                self.summary.record_step(8, "Configure Inquiries", "failed", error_msg, manual_action=True)
-            
-            # Step 9: Upload mass import
-            step_start = time.time()
-            logger.info("\n[Step 9/11] Uploading mass import...")
-            try:
-                await self.configure_mass_import()
-                step_end = time.time()
-                self.summary.record_step_timing(9, step_start, step_end)
-                self.summary.record_step(9, "Upload Mass Import", "success", "File uploaded, processing continues in background")
-            except Exception as e:
-                step_end = time.time()
-                self.summary.record_step_timing(9, step_start, step_end)
-                error_msg = f"Failed to upload mass import: {str(e)}"
-                logger.error(f"❌ {error_msg}")
-                logger.error("⚠️  MANUAL ACTION REQUIRED: Please upload mass import file manually in the UI")
-                self.summary.record_step(9, "Upload Mass Import", "failed", error_msg, manual_action=True)
-            
-            # Step 10: Upload translation file
-            step_start = time.time()
-            logger.info("\n[Step 10/11] Uploading translation file...")
-            try:
-                await self.upload_files()
-                step_end = time.time()
-                self.summary.record_step_timing(10, step_start, step_end)
-                self.summary.record_step(10, "Upload Translation File", "success")
-            except Exception as e:
-                step_end = time.time()
-                self.summary.record_step_timing(10, step_start, step_end)
-                error_msg = f"Failed to upload translation file: {str(e)}"
-                logger.error(f"❌ {error_msg}")
-                logger.error("⚠️  MANUAL ACTION REQUIRED: Please upload translation file manually via SSH")
-                self.summary.record_step(10, "Upload Translation File", "failed", error_msg, manual_action=True)
-            
-            # Step 11: Configure Rancher (last step)
-            step_start = time.time()
-            logger.info("\n[Step 11/11] Configuring Rancher...")
-            try:
-                self.configure_rancher()
-                step_end = time.time()
-                self.summary.record_step_timing(11, step_start, step_end)
-                self.summary.record_step(11, "Configure Rancher", "success")
-            except Exception as e:
-                step_end = time.time()
-                self.summary.record_step_timing(11, step_start, step_end)
-                error_msg = f"Failed to configure Rancher: {str(e)}"
-                logger.error(f"❌ {error_msg}")
-                logger.error("⚠️  MANUAL ACTION REQUIRED: Please configure Rancher environment variables manually")
-                self.summary.record_step(11, "Configure Rancher", "failed", error_msg, manual_action=True)
-            
+            for (step_num, name, method_name, is_async, fatal, success_detail, manual_msg) in AUTOMATION_STEPS:
+                await self._run_step(step_num, name, method_name, is_async, fatal, success_detail, manual_msg)
         except Exception as e:
             # Show user-friendly error message without full stack trace
             error_message = str(e)
@@ -2434,585 +2316,252 @@ class OnWatchAutomation:
             sys.exit(1)
 
 
-def main():
-    """Main entry point."""
-    import argparse
-    
-    parser = argparse.ArgumentParser(
-        description='OnWatch Data Population Automation',
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  # Validate configuration
-  python3 main.py --validate
-  
-  # Run full automation
-  python3 main.py
-  
-  # Run with custom config file
-  python3 main.py --config my-config.yaml
-  
-  # Run specific step
-  python3 main.py --step populate-watchlist
-  
-  # Dry-run mode (validate and show what would be executed)
-  python3 main.py --dry-run
-  
-  # Preview dataset that will be populated
-  python3 main.py --preview-data
-  
-  # Verbose logging
-  python3 main.py --verbose
-  
-  # Quiet mode (errors only)
-  python3 main.py --quiet
-        """
-    )
-    parser.add_argument(
-        '--config',
-        type=str,
-        default='config.yaml',
-        help='Path to configuration YAML file (default: config.yaml)'
-    )
-    parser.add_argument(
-        '--step',
-        type=str,
-        choices=[
-            'init-api', 'set-kv-params', 'configure-system', 'configure-groups',
-            'configure-accounts', 'populate-watchlist', 'configure-devices',
-            'configure-inquiries', 'upload-mass-import', 'configure-rancher', 'upload-translation-file'
-        ],
-        help='Run only a specific step. Use --list-steps to see descriptions.'
-    )
-    parser.add_argument(
-        '--validate',
-        action='store_true',
-        help='Validate configuration file and exit (does not run automation)'
-    )
-    parser.add_argument(
-        '--dry-run',
-        action='store_true',
-        help='Validate config and show what would be executed without making API calls'
-    )
-    parser.add_argument(
-        '--verbose',
-        action='store_true',
-        help='Enable verbose logging (DEBUG level)'
-    )
-    parser.add_argument(
-        '--quiet',
-        action='store_true',
-        help='Enable quiet mode (ERROR level only)'
-    )
-    parser.add_argument(
-        '--log-file',
-        type=str,
-        help='Save logs to file (e.g., --log-file automation.log)'
-    )
-    parser.add_argument(
-        '--version',
-        action='version',
-        version='OnWatch Data Population Automation v1.0'
-    )
-    parser.add_argument(
-        '--list-steps',
-        action='store_true',
-        help='List all available automation steps and exit'
-    )
-    parser.add_argument(
-        '--set-ip',
-        type=str,
-        metavar='IP_ADDRESS',
-        help='Update all IP addresses in config.yaml to the specified IP address. Updates onwatch, ssh, and rancher IPs automatically. Creates a backup of the original config file.'
-    )
-    parser.add_argument(
-        '--set-version',
-        type=str,
-        metavar='VERSION',
-        choices=['2.6', '2.8'],
-        help='Update OnWatch version in config.yaml (2.6 or 2.8). Automatically updates Rancher password based on version (2.6="admin", 2.8="administrator"). Can be used with --set-ip or independently.'
-    )
-    parser.add_argument(
-        '--preview-data',
-        action='store_true',
-        help='Preview the dataset that will be populated (shows all configured data) and exit'
-    )
-    
-    args = parser.parse_args()
-    
-    # Handle list-steps
-    if args.list_steps:
-        steps = [
-            ("init-api", "Initialize API Client", "Connect and authenticate with OnWatch API"),
-            ("set-kv-params", "Set KV Parameters", "Configure key-value system parameters"),
-            ("configure-system", "Configure System Settings", "Set general, map, engine, and interface settings"),
-            ("configure-groups", "Configure Groups", "Create subject groups with authorization and visibility"),
-            ("configure-accounts", "Configure Accounts", "Create user accounts and user groups"),
-            ("populate-watchlist", "Populate Watch List", "Add subjects to watch list with images"),
-            ("configure-devices", "Configure Devices", "Create cameras/devices with thresholds and calibration"),
-            ("configure-inquiries", "Configure Inquiries", "Create inquiry cases with file uploads and ROI settings"),
-            ("upload-mass-import", "Upload Mass Import", "Upload mass import file for bulk subject import"),
-            ("configure-rancher", "Configure Rancher", "Set Kubernetes environment variables via Rancher API"),
-            ("upload-translation-file", "Upload Translation File", "Upload translation file to device via SSH")
-        ]
-        print("\nAvailable Automation Steps:")
-        print("=" * 70)
-        for step_id, step_name, description in steps:
-            print(f"  --step {step_id:24s}  {step_name}")
-            print(f"  {'':26s}  {description}\n")
-        sys.exit(0)
-    
-    # Handle preview-data
-    if args.preview_data:
-        try:
-            automation = OnWatchAutomation(config_path=args.config)
-            config = automation.config
-            
-            print("\n" + "=" * 70)
-            print("Dataset Preview")
-            print("=" * 70)
-            print(f"\nConfiguration file: {args.config}")
-            print("\nThis dataset will be populated when you run the automation:\n")
-            
-            # KV Parameters
-            kv_params = config.get('kv_parameters', {})
-            if kv_params:
-                print(f"📋 KV Parameters: {len(kv_params)}")
-                for key, value in kv_params.items():
-                    print(f"   • {key}: {value}")
-            
-            # System Settings
-            sys_settings = config.get('system_settings', {})
-            if sys_settings:
-                print(f"\n⚙️  System Settings:")
-                general = sys_settings.get('general', {})
-                if general:
-                    blur_faces = general.get('blur_all_faces_except_selected', False)
-                    discard_detections = general.get('discard_detections_not_in_watch_list', False)
-                    print(f"   General:")
-                    print(f"     • Blur all faces except selected: {'enabled' if blur_faces else 'disabled'}")
-                    print(f"     • Discard detections not in watch list: {'enabled' if discard_detections else 'disabled'}")
-                    print(f"     • Face Threshold: {general.get('default_face_threshold', 'N/A')}")
-                    print(f"     • Body Threshold: {general.get('default_body_threshold', 'N/A')}")
-                    print(f"     • Liveness Threshold: {general.get('default_liveness_threshold', 'N/A')}")
-                    print(f"     • Body Image Retention: {general.get('body_image_retention_period', 'N/A')}")
-                map_settings = sys_settings.get('map', {})
-                if map_settings:
-                    seed = map_settings.get('seed_location', {})
-                    acknowledge = map_settings.get('acknowledge', False)
-                    action_title = map_settings.get('action_title', 'N/A')
-                    masks_access = map_settings.get('masks_access_control', False)
-                    print(f"   Map:")
-                    if seed:
-                        print(f"     • Seed Location: lat {seed.get('lat', 'N/A')}, long {seed.get('long', 'N/A')}")
-                    print(f"     • Acknowledge: {'enabled' if acknowledge else 'disabled'}")
-                    if acknowledge:
-                        print(f"     • Action Title: {action_title}")
-                    print(f"     • Masks Access Control: {'enabled' if masks_access else 'disabled'}")
-                interface = sys_settings.get('system_interface', {})
-                if interface:
-                    product_name = interface.get('product_name', 'N/A')
-                    translation_file = interface.get('translation_file', '')
-                    icons = interface.get('icons', '')
-                    print(f"   System Interface:")
-                    print(f"     • Product Name: {product_name}")
-                    if translation_file:
-                        # Check if translation file exists
-                        project_root = os.path.dirname(os.path.abspath(__file__))
-                        if os.path.isabs(translation_file):
-                            translation_path = translation_file
-                        else:
-                            translation_path = os.path.join(project_root, translation_file)
-                        file_exists = os.path.exists(translation_path)
-                        file_size = os.path.getsize(translation_path) if file_exists else 0
-                        file_size_mb = file_size / (1024 * 1024) if file_size > 0 else 0
-                        filename = os.path.basename(translation_file)
-                        print(f"     • Translation File: {filename}")
-                        print(f"       Path: {translation_file}")
-                        if file_exists:
-                            print(f"       Status: ✓ File exists ({file_size_mb:.2f} MB)")
-                            print(f"       Upload: Will be uploaded via SSH to device")
-                        else:
-                            print(f"       Status: ⚠️  File not found at configured path")
-                    if icons:
-                        print(f"     • Icons: {icons} (⚠️  not yet implemented)")
-                engine = sys_settings.get('engine', {})
-                if engine:
-                    video_storage = engine.get('video_storage', {})
-                    print(f"   Engine:")
-                    if video_storage:
-                        print(f"     • All Videos Storage: {video_storage.get('all_videos_days', 'N/A')} days")
-                        print(f"     • Videos with Detections: {video_storage.get('videos_with_detections_days', 'N/A')} days")
-                    print(f"     • Detection Storage: {engine.get('detection_storage_days', 'N/A')} days")
-                    print(f"     • Alert Storage: {engine.get('alert_storage_days', 'N/A')} days")
-                    print(f"     • Inquiry Storage: {engine.get('inquiry_storage_days', 'N/A')} days")
-            
-            # Devices/Cameras
-            devices = config.get('devices', [])
-            if devices:
-                print(f"\n📹 Cameras/Devices: {len(devices)}")
-                for device in devices:
-                    name = device.get('name', 'Unknown')
-                    details = device.get('details', {})
-                    threshold = details.get('threshold', 'N/A')
-                    location = details.get('location', {}).get('name', 'default')
-                    calibration = device.get('calibration', {})
-                    tracker = calibration.get('tracker', 'N/A')
-                    track_length = calibration.get('face_track_length', {})
-                    track_min = track_length.get('min', 'N/A')
-                    track_max = track_length.get('max', 'N/A')
-                    padding = calibration.get('calibration_tool', {}).get('padding', {})
-                    detection_min = calibration.get('calibration_tool', {}).get('detection_min_size', 'N/A')
-                    security = device.get('security_access', {})
-                    liveness = security.get('liveness', False)
-                    liveness_threshold = security.get('liveness_threshold', 'N/A')
-                    
-                    print(f"   • {name}")
-                    print(f"     - Threshold: {threshold}, Location: {location}")
-                    print(f"     - Tracker: {tracker}, Face Track Length: {track_min}-{track_max}s")
-                    if padding:
-                        print(f"     - Padding: top={padding.get('top', 0)}, right={padding.get('right', 0)}, bottom={padding.get('bottom', 0)}, left={padding.get('left', 0)}")
-                    print(f"     - Detection Min Size: {detection_min}")
-                    print(f"     - Liveness: {'active' if liveness else 'disabled'}", end='')
-                    if liveness:
-                        print(f" (threshold: {liveness_threshold})")
-                    else:
-                        print()
-            
-            # Groups
-            groups = config.get('groups', {})
-            subject_groups = groups.get('subject_groups', [])
-            device_groups = groups.get('device_groups', [])
-            if subject_groups:
-                print(f"\n👥 Subject Groups: {len(subject_groups)}")
-                for group in subject_groups:
-                    name = group.get('name', 'Unknown')
-                    auth = group.get('authorization', 'N/A')
-                    visibility = group.get('visibility', 'N/A')
-                    priority = group.get('priority', 'N/A')
-                    print(f"   • {name} ({auth}, {visibility}, priority: {priority})")
-            if device_groups:
-                print(f"\n📱 Device Groups (Camera Groups): {len(device_groups)}")
-                for group in device_groups:
-                    name = group.get('name', 'Unknown')
-                    priority = group.get('priority', 'N/A')
-                    description = group.get('description', '')
-                    print(f"   • {name} (priority: {priority}, description: {description or 'none'})")
-            
-            # Watch List
-            watch_list = config.get('watch_list', {})
-            subjects = watch_list.get('subjects', [])
-            if subjects:
-                total_images = sum(len(s.get('images', [])) for s in subjects)
-                print(f"\n👤 Watch List Subjects: {len(subjects)}")
-                print(f"   Total Images: {total_images}")
-                for subject in subjects:
-                    name = subject.get('name', 'Unknown')
-                    images = subject.get('images', [])
-                    group = subject.get('group', 'N/A')
-                    print(f"   • {name} ({len(images)} image(s), group: {group})")
-            
-            # Inquiry Cases
-            inquiries = config.get('inquiries', [])
-            if inquiries:
-                print(f"\n🔍 Inquiry Cases: {len(inquiries)}")
-                for inquiry in inquiries:
-                    name = inquiry.get('name', 'Unknown')
-                    files = inquiry.get('files', [])
-                    priority = inquiry.get('priority', 'N/A')
-                    print(f"   • {name} (priority: {priority}, {len(files)} file(s))")
-                    for file_config in files:
-                        file_path = file_config.get('path', 'Unknown')
-                        filename = os.path.basename(file_path)
-                        settings = file_config.get('settings', 'default')
-                        print(f"     - {filename} ({settings})")
-            
-            # Mass Import
-            mass_import = config.get('mass_import', {})
-            if mass_import:
-                name = mass_import.get('name', 'N/A')
-                file_path = mass_import.get('file_path', 'N/A')
-                print(f"\n📦 Mass Import:")
-                print(f"   • Name: {name}")
-                print(f"   • File: {file_path}")
-            
-            # Environment Variables
-            env_vars = config.get('env_vars', {})
-            if env_vars:
-                print(f"\n🔧 Environment Variables: {len(env_vars)}")
-                for key in env_vars.keys():
-                    print(f"   • {key}")
-            
-            # User Accounts
-            accounts = config.get('accounts', {})
-            users = accounts.get('users', [])
-            user_groups = accounts.get('user_groups', [])
-            if users or user_groups:
-                print(f"\n👤 User Accounts: {len(users)}")
-                for user in users:
-                    username = user.get('username', 'Unknown')
-                    first_name = user.get('first_name', '')
-                    last_name = user.get('last_name', '')
-                    email = user.get('email', '')
-                    role = user.get('role', 'N/A')
-                    user_group = user.get('user_group', 'N/A')
-                    password = user.get('password')
-                    print(f"   • {username} ({first_name} {last_name}, {role}, group: {user_group})")
-                    if email:
-                        print(f"     Email: {email}")
-                    if password:
-                        print(f"     Password: {password}")
-                    elif password is None:
-                        print(f"     Password: (keep existing)")
-                if user_groups:
-                    # Count users per group
-                    user_group_counts = {}
-                    for user in users:
-                        user_group_name = user.get('user_group', '').lower()
-                        if user_group_name:
-                            user_group_counts[user_group_name] = user_group_counts.get(user_group_name, 0) + 1
-                    
-                    print(f"\n   User Groups: {len(user_groups)}")
-                    for ug in user_groups:
-                        title = ug.get('title', 'Unknown')
-                        # Match user group title (case-insensitive) to count users
-                        title_lower = title.lower()
-                        user_count = user_group_counts.get(title_lower, 0)
-                        print(f"   • {title} (Users Count: {user_count})")
-            
-            # Missing/Not Implemented Features
-            missing_features = []
-            sys_settings = config.get('system_settings', {})
-            if sys_settings:
-                interface = sys_settings.get('system_interface', {})
-                icons = interface.get('icons', '')
-                if icons and icons.strip():
-                    missing_features.append("Icons directory upload (configured but not yet implemented)")
-            
-            # Check for user group assignments (if any are configured)
-            accounts = config.get('accounts', {})
-            user_groups = accounts.get('user_groups', [])
-            has_assignments = False
-            for ug in user_groups:
-                subject_groups = ug.get('subject_groups', [])
-                camera_groups = ug.get('camera_groups', [])
-                if subject_groups or camera_groups:
-                    has_assignments = True
-                    break
-            if has_assignments:
-                missing_features.append("User group assignments to subject/camera groups (configured but not yet implemented)")
-            
-            if missing_features:
-                print(f"\n⚠️  Features Configured But Not Yet Implemented:")
-                for feature in missing_features:
-                    print(f"   • {feature}")
-            
-            print("\n" + "=" * 70)
-            print("Note: This is the dataset from config.yaml.")
-            print("You can customize it by editing config.yaml before running automation.")
-            print("=" * 70 + "\n")
-        except Exception as e:
-            print(f"\n❌ Error loading dataset: {e}\n", file=sys.stderr)
-            sys.exit(1)
-        sys.exit(0)
-    
-    # Configure logging
-    if args.verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
-        # In verbose mode, show full tracebacks
-        sys.excepthook = _original_excepthook
-    elif args.quiet:
-        logging.getLogger().setLevel(logging.ERROR)
-        # In quiet mode, suppress tracebacks
-        sys.excepthook = _clean_excepthook
-    else:
-        # In normal mode, suppress tracebacks (show user-friendly messages only)
-        sys.excepthook = _clean_excepthook
-    
-    # Setup log file if specified
-    if args.log_file:
-        file_handler = logging.FileHandler(args.log_file)
-        file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S'))
-        logging.getLogger().addHandler(file_handler)
-    
-    # Handle --set-ip option (must be done before creating OnWatchAutomation)
-    if args.set_ip:
-        config_manager = ConfigManager(config_path=args.config)
-        success, message = config_manager.update_ip_address(args.set_ip, backup=True)
-        if success:
-            logger.info(f"✓ {message}")
-            logger.info(f"✓ Configuration file updated: {args.config}")
-            logger.info("✓ You can now run the automation with: python3 main.py")
-            # If version is also provided, update it
-            if args.set_version:
-                success2, message2 = config_manager.update_version(args.set_version, backup=False)
-                if success2:
-                    logger.info(f"✓ {message2}")
-                else:
-                    logger.warning(f"⚠️  {message2}")
-        else:
-            logger.error(f"❌ {message}")
-            sys.exit(1)
-        sys.exit(0)
-    
-    # Handle --set-version option (can be used independently or with --set-ip)
-    if args.set_version:
-        config_manager = ConfigManager(config_path=args.config)
-        success, message = config_manager.update_version(args.set_version, backup=True)
-        if success:
-            logger.info(f"✓ {message}")
-            logger.info(f"✓ Configuration file updated: {args.config}")
-            logger.info("✓ You can now run the automation with: python3 main.py")
-        else:
-            logger.error(f"❌ {message}")
-            sys.exit(1)
-        sys.exit(0)
-    
-    automation = OnWatchAutomation(config_path=args.config)
-    
-    # Handle step execution
-    if args.step:
-        step_mapping = {
-            'init-api': lambda: automation.initialize_api_client(),
-            'set-kv-params': lambda: asyncio.run(automation.set_kv_parameters()),
-            'configure-system': lambda: asyncio.run(automation.configure_system_settings()),
-            'configure-groups': lambda: asyncio.run(automation.configure_groups()),
-            'configure-accounts': lambda: asyncio.run(automation.configure_accounts()),
-            'populate-watchlist': lambda: automation.populate_watch_list(),
-            'configure-devices': lambda: asyncio.run(automation.configure_devices()),
-            'configure-inquiries': lambda: asyncio.run(automation.configure_inquiries()),
-            'upload-mass-import': lambda: asyncio.run(automation.configure_mass_import()),
-            'configure-rancher': lambda: automation.configure_rancher(),
-            'upload-translation-file': lambda: asyncio.run(automation.upload_files())
-        }
-        
-        # Some steps need API client initialized first
-        if args.step in ['set-kv-params', 'populate-watchlist']:
-            automation.initialize_api_client()
-        
-        if args.step in step_mapping:
-            step_mapping[args.step]()
-        else:
-            logger.error(f"Invalid step: {args.step}. Use --list-steps to see available steps.")
-            sys.exit(1)
-        return
-    
-    # Handle validate-only mode
-    if args.validate:
-        is_valid, errors = automation.validate_config(verbose=True)
-        if is_valid:
-            logger.info("\n✓ Configuration is valid")
-            sys.exit(0)
-        else:
-            logger.error(f"\n❌ Configuration validation failed with {len(errors)} error(s)")
-            sys.exit(1)
-    
-    # Handle dry-run mode
-    if args.dry_run:
-        is_valid, errors = automation.validate_config(verbose=True)
-        if not is_valid:
-            logger.error(f"\n❌ Configuration validation failed. Cannot proceed with dry-run.")
-            sys.exit(1)
-        logger.info("\n" + "=" * 80)
-        logger.info("DRY-RUN MODE: Showing what would be executed")
-        logger.info("=" * 80)
-        logger.info("\nThe following steps would be executed:")
-        logger.info("  1. Initialize API client")
-        logger.info("  2. Set KV parameters")
-        logger.info("  3. Configure system settings")
-        logger.info("  4. Configure groups")
-        logger.info("  5. Configure accounts")
-        logger.info("  6. Populate watch list")
-        logger.info("  7. Configure devices")
-        logger.info("  8. Configure inquiries")
-        logger.info("  9. Upload mass import")
-        logger.info("  10. Upload translation file")
-        logger.info("  11. Configure Rancher")
-        logger.info("\n✓ Dry-run completed - no actual changes were made")
-        sys.exit(0)
-    
-    automation = OnWatchAutomation(config_path=args.config)
-    
-    # Handle step execution
-    if args.step:
-        step_mapping = {
-            'init-api': lambda: automation.initialize_api_client(),
-            'set-kv-params': lambda: asyncio.run(automation.set_kv_parameters()),
-            'configure-system': lambda: asyncio.run(automation.configure_system_settings()),
-            'configure-groups': lambda: asyncio.run(automation.configure_groups()),
-            'configure-accounts': lambda: asyncio.run(automation.configure_accounts()),
-            'populate-watchlist': lambda: automation.populate_watch_list(),
-            'configure-devices': lambda: asyncio.run(automation.configure_devices()),
-            'configure-inquiries': lambda: asyncio.run(automation.configure_inquiries()),
-            'upload-mass-import': lambda: asyncio.run(automation.configure_mass_import()),
-            'configure-rancher': lambda: automation.configure_rancher(),
-            'upload-translation-file': lambda: asyncio.run(automation.upload_files())
-        }
-        
-        # Some steps need API client initialized first
-        if args.step in ['set-kv-params', 'populate-watchlist']:
-            automation.initialize_api_client()
-        
-        if args.step in step_mapping:
-            step_mapping[args.step]()
-        else:
-            logger.error(f"Invalid step: {args.step}. Use --list-steps to see available steps.")
-            sys.exit(1)
-        return
-    
-    # Handle validate-only mode
-    if args.validate:
-        is_valid, errors = automation.validate_config(verbose=True)
-        if is_valid:
-            logger.info("\n✓ Configuration is valid")
-            sys.exit(0)
-        else:
-            logger.error(f"\n❌ Configuration validation failed with {len(errors)} error(s)")
-            sys.exit(1)
-    
-    # Handle dry-run mode
-    if args.dry_run:
-        is_valid, errors = automation.validate_config(verbose=True)
-        if not is_valid:
-            logger.error(f"\n❌ Configuration validation failed. Cannot proceed with dry-run.")
-            sys.exit(1)
-        logger.info("\n" + "=" * 80)
-        logger.info("DRY-RUN MODE: Showing what would be executed")
-        logger.info("=" * 80)
-        logger.info("\nThe following steps would be executed:")
-        logger.info("  1. Initialize API client")
-        logger.info("  2. Set KV parameters")
-        logger.info("  3. Configure system settings")
-        logger.info("  4. Configure groups")
-        logger.info("  5. Configure accounts")
-        logger.info("  6. Populate watch list")
-        logger.info("  7. Configure devices")
-        logger.info("  8. Configure inquiries")
-        logger.info("  9. Upload mass import")
-        logger.info("  10. Upload translation file")
-        logger.info("  11. Configure Rancher")
-        logger.info("\n✓ Dry-run completed - no actual changes were made")
-        sys.exit(0)
-    
-    # Run full automation
-    # Run automation with clean error handling
+def _preview_dataset(config_path):
+    """Load config and print dataset preview. Exits with 1 on error."""
     try:
-        asyncio.run(automation.run())
+        automation = OnWatchAutomation(config_path=config_path)
+        config = automation.config
+        
+        print("\n" + "=" * 70)
+        print("Dataset Preview")
+        print("=" * 70)
+        print(f"\nConfiguration file: {config_path}")
+        print("\nThis dataset will be populated when you run the automation:\n")
+        
+        # KV Parameters
+        kv_params = config.get('kv_parameters', {})
+        if kv_params:
+            print(f"📋 KV Parameters: {len(kv_params)}")
+            for key, value in kv_params.items():
+                print(f"   • {key}: {value}")
+        
+        # System Settings
+        sys_settings = config.get('system_settings', {})
+        if sys_settings:
+            print(f"\n⚙️  System Settings:")
+            general = sys_settings.get('general', {})
+            if general:
+                blur_faces = general.get('blur_all_faces_except_selected', False)
+                discard_detections = general.get('discard_detections_not_in_watch_list', False)
+                print(f"   General:")
+                print(f"     • Blur all faces except selected: {'enabled' if blur_faces else 'disabled'}")
+                print(f"     • Discard detections not in watch list: {'enabled' if discard_detections else 'disabled'}")
+                print(f"     • Face Threshold: {general.get('default_face_threshold', 'N/A')}")
+                print(f"     • Body Threshold: {general.get('default_body_threshold', 'N/A')}")
+                print(f"     • Liveness Threshold: {general.get('default_liveness_threshold', 'N/A')}")
+                print(f"     • Body Image Retention: {general.get('body_image_retention_period', 'N/A')}")
+            map_settings = sys_settings.get('map', {})
+            if map_settings:
+                seed = map_settings.get('seed_location', {})
+                acknowledge = map_settings.get('acknowledge', False)
+                action_title = map_settings.get('action_title', 'N/A')
+                masks_access = map_settings.get('masks_access_control', False)
+                print(f"   Map:")
+                if seed:
+                    print(f"     • Seed Location: lat {seed.get('lat', 'N/A')}, long {seed.get('long', 'N/A')}")
+                print(f"     • Acknowledge: {'enabled' if acknowledge else 'disabled'}")
+                if acknowledge:
+                    print(f"     • Action Title: {action_title}")
+                print(f"     • Masks Access Control: {'enabled' if masks_access else 'disabled'}")
+            interface = sys_settings.get('system_interface', {})
+            if interface:
+                product_name = interface.get('product_name', 'N/A')
+                translation_file = interface.get('translation_file', '')
+                icons = interface.get('icons', '')
+                print(f"   System Interface:")
+                print(f"     • Product Name: {product_name}")
+                if translation_file:
+                    project_root = os.path.dirname(os.path.abspath(__file__))
+                    if os.path.isabs(translation_file):
+                        translation_path = translation_file
+                    else:
+                        translation_path = os.path.join(project_root, translation_file)
+                    file_exists = os.path.exists(translation_path)
+                    file_size = os.path.getsize(translation_path) if file_exists else 0
+                    file_size_mb = file_size / (1024 * 1024) if file_size > 0 else 0
+                    filename = os.path.basename(translation_file)
+                    print(f"     • Translation File: {filename}")
+                    print(f"       Path: {translation_file}")
+                    if file_exists:
+                        print(f"       Status: ✓ File exists ({file_size_mb:.2f} MB)")
+                        print(f"       Upload: Will be uploaded via SSH to device")
+                    else:
+                        print(f"       Status: ⚠️  File not found at configured path")
+                if icons:
+                    print(f"     • Icons: {icons} (⚠️  not yet implemented)")
+            engine = sys_settings.get('engine', {})
+            if engine:
+                video_storage = engine.get('video_storage', {})
+                print(f"   Engine:")
+                if video_storage:
+                    print(f"     • All Videos Storage: {video_storage.get('all_videos_days', 'N/A')} days")
+                    print(f"     • Videos with Detections: {video_storage.get('videos_with_detections_days', 'N/A')} days")
+                print(f"     • Detection Storage: {engine.get('detection_storage_days', 'N/A')} days")
+                print(f"     • Alert Storage: {engine.get('alert_storage_days', 'N/A')} days")
+                print(f"     • Inquiry Storage: {engine.get('inquiry_storage_days', 'N/A')} days")
+        
+        # Devices/Cameras
+        devices = config.get('devices', [])
+        if devices:
+            print(f"\n📹 Cameras/Devices: {len(devices)}")
+            for device in devices:
+                name = device.get('name', 'Unknown')
+                details = device.get('details', {})
+                threshold = details.get('threshold', 'N/A')
+                location = details.get('location', {}).get('name', 'default')
+                calibration = device.get('calibration', {})
+                tracker = calibration.get('tracker', 'N/A')
+                track_length = calibration.get('face_track_length', {})
+                track_min = track_length.get('min', 'N/A')
+                track_max = track_length.get('max', 'N/A')
+                padding = calibration.get('calibration_tool', {}).get('padding', {})
+                detection_min = calibration.get('calibration_tool', {}).get('detection_min_size', 'N/A')
+                security = device.get('security_access', {})
+                liveness = security.get('liveness', False)
+                liveness_threshold = security.get('liveness_threshold', 'N/A')
+                print(f"   • {name}")
+                print(f"     - Threshold: {threshold}, Location: {location}")
+                print(f"     - Tracker: {tracker}, Face Track Length: {track_min}-{track_max}s")
+                if padding:
+                    print(f"     - Padding: top={padding.get('top', 0)}, right={padding.get('right', 0)}, bottom={padding.get('bottom', 0)}, left={padding.get('left', 0)}")
+                print(f"     - Detection Min Size: {detection_min}")
+                print(f"     - Liveness: {'active' if liveness else 'disabled'}", end='')
+                if liveness:
+                    print(f" (threshold: {liveness_threshold})")
+                else:
+                    print()
+        
+        # Groups
+        groups = config.get('groups', {})
+        subject_groups = groups.get('subject_groups', [])
+        device_groups = groups.get('device_groups', [])
+        if subject_groups:
+            print(f"\n👥 Subject Groups: {len(subject_groups)}")
+            for group in subject_groups:
+                name = group.get('name', 'Unknown')
+                auth = group.get('authorization', 'N/A')
+                visibility = group.get('visibility', 'N/A')
+                priority = group.get('priority', 'N/A')
+                print(f"   • {name} ({auth}, {visibility}, priority: {priority})")
+        if device_groups:
+            print(f"\n📱 Device Groups (Camera Groups): {len(device_groups)}")
+            for group in device_groups:
+                name = group.get('name', 'Unknown')
+                priority = group.get('priority', 'N/A')
+                description = group.get('description', '')
+                print(f"   • {name} (priority: {priority}, description: {description or 'none'})")
+        
+        # Watch List
+        watch_list = config.get('watch_list', {})
+        subjects = watch_list.get('subjects', [])
+        if subjects:
+            total_images = sum(len(s.get('images', [])) for s in subjects)
+            print(f"\n👤 Watch List Subjects: {len(subjects)}")
+            print(f"   Total Images: {total_images}")
+            for subject in subjects:
+                name = subject.get('name', 'Unknown')
+                images = subject.get('images', [])
+                group = subject.get('group', 'N/A')
+                print(f"   • {name} ({len(images)} image(s), group: {group})")
+        
+        # Inquiry Cases
+        inquiries = config.get('inquiries', [])
+        if inquiries:
+            print(f"\n🔍 Inquiry Cases: {len(inquiries)}")
+            for inquiry in inquiries:
+                name = inquiry.get('name', 'Unknown')
+                files = inquiry.get('files', [])
+                priority = inquiry.get('priority', 'N/A')
+                print(f"   • {name} (priority: {priority}, {len(files)} file(s))")
+                for file_config in files:
+                    file_path = file_config.get('path', 'Unknown')
+                    filename = os.path.basename(file_path)
+                    settings = file_config.get('settings', 'default')
+                    print(f"     - {filename} ({settings})")
+        
+        # Mass Import
+        mass_import = config.get('mass_import', {})
+        if mass_import:
+            name = mass_import.get('name', 'N/A')
+            file_path = mass_import.get('file_path', 'N/A')
+            print(f"\n📦 Mass Import:")
+            print(f"   • Name: {name}")
+            print(f"   • File: {file_path}")
+        
+        # Environment Variables
+        env_vars = config.get('env_vars', {})
+        if env_vars:
+            print(f"\n🔧 Environment Variables: {len(env_vars)}")
+            for key in env_vars.keys():
+                print(f"   • {key}")
+        
+        # User Accounts
+        accounts = config.get('accounts', {})
+        users = accounts.get('users', [])
+        user_groups = accounts.get('user_groups', [])
+        if users or user_groups:
+            print(f"\n👤 User Accounts: {len(users)}")
+            for user in users:
+                username = user.get('username', 'Unknown')
+                first_name = user.get('first_name', '')
+                last_name = user.get('last_name', '')
+                email = user.get('email', '')
+                role = user.get('role', 'N/A')
+                user_group = user.get('user_group', 'N/A')
+                password = user.get('password')
+                print(f"   • {username} ({first_name} {last_name}, {role}, group: {user_group})")
+                if email:
+                    print(f"     Email: {email}")
+                if password:
+                    print(f"     Password: {password}")
+                elif password is None:
+                    print(f"     Password: (keep existing)")
+            if user_groups:
+                user_group_counts = {}
+                for user in users:
+                    user_group_name = user.get('user_group', '').lower()
+                    if user_group_name:
+                        user_group_counts[user_group_name] = user_group_counts.get(user_group_name, 0) + 1
+                print(f"\n   User Groups: {len(user_groups)}")
+                for ug in user_groups:
+                    title = ug.get('title', 'Unknown')
+                    title_lower = title.lower()
+                    user_count = user_group_counts.get(title_lower, 0)
+                    print(f"   • {title} (Users Count: {user_count})")
+        
+        # Missing/Not Implemented Features
+        missing_features = []
+        sys_settings = config.get('system_settings', {})
+        if sys_settings:
+            interface = sys_settings.get('system_interface', {})
+            icons = interface.get('icons', '')
+            if icons and icons.strip():
+                missing_features.append("Icons directory upload (configured but not yet implemented)")
+        accounts = config.get('accounts', {})
+        user_groups = accounts.get('user_groups', [])
+        has_assignments = False
+        for ug in user_groups:
+            subject_groups = ug.get('subject_groups', [])
+            camera_groups = ug.get('camera_groups', [])
+            if subject_groups or camera_groups:
+                has_assignments = True
+                break
+        if has_assignments:
+            missing_features.append("User group assignments to subject/camera groups (configured but not yet implemented)")
+        if missing_features:
+            print(f"\n⚠️  Features Configured But Not Yet Implemented:")
+            for feature in missing_features:
+                print(f"   • {feature}")
+        print("\n" + "=" * 70)
+        print("Note: This is the dataset from config.yaml.")
+        print("You can customize it by editing config.yaml before running automation.")
+        print("=" * 70 + "\n")
     except Exception as e:
-        # This should not normally be reached since run() catches all exceptions,
-        # but if it does, show user-friendly message
-        error_message = str(e)
-        logger.error(f"\n❌ FATAL ERROR: {error_message}")
-        logger.error("Automation stopped due to fatal error")
-        # Only show traceback in verbose mode
-        root_logger = logging.getLogger()
-        if root_logger.level <= logging.DEBUG:
-            import traceback
-            logger.debug("\nFull traceback (verbose mode):")
-            logger.debug("", exc_info=True)
+        print(f"\n❌ Error loading dataset: {e}\n", file=sys.stderr)
         sys.exit(1)
 
 
 if __name__ == "__main__":
+    from cli import main
     main()
 

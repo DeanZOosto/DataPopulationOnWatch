@@ -157,8 +157,9 @@ class RunSummary:
         logger.info("=" * 80)
         
         # Step-by-step status with timing
-        logger.info("\n📋 Step Status:")
-        for step_num in sorted(self.steps.keys()):
+        total_steps = len(self.steps)
+        logger.info(f"\n📋 Step Status (1–{total_steps}):")
+        for i, step_num in enumerate(sorted(self.steps.keys()), start=1):
             step = self.steps[step_num]
             status_icon = {
                 'success': '✅',
@@ -173,12 +174,11 @@ class RunSummary:
                 duration = self.step_timings[step_num]['duration']
                 timing_str = f" ({self.format_duration(duration)})"
             
-            logger.info(f"  {status_icon} Step {step_num}: {step['name']} - {step['status'].upper()}{timing_str}")
+            logger.info(f"  {i}. {status_icon} {step['name']} – {step['status'].upper()}{timing_str}")
             if step['message']:
-                logger.info(f"     {step['message']}")
+                logger.info(f"      {step['message']}")
         
         # Statistics
-        total_steps = len(self.steps)
         successful = sum(1 for s in self.steps.values() if s['status'] == 'success')
         failed = sum(1 for s in self.steps.values() if s['status'] == 'failed')
         skipped_steps = sum(1 for s in self.steps.values() if s['status'] == 'skipped')
@@ -188,7 +188,7 @@ class RunSummary:
         duration_str = self.format_duration(total_duration) if total_duration else "N/A"
         
         logger.info(f"\n📊 Statistics:")
-        logger.info(f"  Total Steps: {total_steps}")
+        logger.info(f"  Total Steps: {len(self.steps)}")
         logger.info(f"  ✅ Successful: {successful} (items created/updated)")
         logger.info(f"  ❌ Failed: {failed}")
         logger.info(f"  ⏭️  Skipped Steps: {skipped_steps}")
@@ -199,63 +199,71 @@ class RunSummary:
         
         # Skipped items details
         if self.skipped:
-            logger.info(f"\n⏭️  Skipped Items Details ({len(self.skipped)}):")
-            for item in self.skipped[:20]:  # Show first 20
-                logger.info(f"  - {item}")
+            logger.info(f"\n⏭️  Skipped Items ({len(self.skipped)}):")
+            for i, item in enumerate(self.skipped[:20], start=1):
+                logger.info(f"  {i}. {item}")
             if len(self.skipped) > 20:
                 logger.info(f"  ... and {len(self.skipped) - 20} more")
         
         # Errors details
         if self.errors:
-            logger.error(f"\n❌ ERROR Details ({len(self.errors)}):")
-            for error in self.errors:
-                logger.error(f"  • {error}")
+            logger.error(f"\n❌ Errors ({len(self.errors)}):")
+            for i, error in enumerate(self.errors, start=1):
+                logger.error(f"  {i}. {error}")
         
-        # Manual actions needed
+        # Manual actions needed (yellow – things user may need to do)
         if self.manual_actions_needed:
-            logger.warning(f"\n⚠️  MANUAL ACTION REQUIRED ({len(self.manual_actions_needed)}):")
-            for action in self.manual_actions_needed:
-                logger.warning(f"  ⚠️  {action}")
-            logger.warning("\n⚠️  Please review the items above and complete them manually in the UI.")
+            logger.warning(f"\n⚠️  Manual action required ({len(self.manual_actions_needed)}):")
+            for i, action in enumerate(self.manual_actions_needed, start=1):
+                logger.warning(f"  {i}. {action}")
+            logger.warning("  → Please review the items above and complete them manually in the UI.")
         
         # Warnings
         if self.warnings:
-            logger.warning(f"\n⚠️  WARNINGS ({len(self.warnings)}):")
-            for warning in self.warnings[:10]:  # Show first 10
-                logger.warning(f"  • {warning}")
+            logger.warning(f"\n⚠️  Warnings ({len(self.warnings)}):")
+            for i, warning in enumerate(self.warnings[:10], start=1):
+                logger.warning(f"  {i}. {warning}")
             if len(self.warnings) > 10:
                 logger.warning(f"  ... and {len(self.warnings) - 10} more warnings")
         
         # Created Items Summary (for transparency)
-        logger.info(f"\n📦 Created Items Summary:")
+        logger.info("\n📦 Created items:")
         created_counts = {}
+        idx = 0
         for category, items in self.created_items.items():
             if items:
+                idx += 1
+                label = category.replace('_', ' ').title()
                 if isinstance(items, list):
                     count = len(items)
                     created_counts[category] = count
-                    logger.info(f"  • {category.replace('_', ' ').title()}: {count} item(s)")
+                    logger.info(f"  {idx}. {label}: {count} item(s)")
                 elif isinstance(items, dict) and items:
-                    # For system_settings, show what was configured
                     if category == 'system_settings':
-                        logger.info(f"  • System Settings: Configured")
-                        # Show logos if present
+                        created_counts[category] = 1
+                        logger.info(f"  {idx}. System Settings: Configured")
                         if 'system_interface' in items and 'logos' in items['system_interface']:
                             logos = items['system_interface']['logos']
                             if isinstance(logos, dict):
-                                logo_types = list(logos.keys())
-                                logger.info(f"    - Logos/Favicon: {', '.join(logo_types)}")
+                                logger.info(f"      – Logos/Favicon: {', '.join(logos.keys())}")
                             elif isinstance(logos, list) and logos:
-                                logger.info(f"    - Logos/Favicon: {len(logos)} uploaded")
+                                logger.info(f"      – Logos/Favicon: {len(logos)} uploaded")
                     else:
                         created_counts[category] = 1
-                        logger.info(f"  • {category.replace('_', ' ').title()}: Configured")
+                        logger.info(f"  {idx}. {label}: Configured")
                 elif items is not None:
                     created_counts[category] = 1
-                    logger.info(f"  • {category.replace('_', ' ').title()}: Uploaded/Configured")
-        
+                    logger.info(f"  {idx}. {label}: Uploaded/Configured")
         if not created_counts and not any(isinstance(v, dict) and v for v in self.created_items.values()):
-            logger.info("  (No items created - all may have been skipped)")
+            logger.info("  (none – all may have been skipped)")
+        
+        # Remind about disabling streams if any cameras were created (easy to miss otherwise)
+        cameras_list = self.created_items.get('cameras') or []
+        if cameras_list:
+            logger.warning("")
+            logger.warning("⚠️  IMPORTANT – DO NOT SKIP:")
+            logger.warning("   Remember to disable streams before running the upgrade to have a steady state of alerts to remember.")
+            logger.warning("")
         
         # Final status
         logger.info("\n" + "=" * 80)
@@ -263,10 +271,10 @@ class RunSummary:
             logger.info("✅ AUTOMATION COMPLETED SUCCESSFULLY")
         elif failed > 0:
             logger.error(f"❌ AUTOMATION COMPLETED WITH {failed} FAILED STEP(S)")
-            logger.error("Please review the errors above and take manual action if needed.")
+            logger.warning("  → Please review the errors above and take manual action if needed.")
         else:
             logger.warning("⚠️  AUTOMATION COMPLETED WITH WARNINGS")
-            logger.warning("Please review the warnings and manual actions needed above.")
+            logger.warning("  → Please review the warnings and manual actions above.")
         logger.info("=" * 80 + "\n")
     
     def export_to_file(self, output_path=None, format='yaml'):

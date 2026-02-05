@@ -6,13 +6,16 @@ Automated tool for populating OnWatch on-premise systems with configuration and 
 
 ## Quick Start
 
-```bash
-# Create and activate virtual environment (recommended)
-python3 -m venv venv
-source venv/bin/activate  # On macOS/Linux
+On macOS with Homebrew Python (or any PEP 668 “externally managed” Python), you must use a virtual environment; installing packages system-wide will fail.
 
-# Install dependencies
-pip3 install -r requirements.txt
+```bash
+# Create and activate virtual environment (required on Homebrew Python)
+python3 -m venv .venv
+source .venv/bin/activate   # On macOS/Linux
+# On Windows: .venv\Scripts\activate
+
+# Install dependencies (inside the venv)
+pip install -r requirements.txt
 
 # Configure IP address (recommended - updates all IPs automatically)
 python3 main.py --set-ip 192.168.1.100
@@ -106,6 +109,15 @@ This automatically updates:
 - `onwatch.ip_address` and `onwatch.base_url`
 - `ssh.ip_address`
 - `rancher.ip_address` and `rancher.base_url`
+
+### Working from different locations (office, home, abroad)
+
+The script works from **office, home, or abroad** with the same config. Connect to the **company VPN** when you are not in the office (same as for OnWatch in the browser). The script will try all local interfaces, including the VPN interface. **Leave `bind_address` unset** in shared configs so one config works everywhere.
+
+To force a specific interface only in rare cases, set under `onwatch` your **current** IP (from System Settings → Network or `ifconfig`). The value is network-specific and not portable.
+   ```yaml
+   # bind_address: "192.168.1.100"   # optional; leave unset for office/home/VPN
+   ```
 
 ### Manual Configuration
 

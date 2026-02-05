@@ -94,22 +94,13 @@ class VersionCompat:
         """
         Get GraphQL mutation for setting KV parameters.
         
-        Returns:
-            GraphQL mutation string
+        Returns the same mutation for 2.6 and 2.8: the server GraphQL schema
+        expects updateSingleSetting(settingInput: KeyValueSettingInput!) and
+        MutationResponse (code), including when config reports 2.6.
         """
-        if self.is_version_2_8():
-            # OnWatch 2.8 uses KeyValueSettingInput object
-            return """mutation updateSingleSetting($settingInput: KeyValueSettingInput!) {
+        return """mutation updateSingleSetting($settingInput: KeyValueSettingInput!) {
   updateSingleSetting(settingInput: $settingInput) {
     code
-  }
-}"""
-        else:
-            # OnWatch 2.6 uses separate key and value parameters
-            return """mutation updateSingleSetting($key: String!, $value: String!) {
-  updateSingleSetting(key: $key, value: $value) {
-    key
-    value
   }
 }"""
     

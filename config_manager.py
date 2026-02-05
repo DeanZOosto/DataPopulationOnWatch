@@ -140,7 +140,7 @@ class ConfigManager:
         # Validate required sections
         required_sections = {
             'onwatch': ['ip_address', 'username', 'password'],
-            'ssh': ['ip_address', 'username', 'password', 'translation_util_path'],
+            'ssh': ['ip_address', 'username', 'password'],  # translation_util_path optional (auto-detected if not set)
             'rancher': ['ip_address', 'port', 'username', 'password', 'base_url', 'workload_path']
         }
         

@@ -2,13 +2,16 @@
 OnWatch Client API wrapper for interacting with the OnWatch system via REST API.
 Based on the existing testing code pattern.
 """
-import requests
-from urllib3.exceptions import InsecureRequestWarning
-import urllib3
+import re
 import logging
 import mimetypes
 import os
+import subprocess
 from datetime import datetime, timedelta
+
+import requests
+import urllib3
+from urllib3.exceptions import InsecureRequestWarning
 from constants import (
     INQUIRY_PRIORITY_MAP,
     INQUIRY_PRIORITY_DEFAULT,
@@ -26,6 +29,32 @@ logger = logging.getLogger(__name__)
 # Add support for additional image types
 mimetypes.add_type('image/jpeg', '.jfif')
 
+# Regex for IPv4 in ifconfig / ip output
+_INET_RE = re.compile(r'\binet\s+(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b')
+
+
+def _get_local_ipv4_addresses():
+    """Return list of local IPv4 addresses (excluding loopback). Used for interface-agnostic connection fallback."""
+    ips = []
+    try:
+        out = subprocess.check_output(['ifconfig'], stderr=subprocess.DEVNULL, text=True, timeout=5)
+        ips = _INET_RE.findall(out)
+    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+        try:
+            out = subprocess.check_output(['ip', '-4', 'addr', 'show'], stderr=subprocess.DEVNULL, text=True, timeout=5)
+            ips = _INET_RE.findall(out)
+        except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+            pass
+    # Exclude loopback and deduplicate while preserving order
+    seen = set()
+    result = []
+    for ip in ips:
+        if ip.startswith('127.') or ip in seen:
+            continue
+        seen.add(ip)
+        result.append(ip)
+    return result
+
 
 class MassImportAlreadyExists(Exception):
     """Exception raised when mass import with same name already exists."""
@@ -42,25 +71,39 @@ class InquiryCaseAlreadyExists(Exception):
     pass
 
 
+class _BindAddressAdapter(requests.adapters.HTTPAdapter):
+    """HTTPAdapter that binds outgoing connections to a specific local address (e.g. Wi‑Fi IP)."""
+    def __init__(self, source_address, **kwargs):
+        self._source_address = source_address
+        super().__init__(**kwargs)
+
+    def init_poolmanager(self, connections, maxsize, block=False, **pool_kw):
+        pool_kw["source_address"] = self._source_address
+        super().init_poolmanager(connections, maxsize, block=block, **pool_kw)
+
+
 class ClientApi:
     """Client API for interacting with OnWatch system."""
-    
-    def __init__(self, ip_address, username, password, version=None):
+
+    def __init__(self, ip_address, username, password, version=None, bind_address=None):
         """
         Initialize the ClientApi.
-        
+
         Args:
             ip_address: IP address of the OnWatch system
             username: Username for authentication
             password: Password for authentication
             version: OnWatch version ("2.6" or "2.8"). Required.
-            
+            bind_address: Optional local IP to bind outgoing connections to (e.g. Wi‑Fi IP).
+                Use when macOS sends script traffic over a different interface than the browser.
+                Find your interface IP in System Settings → Network (e.g. Wi‑Fi → Details).
+
         Raises:
             ValueError: If version is not provided or not supported.
         """
         if not version:
             raise ValueError("OnWatch version is required. Set 'onwatch.version' in config.yaml (e.g., '2.6' or '2.8')")
-        
+
         self.ip_address = ip_address
         self.username = username
         self.password = password
@@ -68,6 +111,12 @@ class ClientApi:
         self.headers = {"accept": "application/json"}
         self.token = ""
         self.session = requests.Session()
+        # Bind outgoing connections to a specific interface (e.g. Wi‑Fi) when set
+        if bind_address:
+            adapter = _BindAddressAdapter(source_address=(bind_address, 0))
+            self.session.mount("https://", adapter)
+            self.session.mount("http://", adapter)
+            logger.info(f"Outgoing API connections bound to local address: {bind_address}")
         # Make SSL verification configurable via environment variable
         verify_ssl = os.getenv('ONWATCH_VERIFY_SSL', 'false').lower() == 'true'
         self.session.verify = verify_ssl
@@ -75,57 +124,102 @@ class ClientApi:
             # Only disable warnings if SSL verification is disabled
             urllib3.disable_warnings(InsecureRequestWarning)
         self._settings_cache = None  # Cache for /settings endpoint response
-        
+
         # Initialize version compatibility
         self.version_compat = VersionCompat(version=version)
-        
+
+    def _make_session_for_bind(self, bind_ip):
+        """Create a requests.Session bound to the given local IP, with same verify_ssl as current session."""
+        session = requests.Session()
+        session.verify = self.session.verify
+        adapter = _BindAddressAdapter(source_address=(bind_ip, 0))
+        session.mount("https://", adapter)
+        session.mount("http://", adapter)
+        return session
+
     def login(self):
-        """Login to the OnWatch system and set authentication headers."""
+        """Login to the OnWatch system and set authentication headers.
+        On connection failure (e.g. wrong interface), tries each local interface until one succeeds.
+        """
         login_url = f"{self.url}/login"  # This will be /bt/api/login
         payload = {
             "username": self.username,
             "password": self.password
         }
-        
-        try:
-            response = self.session.post(login_url, headers=self.headers, json=payload)
+
+        def _set_token_from_response(response):
             response.raise_for_status()
-            
-            # Extract token from response
             response_json = response.json()
             if "token" not in response_json:
                 raise ValueError(f"No token in login response: {response.text}")
-            
             self.token = response_json["token"]
             self.headers["authorization"] = f"Bearer {self.token}"
-            
-            # Update session headers
             self.session.headers.update(self.headers)
-            
+
+        try:
+            response = self.session.post(login_url, headers=self.headers, json=payload)
+            _set_token_from_response(response)
             logger.info(f"Successfully logged in to the OnWatch server at IP: {self.ip_address}")
             logger.info(f"OnWatch version: {self.version_compat.get_version()}")
             return response
-            
         except requests.exceptions.RequestException as e:
-            error_msg = f"Login failed to OnWatch system at {self.ip_address}"
+            # Only try other interfaces on connection errors (no HTTP response)
             if hasattr(e, 'response') and e.response is not None:
-                status_code = e.response.status_code
-                if status_code == 401:
-                    error_msg += ": Authentication failed (401 Unauthorized)"
-                    error_msg += "\n  → Check username and password in config.yaml (onwatch section)"
-                    error_msg += "\n  → Verify credentials are correct for this OnWatch system"
-                elif status_code == 404:
-                    error_msg += f": Login endpoint not found (404 Not Found)"
-                    error_msg += f"\n  → Check if OnWatch API is accessible at {login_url}"
-                    error_msg += "\n  → Verify IP address and network connectivity"
-                else:
-                    error_msg += f": HTTP {status_code} - {e.response.text[:200]}"
+                self._raise_login_error(e, login_url)
+            err_str = str(e).lower()
+            connection_errors = (
+                "no route to host", "errno 65", "timed out", "connection refused",
+                "can't assign requested address", "errno 49", "connection error"
+            )
+            if not any(ce in err_str for ce in connection_errors):
+                self._raise_login_error(e, login_url)
+            local_ips = _get_local_ipv4_addresses()
+            if not local_ips:
+                logger.warning("Could not enumerate local interfaces for fallback (ifconfig/ip failed)")
+                self._raise_login_error(e, login_url)
+            logger.info(f"First connection failed; trying {len(local_ips)} local interface(s)...")
+            last_e = e
+            for bind_ip in local_ips:
+                try:
+                    session = self._make_session_for_bind(bind_ip)
+                    self.session = session
+                    resp = self.session.post(login_url, headers=self.headers, json=payload)
+                    _set_token_from_response(resp)
+                    logger.info(f"Using interface with address {bind_ip}")
+                    logger.info(f"Successfully logged in to the OnWatch server at IP: {self.ip_address}")
+                    logger.info(f"OnWatch version: {self.version_compat.get_version()}")
+                    return resp
+                except requests.exceptions.RequestException as retry_e:
+                    last_e = retry_e
+                    logger.info(f"  Interface {bind_ip}: {retry_e}")
+                    continue
+            self._raise_login_error(last_e, login_url, tried_interfaces=len(local_ips))
+
+    def _raise_login_error(self, e, login_url, tried_interfaces=0):
+        """Build and raise a user-friendly login error."""
+        error_msg = f"Login failed to OnWatch system at {self.ip_address}"
+        if tried_interfaces:
+            error_msg += f"\n  → Tried {tried_interfaces} local interface(s); none could reach the host"
+        if hasattr(e, 'response') and e.response is not None:
+            status_code = e.response.status_code
+            if status_code == 401:
+                error_msg += ": Authentication failed (401 Unauthorized)"
+                error_msg += "\n  → Check username and password in config.yaml (onwatch section)"
+                error_msg += "\n  → Verify credentials are correct for this OnWatch system"
+            elif status_code == 404:
+                error_msg += f": Login endpoint not found (404 Not Found)"
+                error_msg += f"\n  → Check if OnWatch API is accessible at {login_url}"
+                error_msg += "\n  → Verify IP address and network connectivity"
             else:
-                error_msg += f": {str(e)}"
-                error_msg += "\n  → Check network connectivity to OnWatch system"
-                error_msg += f"\n  → Verify IP address {self.ip_address} is correct"
-            logger.error(error_msg)
-            raise Exception(error_msg) from e
+                error_msg += f": HTTP {status_code} - {e.response.text[:200]}"
+        else:
+            error_msg += f": {str(e)}"
+            error_msg += "\n  → Check network connectivity to OnWatch system"
+            error_msg += f"\n  → Verify IP address {self.ip_address} is correct"
+            if "Can't assign requested address" in str(e) or "Errno 49" in str(e):
+                error_msg += "\n  → If using onwatch.bind_address: that IP must be assigned to this machine (e.g. Wi‑Fi IP). Check with: ifconfig or System Settings → Network"
+        logger.error(error_msg)
+        raise Exception(error_msg) from e
     
     def extract_faces_from_image(self, image_path):
         """
@@ -965,32 +1059,19 @@ class ClientApi:
             # GraphQL mutation endpoint
             graphql_url = f"{self.url}/graphql"  # This will be /bt/api/graphql
             
-            # Get version-specific mutation
+            # Mutation and payload use KeyValueSettingInput for both 2.6 and 2.8;
+            # the server GraphQL schema requires settingInput/MutationResponse.
             mutation_query = self.version_compat.get_graphql_mutation_for_kv().strip()
-            
-            # Build payload based on version
-            if self.version_compat.is_version_2_8():
-                # OnWatch 2.8 uses KeyValueSettingInput object
-                payload = {
-                    "operationName": "updateSingleSetting",
-                    "variables": {
-                        "settingInput": {
-                            "key": key,
-                            "value": str(value)  # Convert to string as API expects
-                        }
-                    },
-                    "query": mutation_query
-                }
-            else:
-                # OnWatch 2.6 uses separate key and value parameters
-                payload = {
-                    "operationName": "updateSingleSetting",
-                    "variables": {
+            payload = {
+                "operationName": "updateSingleSetting",
+                "variables": {
+                    "settingInput": {
                         "key": key,
-                        "value": str(value)  # Convert to string as API expects
-                    },
-                    "query": mutation_query
-                }
+                        "value": str(value)  # API expects string
+                    }
+                },
+                "query": mutation_query
+            }
             
             response = self.session.post(
                 graphql_url,

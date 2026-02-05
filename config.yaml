@@ -8,16 +8,20 @@
 # OnWatch API Connection
 # Required: All fields must be configured for the automation to work
 onwatch:
-  ip_address: "10.1.71.63"
+  ip_address: "10.1.71.61"
   username: "Administrator"
   password: "pa$$word!"
-  base_url: "https://10.1.71.63"
+  base_url: "https://10.1.71.61"
   # OnWatch version: "2.6" or "2.8" (required - must be set manually)
   version: "2.8"  # Set to "2.6" or "2.8" based on your OnWatch system version
+  # Optional: Leave bind_address unset for use from office, home, or VPN. The script will try all
+  # local interfaces automatically. Only set this if you must force one interface (use your current
+  # IP from System Settings → Network or ifconfig); the value is network-specific and not portable.
+  # bind_address: "192.168.1.100"
 
 # SSH Configuration (for translation file upload)
 ssh:
-  ip_address: "10.1.71.63"  # Usually same as onwatch IP
+  ip_address: "10.1.71.61"  # Usually same as onwatch IP
   username: "user"  # SSH user (will sudo to root for translation-util)
   password: "user1!"  # SSH password (default for user "user")
   sudo_password: "user1!"  # Sudo password (if different from SSH password, leave empty to use SSH password)
@@ -26,11 +30,11 @@ ssh:
   # translation_util_path: "/opt/ansible-installer-1.4.0-8/support-scripts/translation-util"
 
 rancher:
-  ip_address: "10.1.71.63"
+  ip_address: "10.1.71.61"
   port: 9443
   username: "admin"
   password: "administrator"
-  base_url: "https://10.1.71.63:9443"
+  base_url: "https://10.1.71.61:9443"
   # Workload URL path (relative to base_url) - update workloadId if needed
   # Format: /p/local:p-p6l45/workloads/run?launchConfigIndex=-1&namespaceId=default&upgrade=true&workloadId=statefulset%3Adefault%3Acv-engine
   workload_path: "/p/local:p-p6l45/workloads/run?launchConfigIndex=-1&namespaceId=default&upgrade=true&workloadId=statefulset%3Adefault%3Acv-engine"
@@ -88,7 +92,7 @@ system_settings:
 # For 2.8, these must be configured manually via Rancher UI.
 # All environment variables will be validated after population.
 env_vars:
-  ENABLE_DVR: "True"
+  ENABLE_DVR: "false"
   OVERWRITE_FFMPEG_OPTIONS_VALUES: "ffmpeg-opts:rtsp_transport=udp,reorder_queue_size=8192,max_delay=500000,buffer_size=4194304"
   SERVICE_TAGS: "engine-service,body-from-face-pipeline,body-pipeline,dvr,face-pipeline,ffmpeg-options,forensics,gdpr,image-processing,live-stream,roi,watch-video,webrtc"
   SERVICE_DOMAIN: "cv-engine.default"

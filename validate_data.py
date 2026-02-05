@@ -50,7 +50,8 @@ class DataValidator:
             'validated': 0,
             'passed': 0,
             'failed': 0,
-            'errors': []
+            'errors': [],
+            'categories_done': []  # list of (category_label, count) for summary
         }
     
     def initialize_api_client(self):
@@ -345,7 +346,7 @@ class DataValidator:
                     logger.error(f"  ❌ {error_msg}")
                 else:
                     self.results['passed'] += 1
-                    logger.debug(f"  ✓ Group '{group_name}' exists")
+                    logger.info(f"  ✓ Group '{group_name}' exists")
         
         except Exception as e:
             self.results['failed'] += 1
@@ -385,7 +386,7 @@ class DataValidator:
                     logger.error(f"  ❌ {error_msg}")
                 else:
                     self.results['passed'] += 1
-                    logger.debug(f"  ✓ User '{username}' exists")
+                    logger.info(f"  ✓ User '{username}' exists")
         
         except Exception as e:
             self.results['failed'] += 1
@@ -464,7 +465,8 @@ class DataValidator:
                         logger.error(f"  ❌ {error_msg}")
                     else:
                         self.results['passed'] += 1
-                        logger.debug(f"  ✓ Subject '{subject_name}' exists with {len(actual_images)} image(s)")
+                        img_count = len(actual_images) if isinstance(actual_images, list) else subject.get('images', 0)
+                        logger.info(f"  ✓ Subject '{subject_name}' exists (images: {img_count})")
         
         except Exception as e:
             self.results['failed'] += 1
@@ -508,7 +510,7 @@ class DataValidator:
                     logger.error(f"  ❌ {error_msg}")
                 else:
                     self.results['passed'] += 1
-                    logger.debug(f"  ✓ Camera '{camera_name}' exists")
+                    logger.info(f"  ✓ Camera '{camera_name}' exists")
         
         except Exception as e:
             self.results['failed'] += 1
@@ -560,7 +562,7 @@ class DataValidator:
                     logger.error(f"  ❌ {error_msg}")
                 else:
                     self.results['passed'] += 1
-                    logger.debug(f"  ✓ Inquiry case '{inquiry_name}' exists")
+                    logger.info(f"  ✓ Inquiry case '{inquiry_name}' exists")
         
         except Exception as e:
             self.results['failed'] += 1
@@ -576,7 +578,8 @@ class DataValidator:
         logger.info(f"\n📦 Validating mass import...")
         
         mass_import_name = mass_import.get('name')
-        mass_import_id = mass_import.get('id')
+        # Export stores upload_id (from prepare); API get_mass_import_status expects that id
+        mass_import_id = mass_import.get('id') or mass_import.get('upload_id')
         
         if not mass_import_name and not mass_import_id:
             return
@@ -593,7 +596,7 @@ class DataValidator:
                     logger.error(f"  ❌ {error_msg}")
                 else:
                     self.results['passed'] += 1
-                    logger.debug(f"  ✓ Mass import '{mass_import_name or mass_import_id}' exists")
+                    logger.info(f"  ✓ Mass import '{mass_import_name or mass_import_id}' exists (status: {status})")
             else:
                 # Can't validate without ID
                 logger.warning(f"  ⚠️  Mass import '{mass_import_name}' - cannot validate without ID")
@@ -702,6 +705,18 @@ class DataValidator:
             self.results['errors'].append(error_msg)
             logger.error(f"  ❌ {error_msg}")
     
+    def validate_translation_file(self, translation_file):
+        """Acknowledge translation file from export (uploaded via SSH; no OnWatch API to verify on server)."""
+        if not translation_file:
+            return
+        
+        logger.info("\n🌐 Validating translation file...")
+        self.results['validated'] += 1
+        filename = translation_file.get('filename') or translation_file.get('path', 'unknown')
+        # No OnWatch API exists to list or get translation files; they are uploaded via SSH/translation-util
+        self.results['passed'] += 1
+        logger.info(f"  ✓ Translation file in export: {filename} (uploaded via SSH – no server API to verify)")
+    
     def validate(self):
         """Run full validation."""
         logger.info("=" * 80)
@@ -717,35 +732,55 @@ class DataValidator:
         # Get created items
         created_items = output_data.get('created_items', {})
         
-        # Validate each category
+        # Log what we will validate (so user sees full scope)
+        categories = [k for k in ['kv_parameters', 'system_settings', 'groups', 'accounts', 'subjects', 'cameras', 'inquiries', 'mass_import', 'translation_file', 'rancher_env_vars'] if k in created_items and created_items[k]]
+        if categories:
+            logger.info(f"\n📑 Will validate all exported data: {', '.join(c.replace('_', ' ') for c in categories)}")
+        
+        # Validate each category present in export
         if 'kv_parameters' in created_items:
             self.validate_kv_parameters(created_items['kv_parameters'])
+            self.results['categories_done'].append(('KV parameters', len(created_items['kv_parameters'])))
         
         if 'system_settings' in created_items:
             self.validate_system_settings(created_items['system_settings'])
+            self.results['categories_done'].append(('System settings', 1))
         
         if 'groups' in created_items:
             self.validate_groups(created_items['groups'])
+            self.results['categories_done'].append(('Groups', len(created_items['groups'])))
         
         if 'accounts' in created_items:
             users = [acc for acc in created_items['accounts'] if 'username' in acc]
             if users:
                 self.validate_users(users)
+                self.results['categories_done'].append(('Accounts', len(users)))
         
         if 'subjects' in created_items:
             self.validate_subjects(created_items['subjects'])
+            subj = created_items['subjects']
+            self.results['categories_done'].append(('Subjects', len(subj) if isinstance(subj, list) else 0))
         
         if 'cameras' in created_items:
             self.validate_cameras(created_items['cameras'])
+            self.results['categories_done'].append(('Cameras', len(created_items['cameras'])))
         
         if 'inquiries' in created_items:
             self.validate_inquiries(created_items['inquiries'])
+            self.results['categories_done'].append(('Inquiries', len(created_items['inquiries'])))
         
         if 'mass_import' in created_items:
             self.validate_mass_import(created_items['mass_import'])
+            self.results['categories_done'].append(('Mass import', 1))
         
         if 'rancher_env_vars' in created_items:
             self.validate_env_vars(created_items['rancher_env_vars'])
+            r = created_items['rancher_env_vars']
+            self.results['categories_done'].append(('Rancher env vars', len(r) if isinstance(r, list) else len(r) if isinstance(r, dict) else 0))
+        
+        if 'translation_file' in created_items:
+            self.validate_translation_file(created_items['translation_file'])
+            self.results['categories_done'].append(('Translation file', 1))
         
         # Print summary
         self.print_summary()
@@ -763,6 +798,9 @@ class DataValidator:
         failed = self.results['failed']
         
         logger.info(f"\n📊 Results:")
+        if self.results.get('categories_done'):
+            breakdown = ", ".join(f"{label} ({n})" for label, n in self.results['categories_done'])
+            logger.info(f"  Categories validated: {breakdown}")
         logger.info(f"  Total items validated: {total}")
         logger.info(f"  ✅ Passed: {passed}")
         logger.info(f"  ❌ Failed: {failed}")
