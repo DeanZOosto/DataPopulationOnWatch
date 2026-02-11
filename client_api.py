@@ -1713,13 +1713,17 @@ class ClientApi:
             )
             response.raise_for_status()
             result = response.json()
-            # Handle both list and dict with 'data' key
+            # Handle list, or dict with 'data' / 'items' (2.6 and 2.8 may differ)
             if isinstance(result, list):
                 return result
-            elif isinstance(result, dict) and 'data' in result:
-                return result['data']
-            else:
+            if not isinstance(result, dict):
                 return []
+            data = result.get('data', result.get('items'))
+            if isinstance(data, list):
+                return data
+            if isinstance(data, dict) and 'items' in data:
+                return data['items']
+            return []
         except requests.exceptions.RequestException as e:
             logger.debug(f"Failed to get inquiry cases: {e}")
             return []

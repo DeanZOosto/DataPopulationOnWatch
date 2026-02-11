@@ -8,10 +8,10 @@
 # OnWatch API Connection
 # Required: All fields must be configured for the automation to work
 onwatch:
-  ip_address: "10.1.71.61"
+  ip_address: "10.1.25.14"
   username: "Administrator"
   password: "pa$$word!"
-  base_url: "https://10.1.71.61"
+  base_url: "https://10.1.25.14"
   # OnWatch version: "2.6" or "2.8" (required - must be set manually)
   version: "2.8"  # Set to "2.6" or "2.8" based on your OnWatch system version
   # Optional: Leave bind_address unset for use from office, home, or VPN. The script will try all
@@ -21,7 +21,7 @@ onwatch:
 
 # SSH Configuration (for translation file upload)
 ssh:
-  ip_address: "10.1.71.61"  # Usually same as onwatch IP
+  ip_address: "10.1.25.14"  # Usually same as onwatch IP
   username: "user"  # SSH user (will sudo to root for translation-util)
   password: "user1!"  # SSH password (default for user "user")
   sudo_password: "user1!"  # Sudo password (if different from SSH password, leave empty to use SSH password)
@@ -30,11 +30,13 @@ ssh:
   # translation_util_path: "/opt/ansible-installer-1.4.0-8/support-scripts/translation-util"
 
 rancher:
-  ip_address: "10.1.71.61"
+  ip_address: "10.1.25.14"
   port: 9443
   username: "admin"
   password: "administrator"
-  base_url: "https://10.1.71.61:9443"
+  base_url: "https://10.1.25.14:9443"
+  # Set to true to skip Rancher env vars validation (e.g. after 2.8 upgrade when API is unavailable). Verify env vars in Rancher UI.
+  # skip_env_validation: false
   # Workload URL path (relative to base_url) - update workloadId if needed
   # Format: /p/local:p-p6l45/workloads/run?launchConfigIndex=-1&namespaceId=default&upgrade=true&workloadId=statefulset%3Adefault%3Acv-engine
   workload_path: "/p/local:p-p6l45/workloads/run?launchConfigIndex=-1&namespaceId=default&upgrade=true&workloadId=statefulset%3Adefault%3Acv-engine"

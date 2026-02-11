@@ -1783,6 +1783,10 @@ class OnWatchAutomation:
                     started_count = final_done + final_analyzing
                     if started_count == final_total:
                         logger.info(f"✓ All {final_total} file(s) started analysis ({final_done} DONE, {final_analyzing} ANALYZING)")
+                        if final_done < final_total:
+                            logger.warning("⚠️  IMPORTANT – INQUIRY ANALYSIS INCOMPLETE:")
+                            logger.warning("   Not all files are DONE yet. You may need to open the inquiry in the UI and start or wait for analysis for the remaining file(s).")
+                            logger.warning("")
                     elif started_count > 0:
                         status_msg = f"✓ Inquiry case configured: {inquiry_name} ({len(successful_uploads)} file(s) uploaded)"
                         status_msg += f" - Analysis: {final_done} DONE, {final_analyzing} ANALYZING"
@@ -1791,7 +1795,10 @@ class OnWatchAutomation:
                         if final_failed > 0:
                             status_msg += f", {final_failed} FAILED"
                         logger.info(status_msg)
-                        
+                        if final_done < final_total:
+                            logger.warning("⚠️  IMPORTANT – INQUIRY ANALYSIS INCOMPLETE:")
+                            logger.warning("   Not all files are DONE yet. You may need to open the inquiry in the UI and start or wait for analysis for the remaining file(s).")
+                            logger.warning("")
                         if final_queued > 0:
                             logger.warning(f"→ {final_queued} file(s) are QUEUED and may need manual analysis:")
                             for queued_file in final_files_by_status.get('QUEUED', []):

@@ -307,6 +307,7 @@ class RunSummary:
                     'total_steps': len(self.steps),
                     'successful_steps': sum(1 for s in self.steps.values() if s['status'] == 'success'),
                     'failed_steps': sum(1 for s in self.steps.values() if s['status'] == 'failed'),
+                    'skipped_steps': sum(1 for s in self.steps.values() if s['status'] == 'skipped'),  # steps not run (e.g. all items already existed)
                     'skipped_items_count': len(self.skipped),
                     'errors_count': len(self.errors)
                 }
