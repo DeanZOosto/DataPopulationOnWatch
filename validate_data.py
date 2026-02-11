@@ -12,13 +12,11 @@ import sys
 import argparse
 import glob
 import logging
-import urllib.parse
 import yaml
 from pathlib import Path
 
 from client_api import ClientApi
 from config_manager import ConfigManager
-from rancher_api import RancherApi
 
 # -----------------------------------------------------------------------------
 # Constants — log prefixes and category labels (single place for clarity)
@@ -30,10 +28,6 @@ LOG_SKIP = "  ⚠️  "
 CATEGORY_RANCHER_ENV_VARS = "Rancher env vars"
 CATEGORY_TRANSLATION_FILE = "Translation file"
 CATEGORY_MASS_IMPORT = "Mass import"
-
-# Rancher fallbacks when workload_path cannot be parsed
-RANCHER_DEFAULT_PROJECT_ID = "local:p-p6l45"
-RANCHER_DEFAULT_WORKLOAD_ID = "statefulset:default:cv-engine"
 
 
 def _image_count(value):
@@ -95,8 +89,7 @@ class DataValidator:
         self.config_manager = ConfigManager(config_path)
         self.config = self.config_manager.load_config()
         self.client_api = None
-        self.rancher_api = None
-        
+
         # Validation results
         self.results = {
             'validated': 0,
@@ -129,27 +122,6 @@ class DataValidator:
         # Log detected/configured version
         detected_version = self.client_api.version_compat.get_version()
         logger.info(f"✓ Connected to OnWatch API (OnWatch {detected_version})")
-    
-    def initialize_rancher_api(self):
-        """Initialize and authenticate with Rancher API."""
-        rancher_config = self.config.get('rancher', {})
-        if not rancher_config:
-            logger.warning("Rancher configuration not found - skipping environment variables validation")
-            return False
-        
-        try:
-            self.rancher_api = RancherApi(
-                base_url=rancher_config['base_url'],
-                username=rancher_config['username'],
-                password=rancher_config['password']
-            )
-            self.rancher_api.login()
-            logger.info("✓ Connected to Rancher API")
-            return True
-        except Exception as e:
-            logger.warning(f"Could not connect to Rancher API: {e}")
-            logger.warning("Environment variables validation will be skipped")
-            return False
     
     def load_output_yaml(self):
         """Load output YAML file."""
@@ -596,86 +568,19 @@ class DataValidator:
         logger.warning(f"{LOG_SKIP} {category_label}: Skipped – {reason}")
 
     def validate_env_vars(self, env_vars):
-        """Validate environment variables set via Rancher. Returns True if validation ran, False if skipped."""
+        """Acknowledge Rancher env vars from export; no API check. Warn user to verify manually (only when export shows they were set)."""
         env_vars_dict = _env_vars_to_dict(env_vars)
         if not env_vars_dict:
-            return False
-        rancher_config = self.config.get("rancher", {})
-
-        if rancher_config.get("skip_env_validation"):
-            self._record_skip(
-                CATEGORY_RANCHER_ENV_VARS,
-                "Skipped by config (skip_env_validation: true). Verify in Rancher UI.",
-            )
-            return False
-        if not rancher_config:
-            self._record_skip(
-                CATEGORY_RANCHER_ENV_VARS,
-                "Rancher configuration not found in config.",
-            )
-            return False
-
-        logger.info(f"\n🔧 Validating {len(env_vars_dict)} environment variables...")
-        if not self.rancher_api and not self.initialize_rancher_api():
-            self._record_skip(
-                CATEGORY_RANCHER_ENV_VARS,
-                "Rancher API unavailable or access denied (common after 2.8 upgrade). "
-                "Verify environment variables in Rancher UI.",
-            )
-            return False
-
-        project_id = RANCHER_DEFAULT_PROJECT_ID
-        workload_id = RANCHER_DEFAULT_WORKLOAD_ID
-        workload_path = rancher_config.get("workload_path", "")
-        if workload_path:
-            try:
-                parsed = urllib.parse.urlparse(workload_path)
-                path_parts = parsed.path.split("/")
-                for i, part in enumerate(path_parts):
-                    if part == "p" and i + 1 < len(path_parts):
-                        project_id = path_parts[i + 1]
-                        break
-                query_params = urllib.parse.parse_qs(parsed.query)
-                if "workloadId" in query_params:
-                    workload_id = urllib.parse.unquote(query_params["workloadId"][0])
-            except Exception as e:
-                logger.debug(f"Could not parse workload_path, using defaults: {e}")
-        try:
-            if self.rancher_api:
-                discovered = self.rancher_api.get_project_id_from_namespace(namespace="default")
-                if discovered:
-                    project_id = discovered
-                    logger.debug(f"Discovered project_id: {project_id}")
-        except Exception as e:
-            logger.debug(f"Could not discover project_id: {e}")
-
-        try:
-            actual_env_vars = self.rancher_api.get_workload_environment_variables(
-                workload_id, project_id
-            )
-            if actual_env_vars is None:
-                self._record_skip(
-                    CATEGORY_RANCHER_ENV_VARS,
-                    "Could not retrieve env vars from workload (Rancher API issue). Verify in Rancher UI.",
-                )
-                return False
-            for key, expected_value in env_vars_dict.items():
-                self.results["validated"] += 1
-                expected_str = str(expected_value)
-                actual_value = actual_env_vars.get(key)
-                if actual_value is None:
-                    self._record_failure(f"Environment variable '{key}': NOT FOUND")
-                elif str(actual_value) != expected_str:
-                    self._record_failure(
-                        f"Environment variable '{key}': VALUE MISMATCH "
-                        f"(expected: {expected_str}, actual: {actual_value})"
-                    )
-                else:
-                    self.results["passed"] += 1
-                    logger.info(f"{LOG_PASS} {key} = {expected_str}")
-        except Exception as e:
-            self._record_failure(f"Environment variables: ERROR - {str(e)}")
-        return True
+            return
+        logger.info(f"\n🔧 Rancher env vars (acknowledged from export – {len(env_vars_dict)} set during population)...")
+        self.results["acknowledged"].append(
+            (CATEGORY_RANCHER_ENV_VARS, f"{len(env_vars_dict)} variable(s) set during population")
+        )
+        logger.info(f"{LOG_PASS} In export: {len(env_vars_dict)} env var(s) recorded")
+        logger.warning(
+            f"{LOG_SKIP} MANUAL CHECK REQUIRED: Rancher environment variables were set during population and could not be verified here. "
+            "Please confirm in Rancher UI (workload environment) that they match your config/export."
+        )
     
     def validate_translation_file(self, translation_file):
         """Acknowledge translation file from export (uploaded via SSH; no OnWatch API to verify)."""
@@ -748,12 +653,9 @@ class DataValidator:
             if self.validate_mass_import(created_items["mass_import"]):
                 self.results["categories_done"].append(("Mass import", 1))
 
-        # — External / optional (Rancher env vars, translation file)
-        if "rancher_env_vars" in created_items:
-            if self.validate_env_vars(created_items["rancher_env_vars"]):
-                r = created_items["rancher_env_vars"]
-                count = len(r) if isinstance(r, list) else len(r) if isinstance(r, dict) else 0
-                self.results["categories_done"].append(("Rancher env vars", count))
+        # — External / optional (Rancher env vars, translation file) — acknowledged only, no API check
+        if "rancher_env_vars" in created_items and created_items["rancher_env_vars"]:
+            self.validate_env_vars(created_items["rancher_env_vars"])
         if "translation_file" in created_items:
             self.validate_translation_file(created_items["translation_file"])
         
@@ -813,8 +715,10 @@ class DataValidator:
         skipped_labels = {label for label, _ in self.results.get("skipped", [])}
         ack_labels = {label for label, _ in self.results.get("acknowledged", [])}
         items = []
-        if CATEGORY_RANCHER_ENV_VARS in skipped_labels:
-            items.append("   [ ] Rancher env vars – Compare workload env in Rancher UI with export/config.")
+        if CATEGORY_RANCHER_ENV_VARS in ack_labels:
+            items.append(
+                f"   {LOG_SKIP} MANUAL CHECK REQUIRED: Rancher env vars – Please confirm in Rancher UI (workload environment) that they match your config/export."
+            )
         if CATEGORY_TRANSLATION_FILE in ack_labels:
             items.append(
                 f"   {LOG_SKIP} MANUAL CHECK REQUIRED: Translation file – Please confirm on the OnWatch server that the file is present and loaded (uploaded via SSH; no API check)."
