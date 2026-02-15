@@ -1,0 +1,239 @@
+:root {
+  --bg: #1a1d23;
+  --bg-card: #252830;
+  --bg-input: #2d3139;
+  --text: #e4e6eb;
+  --text-muted: #9ca3af;
+  --accent: #3b82f6;
+  --accent-hover: #2563eb;
+  --success: #22c55e;
+  --error: #ef4444;
+  --warning: #f59e0b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  margin: 0;
+  padding: 1.5rem 2rem;
+  line-height: 1.5;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--bg-input);
+}
+
+h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+h2 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin: 0 0 0.75rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.badge {
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.badge.ok {
+  background: rgba(34, 197, 94, 0.2);
+  color: var(--success);
+}
+
+.badge.error {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--error);
+}
+
+.badge.pending {
+  background: rgba(156, 163, 175, 0.2);
+  color: var(--text-muted);
+}
+
+section {
+  background: var(--bg-card);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.actions .action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.btn {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: background 0.15s;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.btn-secondary {
+  background: var(--bg-input);
+  color: var(--text);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #3d424b;
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--bg-input);
+}
+
+.btn-outline:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--text-muted);
+}
+
+.btn-sm {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.8rem;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+select {
+  background: var(--bg-input);
+  color: var(--text);
+  border: 1px solid var(--bg-input);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+  min-width: 220px;
+}
+
+#config-content {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+#config-content .error-list {
+  color: var(--error);
+  margin-top: 0.5rem;
+}
+
+.exports-item {
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--bg-input);
+  font-size: 0.9rem;
+}
+
+.exports-item:last-child {
+  border-bottom: none;
+}
+
+.exports-item .filename {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.exports-item .meta {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+}
+
+.log-toolbar {
+  margin-bottom: 0.5rem;
+}
+
+#log-output {
+  background: #0d0f12;
+  border-radius: 6px;
+  padding: 1rem;
+  font-family: "SF Mono", "Monaco", "Consolas", monospace;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  overflow-x: auto;
+  max-height: 400px;
+  overflow-y: auto;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.results-grid {
+  display: grid;
+  gap: 1rem;
+  font-size: 0.9rem;
+}
+
+.result-card {
+  padding: 1rem;
+  background: var(--bg-input);
+  border-radius: 6px;
+}
+
+.result-card h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.95rem;
+}
+
+.result-card.success h3 { color: var(--success); }
+.result-card.failure h3 { color: var(--error); }
+
+.result-card .detail {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.checklist {
+  margin-top: 0.75rem;
+  padding-left: 1.25rem;
+}
+
+.checklist li {
+  margin: 0.35rem 0;
+  color: var(--warning);
+}
+
+.errors-list {
+  color: var(--error);
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.errors-list li {
+  margin: 0.25rem 0;
+}

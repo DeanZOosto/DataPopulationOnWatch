@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OnWatch Data Population Hub</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <h1>OnWatch Data Population Hub</h1>
+    <div id="config-badge" class="badge">Checking config…</div>
+  </header>
+
+  <section class="actions">
+    <h2>Actions</h2>
+    <div class="action-row">
+      <button id="btn-run-population" class="btn btn-primary">Run Population</button>
+      <button id="btn-validate" class="btn btn-secondary">Validate</button>
+      <select id="export-select">
+        <option value="">-- Select export file --</option>
+      </select>
+      <button id="btn-refresh-exports" class="btn btn-outline">Refresh</button>
+    </div>
+  </section>
+
+  <section class="config-status" id="config-section">
+    <h2>Config Status</h2>
+    <div id="config-content"></div>
+  </section>
+
+  <section class="exports" id="exports-section">
+    <h2>Exports (run outputs)</h2>
+    <div id="exports-list"></div>
+  </section>
+
+  <section class="logs">
+    <h2>Live Logs <span id="log-source"></span></h2>
+    <div class="log-toolbar">
+      <button id="btn-clear-logs" class="btn btn-outline btn-sm">Clear</button>
+    </div>
+    <pre id="log-output"></pre>
+  </section>
+
+  <section class="results" id="results-section">
+    <h2>Results (latest run)</h2>
+    <div id="results-content"></div>
+  </section>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

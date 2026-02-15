@@ -95,6 +95,16 @@ See [VALIDATION_GUIDE.md](VALIDATION_GUIDE.md) for complete validation instructi
 python3 validate_data.py onwatch_data_export_2025-01-15_10-30-00.yaml
 ```
 
+### Web UI Hub
+
+A local web interface for running population, validation, and viewing logs and results:
+
+```bash
+python run_web.py
+```
+
+Then open http://127.0.0.1:5000 in your browser. See [web/README.md](web/README.md) for details.
+
 ## Configuration
 
 ### Quick IP Configuration
