@@ -14,7 +14,9 @@ const DOM = {
   configStatusMsg: () => document.getElementById("config-status-msg"),
   exportsList: () => document.getElementById("exports-list"),
   exportSelect: () => document.getElementById("export-select"),
+  actionError: () => document.getElementById("action-error"),
   resultsContent: () => document.getElementById("results-content"),
+  progressSection: () => document.getElementById("progress-section"),
   progressSource: () => document.getElementById("progress-source"),
   progressBar: () => document.getElementById("progress-bar"),
   progressText: () => document.getElementById("progress-text"),
@@ -168,7 +170,8 @@ function renderProgressSteps(steps) {
 }
 
 function renderProgressWarnings(warnings) {
-  DOM.progressWarnings().innerHTML = warnings
+  const filtered = warnings.filter((w) => (w.message || "").trim());
+  DOM.progressWarnings().innerHTML = filtered
     .map((w) => `<div class="progress-warning ${w.type}">${w.type === "error" ? "✗" : "⚠️"} ${escapeHtml(w.message)}</div>`)
     .join("");
 }
@@ -177,6 +180,22 @@ function escapeHtml(s) {
   const div = document.createElement("div");
   div.textContent = s;
   return div.innerHTML;
+}
+
+function showValidationError(message) {
+  DOM.actionError().innerHTML = `<div class="action-error-card">
+    <strong>⚠️ ${escapeHtml(message)}</strong>
+    <span>Select an export file from the dropdown above, then click Validate.</span>
+  </div>`;
+  DOM.actionError().classList.add("visible");
+  DOM.exportSelect().focus();
+  DOM.exportSelect().classList.add("input-error");
+  setTimeout(() => DOM.exportSelect().classList.remove("input-error"), 2000);
+}
+
+function clearActionError() {
+  DOM.actionError().innerHTML = "";
+  DOM.actionError().classList.remove("visible");
 }
 
 // =============================================================================
@@ -222,14 +241,20 @@ function handleProgressEvent(ev, jobType, ctx) {
   }
 
   if (ev.type === "warning") {
-    ctx.warnings.push({ type: "warning", message: ev.message });
-    renderProgressWarnings(ctx.warnings);
+    const msg = (ev.message || "").trim();
+    if (msg) {
+      ctx.warnings.push({ type: "warning", message: msg });
+      renderProgressWarnings(ctx.warnings);
+    }
     return;
   }
 
   if (ev.type === "error") {
-    ctx.warnings.push({ type: "error", message: ev.message });
-    renderProgressWarnings(ctx.warnings);
+    const msg = (ev.message || "").trim();
+    if (msg) {
+      ctx.warnings.push({ type: "error", message: msg });
+      renderProgressWarnings(ctx.warnings);
+    }
     return;
   }
 
@@ -239,10 +264,33 @@ function handleProgressEvent(ev, jobType, ctx) {
       const rs = ev.run_status;
       DOM.progressText().textContent = `Done: ${rs.successful_steps ?? 0}/${rs.total_steps ?? 0} steps | ${ev.duration || ""}`;
       DOM.progressSummary().innerHTML = buildPopulationCompleteSummary(ev);
+      // Update Results section from complete event (fallback if pollStatus hasn't run yet)
+      lastRunType = "population";
+      latestPopulationResult = {
+        success: ev.success,
+        run_status: ev.run_status,
+        duration: ev.duration,
+        export_path: ev.export_path,
+        error: ev.error,
+      };
+      renderResults();
     }
     if (jobType === "validation" && ev.passed !== undefined) {
       DOM.progressText().textContent = `Done: ${ev.passed} passed, ${ev.failed} failed`;
       DOM.progressSummary().innerHTML = buildValidationCompleteSummary(ev);
+      // Update Results section from complete event
+      lastRunType = "validation";
+      latestValidationResult = {
+        success: ev.success,
+        passed: ev.passed,
+        failed: ev.failed,
+        validated: ev.validated,
+        errors: ev.errors || [],
+        acknowledged: ev.acknowledged || [],
+        manual_checklist: ev.manual_checklist || [],
+        error: ev.error,
+      };
+      renderResults();
     }
   }
 }
@@ -335,7 +383,13 @@ function renderResults() {
   } else if (lastRunType === "validation" && latestValidationResult) {
     html = buildValidationResultCard(latestValidationResult);
   }
-  DOM.resultsContent().innerHTML = html || "<p class='detail'>Run population or validation to see results.</p>";
+  if (!html) {
+    html = `<div class="results-empty">
+      <p class="results-empty-text">No runs yet.</p>
+      <p class="results-empty-hint">Run <strong>Population</strong> first, then select an export file and run <strong>Validate</strong> to check data after upgrade.</p>
+    </div>`;
+  }
+  DOM.resultsContent().innerHTML = html;
 }
 
 function buildPopulationResultCard(r) {
@@ -365,11 +419,12 @@ function buildValidationResultCard(r) {
 
 async function runPopulation() {
   if (currentJobId) return;
+  clearActionError();
   try {
     const r = await fetch("/api/run-population", { method: "POST" });
     const data = await r.json();
     if (data.job_id) {
-      streamProgress(data.job_id, "Population");
+      streamProgress(data.job_id, "population");
     } else {
       DOM.progressSummary().innerHTML = `<div class="summary-card failure">Error: ${data.error || "Unknown error"}</div>`;
     }
@@ -380,9 +435,10 @@ async function runPopulation() {
 
 async function runValidation() {
   if (currentJobId) return;
+  clearActionError();
   const file = DOM.exportSelect().value;
   if (!file) {
-    DOM.progressSummary().innerHTML = '<div class="summary-card failure">Please select an export file first.</div>';
+    showValidationError("Please select an export file (last population run) to validate against.");
     return;
   }
   try {
@@ -393,7 +449,7 @@ async function runValidation() {
     });
     const data = await r.json();
     if (data.job_id) {
-      streamProgress(data.job_id, "Validation");
+      streamProgress(data.job_id, "validation");
     } else {
       DOM.progressSummary().innerHTML = `<div class="summary-card failure">Error: ${data.error || "Unknown error"}</div>`;
     }

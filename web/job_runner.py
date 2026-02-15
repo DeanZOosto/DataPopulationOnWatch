@@ -51,7 +51,9 @@ class ProgressLogHandler(logging.Handler):
         try:
             if record.levelno < logging.WARNING:
                 return
-            msg = self.format(record)
+            msg = (self.format(record) or "").strip()
+            if not msg:
+                return
             event_type = "error" if record.levelno >= logging.ERROR else "warning"
             with self._lock:
                 if self.job_id in self._queues:

@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>OnWatch Data Population Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -16,12 +19,13 @@
     <h2>Actions</h2>
     <div class="action-row">
       <button id="btn-run-population" class="btn btn-primary">Run Population</button>
-      <button id="btn-validate" class="btn btn-secondary">Validate</button>
+      <button id="btn-validate" class="btn btn-accent">Validate</button>
       <select id="export-select">
         <option value="">-- Select export file --</option>
       </select>
       <button id="btn-refresh-exports" class="btn btn-outline">Refresh</button>
     </div>
+    <div id="action-error" class="action-error"></div>
   </section>
 
   <section class="config-status" id="config-section">
