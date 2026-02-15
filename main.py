@@ -1,7 +1,17 @@
 #!/usr/bin/env python3
 """
 Main automation script for populating OnWatch system with data.
-This script orchestrates automation tasks via REST API, GraphQL API, and Rancher configuration.
+
+Orchestrates automation tasks via REST API, GraphQL API, and Rancher configuration.
+
+Structure:
+  - Imports, logging, exception hook
+  - STEP_LIST / AUTOMATION_STEPS — step definitions (single source of truth)
+  - OnWatchAutomation — orchestrator class
+    - Configuration & API init
+    - Step methods (set_kv_parameters, configure_groups, etc.)
+    - _run_step / run — execution loop with progress callback
+  - CLI entry points (_preview_dataset, main)
 """
 import asyncio
 import os
@@ -98,12 +108,13 @@ class OnWatchAutomation:
     """Main automation orchestrator."""
 
     # ---- Configuration & API ----
-    def __init__(self, config_path="config.yaml"):
+    def __init__(self, config_path="config.yaml", progress_callback=None):
         """
         Initialize automation with configuration.
         
         Args:
             config_path: Path to YAML configuration file
+            progress_callback: Optional callable(event_dict) for UI progress reporting
         """
         self.config_path = config_path
         self.config_manager = ConfigManager(config_path)
@@ -111,6 +122,7 @@ class OnWatchAutomation:
         self.client_api = None
         self.rancher_automation = None
         self.summary = RunSummary()
+        self.progress_callback = progress_callback
         
         # Auto-sync Rancher password with version if version is set
         self._sync_rancher_password_with_version()
@@ -2244,11 +2256,21 @@ class OnWatchAutomation:
             return ("partial", "Some subjects failed - see warnings", True)
         return None
     
+    def _emit_progress(self, event_dict):
+        """Emit progress event if callback is set."""
+        if self.progress_callback:
+            try:
+                self.progress_callback(event_dict)
+            except Exception:
+                pass
+
     async def _run_step(self, step_num, name, method_name, is_async, fatal, success_detail, manual_msg):
         """Run one automation step: call method, record timing and success/failure. Raises on fatal failure."""
         step_start = time.time()
+        self._emit_progress({"type": "step_start", "step": step_num, "total": NUM_STEPS, "name": name})
         logger.info(f"\n[Step {step_num}/{NUM_STEPS}] {name}...")
         callable_fn = getattr(self, method_name)
+        status, message = "success", success_detail or ""
         try:
             if is_async:
                 await callable_fn()
@@ -2260,8 +2282,8 @@ class OnWatchAutomation:
             if step_num == 6:
                 override = self._check_populate_watch_list_partial()
                 if override:
-                    status, detail, manual_action = override
-                    self.summary.record_step(step_num, name, status, detail, manual_action=manual_action)
+                    status, message, manual_action = override
+                    self.summary.record_step(step_num, name, status, message, manual_action=manual_action)
                 else:
                     self.summary.record_step(step_num, name, "success", success_detail)
             else:
@@ -2269,16 +2291,20 @@ class OnWatchAutomation:
         except StepSkipped as e:
             step_end = time.time()
             self.summary.record_step_timing(step_num, step_start, step_end)
+            status, message = "skipped", str(e)
             self.summary.record_step(step_num, name, "skipped", str(e))
         except Exception as e:
             step_end = time.time()
             self.summary.record_step_timing(step_num, step_start, step_end)
             error_msg = f"Failed to {name.lower()}: {str(e)}"
+            status, message = "failed", error_msg
             logger.error(f"❌ {error_msg}")
             logger.warning(f"→ MANUAL ACTION REQUIRED: {manual_msg}")
             self.summary.record_step(step_num, name, "failed", error_msg, manual_action=True)
             if fatal:
                 raise
+        finally:
+            self._emit_progress({"type": "step_done", "step": step_num, "total": NUM_STEPS, "name": name, "status": status, "message": message})
 
     # ---- Run loop ----
     async def run(self):
@@ -2316,9 +2342,24 @@ class OnWatchAutomation:
         export_path = self.summary.export_to_file(format='yaml')
         if export_path:
             logger.info(f"💾 Data export saved for post-upgrade validation: {export_path}")
-        
-        # Exit with appropriate code
+
+        # Emit completion with summary for UI
         failed_steps = sum(1 for s in self.summary.steps.values() if s['status'] == 'failed')
+        self._emit_progress({
+            "type": "complete",
+            "success": failed_steps == 0,
+            "export_path": str(export_path) if export_path else None,
+            "run_status": {
+                "total_steps": len(self.summary.steps),
+                "successful_steps": sum(1 for s in self.summary.steps.values() if s["status"] == "success"),
+                "failed_steps": failed_steps,
+                "skipped_steps": sum(1 for s in self.summary.steps.values() if s["status"] == "skipped"),
+            },
+            "warnings": list(self.summary.warnings),
+            "duration": self.summary.format_duration(self.summary.get_total_duration()),
+        })
+        
+        # Exit with appropriate code (when run from CLI)
         if failed_steps > 0:
             sys.exit(1)
 

@@ -27,6 +27,19 @@
   <section class="config-status" id="config-section">
     <h2>Config Status</h2>
     <div id="config-content"></div>
+    <div class="config-edit">
+      <label>Set IP:</label>
+      <input type="text" id="config-ip" placeholder="e.g. 192.168.1.100" />
+      <button id="btn-set-ip" class="btn btn-outline btn-sm">Set IP</button>
+      <label>Set Version:</label>
+      <select id="config-version">
+        <option value="">-- Select --</option>
+        <option value="2.6">2.6</option>
+        <option value="2.8">2.8</option>
+      </select>
+      <button id="btn-set-version" class="btn btn-outline btn-sm">Set Version</button>
+      <span id="config-status-msg" class="config-status-msg"></span>
+    </div>
   </section>
 
   <section class="exports" id="exports-section">
@@ -34,12 +47,15 @@
     <div id="exports-list"></div>
   </section>
 
-  <section class="logs">
-    <h2>Live Logs <span id="log-source"></span></h2>
-    <div class="log-toolbar">
-      <button id="btn-clear-logs" class="btn btn-outline btn-sm">Clear</button>
+  <section class="progress-section" id="progress-section">
+    <h2>Run Progress <span id="progress-source"></span></h2>
+    <div class="progress-bar-container">
+      <div class="progress-bar" id="progress-bar"></div>
+      <span class="progress-text" id="progress-text"></span>
     </div>
-    <pre id="log-output"></pre>
+    <div class="progress-steps" id="progress-steps"></div>
+    <div class="progress-warnings" id="progress-warnings"></div>
+    <div class="progress-summary" id="progress-summary"></div>
   </section>
 
   <section class="results" id="results-section">

@@ -7,6 +7,16 @@ and correct in the OnWatch system after upgrade.
 
 Usage:
     python3 validate_data.py <output_yaml_file> [--config config.yaml]
+
+Structure:
+  - Constants (LOG_PASS, CATEGORY_*, etc.)
+  - Helper functions (_image_count, _normalize_list_response, _env_vars_to_dict)
+  - DataValidator class
+    - Init, load_output_yaml, _record_failure
+    - validate_* methods (kv_parameters, system_settings, groups, etc.)
+    - validate() — main entry, iterates categories with progress callback
+    - print_summary, _manual_verification_checklist
+  - main() — CLI entry point
 """
 import sys
 import argparse
@@ -76,19 +86,21 @@ logger = logging.getLogger(__name__)
 class DataValidator:
     """Validates OnWatch data against output YAML."""
     
-    def __init__(self, output_yaml_path, config_path="config.yaml"):
+    def __init__(self, output_yaml_path, config_path="config.yaml", progress_callback=None):
         """
         Initialize validator.
         
         Args:
             output_yaml_path: Path to output YAML file from population run
             config_path: Path to config.yaml for OnWatch connection details
+            progress_callback: Optional callable(event_dict) for UI progress reporting
         """
         self.output_yaml_path = Path(output_yaml_path)
         self.config_path = config_path
         self.config_manager = ConfigManager(config_path)
         self.config = self.config_manager.load_config()
         self.client_api = None
+        self.progress_callback = progress_callback
 
         # Validation results
         self.results = {
@@ -613,54 +625,103 @@ class DataValidator:
             "cameras", "inquiries", "mass_import", "translation_file", "rancher_env_vars",
         ]
         categories_present = [k for k in export_category_keys if created_items.get(k)]
+        total_categories = len(categories_present)
         if categories_present:
             logger.info(
                 f"\n📑 Will validate: {', '.join(c.replace('_', ' ') for c in categories_present)}"
             )
 
+        def _emit(event_dict):
+            if self.progress_callback:
+                try:
+                    self.progress_callback(event_dict)
+                except Exception:
+                    pass
+
+        cat_idx = [0]
+
+        def _cat_start(name):
+            cat_idx[0] += 1
+            _emit({"type": "category_start", "name": name, "current": cat_idx[0], "total": total_categories})
+        def _cat_done(name, count=1):
+            _emit({"type": "category_done", "name": name, "count": count})
+
         # — Settings (KV, system settings)
         if "kv_parameters" in created_items:
+            _cat_start("KV parameters")
             self.validate_kv_parameters(created_items["kv_parameters"])
+            _cat_done("KV parameters", len(created_items["kv_parameters"]))
             self.results["categories_done"].append(("KV parameters", len(created_items["kv_parameters"])))
         if "system_settings" in created_items:
+            _cat_start("System settings")
             self.validate_system_settings(created_items["system_settings"])
+            _cat_done("System settings", 1)
             self.results["categories_done"].append(("System settings", 1))
 
         # — Identity (groups, accounts)
         if "groups" in created_items:
+            _cat_start("Groups")
             self.validate_groups(created_items["groups"])
+            _cat_done("Groups", len(created_items["groups"]))
             self.results["categories_done"].append(("Groups", len(created_items["groups"])))
         if "accounts" in created_items:
             users = [acc for acc in created_items["accounts"] if "username" in acc]
             if users:
+                _cat_start("Accounts")
                 self.validate_users(users)
+                _cat_done("Accounts", len(users))
                 self.results["categories_done"].append(("Accounts", len(users)))
 
         # — Content (subjects, cameras, inquiries, mass import)
         if "subjects" in created_items:
+            _cat_start("Subjects")
             self.validate_subjects(created_items["subjects"])
             subj = created_items["subjects"]
+            _cat_done("Subjects", len(subj) if isinstance(subj, list) else 0)
             self.results["categories_done"].append(
                 ("Subjects", len(subj) if isinstance(subj, list) else 0)
             )
         if "cameras" in created_items:
+            _cat_start("Cameras")
             self.validate_cameras(created_items["cameras"])
+            _cat_done("Cameras", len(created_items["cameras"]))
             self.results["categories_done"].append(("Cameras", len(created_items["cameras"])))
         if "inquiries" in created_items:
+            _cat_start("Inquiries")
             self.validate_inquiries(created_items["inquiries"])
+            _cat_done("Inquiries", len(created_items["inquiries"]))
             self.results["categories_done"].append(("Inquiries", len(created_items["inquiries"])))
         if "mass_import" in created_items:
+            _cat_start("Mass import")
             if self.validate_mass_import(created_items["mass_import"]):
+                _cat_done("Mass import", 1)
                 self.results["categories_done"].append(("Mass import", 1))
 
         # — External / optional (Rancher env vars, translation file) — acknowledged only, no API check
         if "rancher_env_vars" in created_items and created_items["rancher_env_vars"]:
+            _cat_start("Rancher env vars")
             self.validate_env_vars(created_items["rancher_env_vars"])
+            _cat_done("Rancher env vars", len(created_items["rancher_env_vars"]))
         if "translation_file" in created_items:
+            _cat_start("Translation file")
             self.validate_translation_file(created_items["translation_file"])
+            _cat_done("Translation file", 1)
         
         # Print summary
         self.print_summary()
+
+        # Emit completion for UI
+        _emit({
+            "type": "complete",
+            "success": self.results["failed"] == 0,
+            "passed": self.results["passed"],
+            "failed": self.results["failed"],
+            "validated": self.results["validated"],
+            "errors": list(self.results["errors"]),
+            "skipped": list(self.results.get("skipped", [])),
+            "acknowledged": list(self.results.get("acknowledged", [])),
+            "manual_checklist": [line.strip() for line in self._manual_verification_checklist()[1:] if line.strip()] if self._manual_verification_checklist() else [],
+        })
         
         return self.results['failed'] == 0
     
