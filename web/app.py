@@ -13,7 +13,7 @@ from collections import deque
 from pathlib import Path
 
 import yaml
-from flask import Flask, Response, jsonify, render_template, request
+from flask import Flask, Response, jsonify, redirect, render_template, request, session, url_for
 
 # Add project root to path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -23,10 +23,47 @@ os.chdir(PROJECT_ROOT)
 from web.job_runner import run_population, run_validation
 
 # -----------------------------------------------------------------------------
+# Auth config
+# -----------------------------------------------------------------------------
+
+def _load_auth_config():
+    """Load web UI credentials from config. Falls back to onwatch if web_ui not set."""
+    try:
+        with open(PROJECT_ROOT / "config.yaml") as f:
+            config = yaml.safe_load(f) or {}
+        web_ui = config.get("web_ui") or {}
+        onwatch = config.get("onwatch") or {}
+        return {
+            "username": web_ui.get("username") or onwatch.get("username") or "Administrator",
+            "password": web_ui.get("password") or onwatch.get("password") or "",
+            "secret_key": os.environ.get("OW_WEB_SECRET_KEY") or web_ui.get("secret_key") or "dev-secret-change-in-production",
+        }
+    except Exception:
+        return {"username": "Administrator", "password": "", "secret_key": "dev-secret"}
+
+
+def _require_login(f):
+    """Decorator: redirect to login if not authenticated."""
+    from functools import wraps
+    @wraps(f)
+    def wrapped(*args, **kwargs):
+        if not session.get("logged_in"):
+            if request.path.startswith("/api/"):
+                return jsonify({"error": "Unauthorized", "login_required": True}), 401
+            return redirect(url_for("login_page", next=request.url))
+        return f(*args, **kwargs)
+    return wrapped
+
+
+# -----------------------------------------------------------------------------
 # Flask app and shared state
 # -----------------------------------------------------------------------------
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
+auth_config = _load_auth_config()
+app.secret_key = auth_config["secret_key"]
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
 jobs = {}
 jobs_lock = threading.Lock()
@@ -141,24 +178,62 @@ def _stream_logs_generator(job_id):
 
 
 # -----------------------------------------------------------------------------
-# Routes — pages
+# Routes — auth (unprotected)
+# -----------------------------------------------------------------------------
+
+@app.route("/login")
+def login_page():
+    if session.get("logged_in"):
+        return redirect(url_for("index"))
+    return render_template("login.html")
+
+
+@app.route("/api/login", methods=["POST"])
+def login():
+    data = request.get_json(silent=True) or request.form
+    username = (data.get("username") or "").strip()
+    password = (data.get("password") or "")
+    if username == auth_config["username"] and password == auth_config["password"]:
+        session["logged_in"] = True
+        next_url = request.args.get("next") or request.form.get("next") or "/"
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.is_json:
+            return jsonify({"success": True, "redirect": next_url})
+        return redirect(next_url)
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.is_json:
+        return jsonify({"success": False, "error": "Invalid username or password"}), 401
+    return redirect(url_for("login_page", error=1))
+
+
+@app.route("/api/logout", methods=["POST", "GET"])
+def logout():
+    session.pop("logged_in", None)
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.is_json:
+        return jsonify({"success": True, "redirect": "/login"})
+    return redirect(url_for("login_page"))
+
+
+# -----------------------------------------------------------------------------
+# Routes — pages (protected)
 # -----------------------------------------------------------------------------
 
 @app.route("/")
+@_require_login
 def index():
     return render_template("index.html")
 
 
 # -----------------------------------------------------------------------------
-# Routes — config API
+# Routes — config API (protected)
 # -----------------------------------------------------------------------------
 
 @app.route("/api/config/status")
+@_require_login
 def config_status():
     return jsonify(get_config_status())
 
 
 @app.route("/api/config/set-ip", methods=["POST"])
+@_require_login
 def set_ip():
     data = request.get_json() or {}
     new_ip = (data.get("ip") or request.form.get("ip") or "").strip()
@@ -174,19 +249,23 @@ def set_ip():
 
 
 @app.route("/api/config/preview")
+@_require_login
 def config_preview():
-    """Return raw config.yaml content for preview."""
+    """Return config.yaml content for preview, with web_ui section redacted."""
     config_path = PROJECT_ROOT / "config.yaml"
     if not config_path.exists():
         return jsonify({"error": "config.yaml not found"}), 404
     try:
-        content = config_path.read_text(encoding="utf-8")
+        data = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+        data.pop("web_ui", None)
+        content = yaml.dump(data, default_flow_style=False, sort_keys=False, allow_unicode=True)
         return Response(content, mimetype="text/plain; charset=utf-8")
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/config/set-version", methods=["POST"])
+@_require_login
 def set_version():
     data = request.get_json() or {}
     version = (data.get("version") or request.form.get("version") or "").strip()
@@ -202,15 +281,17 @@ def set_version():
 
 
 # -----------------------------------------------------------------------------
-# Routes — exports
+# Routes — exports (protected)
 # -----------------------------------------------------------------------------
 
 @app.route("/api/exports")
+@_require_login
 def exports():
     return jsonify(get_exports())
 
 
 @app.route("/api/file/preview")
+@_require_login
 def file_preview():
     """Return YAML file content for preview. Path must be under project root."""
     path_arg = request.args.get("path")
@@ -231,10 +312,11 @@ def file_preview():
 
 
 # -----------------------------------------------------------------------------
-# Routes — job execution
+# Routes — job execution (protected)
 # -----------------------------------------------------------------------------
 
 @app.route("/api/run-population", methods=["POST"])
+@_require_login
 def start_population():
     data = request.get_json() or {}
     user_name = (data.get("name") or "").strip() or None
@@ -250,6 +332,7 @@ def start_population():
 
 
 @app.route("/api/validate", methods=["POST"])
+@_require_login
 def start_validation():
     data = request.get_json() or {}
     export_file = data.get("file") or request.args.get("file")
@@ -263,10 +346,11 @@ def start_validation():
 
 
 # -----------------------------------------------------------------------------
-# Routes — job status and streams
+# Routes — job status and streams (protected)
 # -----------------------------------------------------------------------------
 
 @app.route("/api/progress/<job_id>")
+@_require_login
 def stream_progress(job_id):
     """Stream progress events as SSE (JSON)."""
     return Response(
@@ -277,6 +361,7 @@ def stream_progress(job_id):
 
 
 @app.route("/api/logs/<job_id>")
+@_require_login
 def stream_logs(job_id):
     """Stream raw log lines as SSE (legacy)."""
     return Response(
@@ -287,6 +372,7 @@ def stream_logs(job_id):
 
 
 @app.route("/api/status/<job_id>")
+@_require_login
 def job_status(job_id):
     with jobs_lock:
         job = jobs.get(job_id, {})
@@ -300,6 +386,7 @@ def job_status(job_id):
 
 
 @app.route("/api/jobs/active")
+@_require_login
 def active_jobs():
     """Return whether any job is currently running (for disabling UI actions)."""
     with jobs_lock:

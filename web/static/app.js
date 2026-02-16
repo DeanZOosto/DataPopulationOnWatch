@@ -31,6 +31,18 @@ const DOM = {
 };
 
 // =============================================================================
+// Auth
+// =============================================================================
+
+function redirectToLoginIfUnauthorized(r) {
+  if (r && r.status === 401) {
+    window.location.href = "/login?next=" + encodeURIComponent(window.location.href);
+    return true;
+  }
+  return false;
+}
+
+// =============================================================================
 // State
 // =============================================================================
 
@@ -45,7 +57,8 @@ let lastRunType = null; // "population" | "validation" — only show result for 
 
 async function fetchConfig() {
   try {
-    const r = await fetch("/api/config/status");
+    const r = await fetch("/api/config/status", { credentials: "same-origin" });
+    if (redirectToLoginIfUnauthorized(r)) return;
     const data = await r.json();
     if (data.valid) {
       DOM.configBadge().textContent = "Config ✓";
@@ -84,9 +97,11 @@ async function setIp() {
   try {
     const r = await fetch("/api/config/set-ip", {
       method: "POST",
+      credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ip }),
     });
+    if (redirectToLoginIfUnauthorized(r)) return;
     const data = await r.json();
     if (data.success) {
       showConfigStatus("✓ " + data.message);
@@ -108,9 +123,11 @@ async function setVersion() {
   try {
     const r = await fetch("/api/config/set-version", {
       method: "POST",
+      credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ version }),
     });
+    if (redirectToLoginIfUnauthorized(r)) return;
     const data = await r.json();
     if (data.success) {
       showConfigStatus("✓ " + data.message);
@@ -129,7 +146,8 @@ async function setVersion() {
 
 async function fetchExports() {
   try {
-    const r = await fetch("/api/exports");
+    const r = await fetch("/api/exports", { credentials: "same-origin" });
+    if (redirectToLoginIfUnauthorized(r)) return;
     const exports = await r.json();
     DOM.exportsList().innerHTML = exports.length
       ? exports
@@ -161,7 +179,8 @@ async function fetchExports() {
 
 async function showConfigPreview() {
   try {
-    const r = await fetch("/api/config/preview");
+    const r = await fetch("/api/config/preview", { credentials: "same-origin" });
+    if (redirectToLoginIfUnauthorized(r)) return;
     if (!r.ok) throw new Error(await r.text());
     const content = await r.text();
     showPreviewModal("config.yaml", content);
@@ -172,7 +191,8 @@ async function showConfigPreview() {
 
 async function showFilePreview(path, filename) {
   try {
-    const r = await fetch("/api/file/preview?path=" + encodeURIComponent(path));
+    const r = await fetch("/api/file/preview?path=" + encodeURIComponent(path), { credentials: "same-origin" });
+    if (redirectToLoginIfUnauthorized(r)) return;
     if (!r.ok) throw new Error(await r.text());
     const content = await r.text();
     showPreviewModal(filename || "Preview", content);
@@ -428,7 +448,8 @@ async function pollStatus(jobId, jobType) {
   const maxAttempts = 30;
   for (let i = 0; i < maxAttempts; i++) {
     try {
-      const r = await fetch(`/api/status/${jobId}`);
+      const r = await fetch(`/api/status/${jobId}`, { credentials: "same-origin" });
+      if (redirectToLoginIfUnauthorized(r)) return;
       const data = await r.json();
       if (data.status === "done") {
         lastRunType = jobType;
@@ -496,9 +517,11 @@ async function runPopulation() {
   try {
     const r = await fetch("/api/run-population", {
       method: "POST",
+      credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: userName }),
     });
+    if (redirectToLoginIfUnauthorized(r)) return;
     const data = await r.json();
     if (data.job_id) {
       streamProgress(data.job_id, "population");
@@ -521,9 +544,11 @@ async function runValidation() {
   try {
     const r = await fetch("/api/validate", {
       method: "POST",
+      credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ file }),
     });
+    if (redirectToLoginIfUnauthorized(r)) return;
     const data = await r.json();
     if (data.job_id) {
       streamProgress(data.job_id, "validation");

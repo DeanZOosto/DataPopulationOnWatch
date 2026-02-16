@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login – OnWatch Data Population UI</title>
+  <link rel="icon" href="/static/favicon.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    .login-page {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+    .login-card {
+      width: 100%;
+      max-width: 360px;
+      padding: 2rem;
+    }
+    .login-card h1 {
+      font-family: "Outfit", "Inter", sans-serif;
+      font-size: 1.25rem;
+      margin: 0 0 1.5rem 0;
+      text-align: center;
+      color: var(--text);
+    }
+    .login-form label {
+      display: block;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 0.35rem;
+    }
+    .login-form input {
+      width: 100%;
+      padding: 0.6rem 0.75rem;
+      margin-bottom: 1rem;
+      background: var(--bg-input);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 1rem;
+    }
+    .login-form input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    .login-form button {
+      width: 100%;
+      padding: 0.65rem;
+      margin-top: 0.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+    .login-error {
+      color: var(--error);
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-page">
+    <section class="login-card">
+      <h1>OnWatch Data Population UI</h1>
+      <form class="login-form" id="login-form" method="POST" action="/api/login">
+        <input type="hidden" name="next" value="">
+        <div id="login-error" class="login-error" style="display:none;"></div>
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" required autofocus autocomplete="username">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required autocomplete="current-password">
+        <button type="submit" class="btn btn-primary">Log in</button>
+      </form>
+    </section>
+  </div>
+  <script>
+    const form = document.getElementById("login-form");
+    const errorEl = document.getElementById("login-error");
+    const nextInput = form.querySelector('input[name="next"]');
+    const urlParams = new URLSearchParams(window.location.search);
+    nextInput.value = urlParams.get("next") || "/";
+    if (urlParams.get("error") === "1") {
+      errorEl.textContent = "Invalid username or password.";
+      errorEl.style.display = "block";
+    }
+    form.addEventListener("submit", () => {
+      errorEl.style.display = "none";
+    });
+  </script>
+</body>
+</html>

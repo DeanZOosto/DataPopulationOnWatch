@@ -1,6 +1,12 @@
 # OnWatch Automation Configuration
 # Paths are relative to project root unless absolute.
 
+# Web UI login (same credentials as OnWatch UI by default)
+web_ui:
+  username: "Administrator"
+  password: "pa$$word!"
+  secret_key: "change-me-in-production"  # Session signing; override with env OW_WEB_SECRET_KEY
+
 # OnWatch API Connection
 onwatch:
   ip_address: "10.1.25.14"
