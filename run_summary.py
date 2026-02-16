@@ -314,7 +314,7 @@ class RunSummary:
                 safe = "".join(c for c in name_prefix if c.isalnum() or c == "_").strip("_") or "data"
                 filename = f"{safe}_data_inserted_{timestamp}.{format}"
             else:
-                filename = f"onwatch_data_export_{timestamp}.{format}"
+                filename = f"onwatch_data_inserted_{timestamp}.{format}"
             output_path = Path(filename)
         
         output_path = Path(output_path)
