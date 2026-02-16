@@ -137,12 +137,18 @@ def get_config_status():
 def _stream_progress_generator(job_id):
     """Yield progress events as SSE JSON until job is done."""
     seen = 0
+    start = time.time()
+    JOB_NOT_FOUND_TIMEOUT = 3.0  # If job missing for this long, likely different gunicorn worker
     while True:
         with jobs_lock:
             job = jobs.get(job_id, {})
             q = progress_queues.get(job_id, deque())
         if job.get("status") == "done" and seen >= len(q):
             break
+        # Job not in this worker (e.g. multi-worker gunicorn) — close quickly instead of hanging
+        if not job and (time.time() - start) > JOB_NOT_FOUND_TIMEOUT:
+            yield 'data: {"type":"stream_done","error":"job_not_found"}\n\n'
+            return
         while seen < len(q):
             try:
                 ev = q[seen]
@@ -160,12 +166,17 @@ def _stream_progress_generator(job_id):
 def _stream_logs_generator(job_id):
     """Yield log lines as SSE until job is done."""
     seen = 0
+    start = time.time()
+    JOB_NOT_FOUND_TIMEOUT = 3.0
     while True:
         with jobs_lock:
             job = jobs.get(job_id, {})
             q = log_queues.get(job_id, deque())
         if job.get("status") == "done" and seen >= len(q):
             break
+        if not job and (time.time() - start) > JOB_NOT_FOUND_TIMEOUT:
+            yield "data: [DONE]\n\n"
+            return
         while seen < len(q):
             try:
                 line = q[seen]

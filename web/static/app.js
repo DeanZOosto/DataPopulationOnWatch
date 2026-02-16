@@ -422,7 +422,11 @@ function streamProgress(jobId, jobType) {
       const ev = JSON.parse(e.data);
       if (ev.type === "stream_done") {
         es.close();
-        pollStatus(jobId, jobType);
+        if (ev.error === "job_not_found") {
+          DOM.progressSummary().innerHTML = `<div class="summary-card failure">Job not found (server may use multiple workers). Try again.</div>`;
+        } else {
+          pollStatus(jobId, jobType);
+        }
         setActionsEnabled(true);
         currentJobId = null;
         DOM.progressSource().textContent = "";
