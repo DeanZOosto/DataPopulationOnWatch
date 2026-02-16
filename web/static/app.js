@@ -545,6 +545,13 @@ document.getElementById("btn-refresh-exports").addEventListener("click", fetchEx
 document.getElementById("btn-set-ip").addEventListener("click", setIp);
 document.getElementById("btn-set-version").addEventListener("click", setVersion);
 
+document.getElementById("guidance-toggle").addEventListener("click", () => {
+  const btn = document.getElementById("guidance-toggle");
+  const content = document.getElementById("guidance-content");
+  const expanded = btn.getAttribute("aria-expanded") === "true";
+  btn.setAttribute("aria-expanded", !expanded);
+  content.classList.toggle("hidden", expanded);
+});
 DOM.configPreviewLink().addEventListener("click", (e) => {
   e.preventDefault();
   showConfigPreview();

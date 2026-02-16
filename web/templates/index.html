@@ -16,6 +16,30 @@
     <div id="config-badge" class="badge">Checking config…</div>
   </header>
 
+  <section class="guidance" id="guidance-section">
+    <h2>
+      <button type="button" id="guidance-toggle" class="guidance-toggle" aria-expanded="false">
+        <span class="guidance-toggle-icon">▸</span> Guidance
+      </button>
+    </h2>
+    <div id="guidance-content" class="guidance-content hidden">
+      <p><strong>What this tool does:</strong> Populates an OnWatch system with data from <code>config.yaml</code> (KV parameters, system settings, groups, accounts, watch list, devices, inquiries, etc.). After an OnWatch upgrade, use <strong>Validate</strong> to verify the data is still correct.</p>
+      <p><strong>Workflow:</strong></p>
+      <ol>
+        <li>Ensure <strong>Config Status</strong> shows a valid config and set the correct IP and version (2.6 or 2.8).</li>
+        <li>Click <strong>Run Population</strong> to populate the OnWatch system. A data_inserted YAML file is saved for later validation.</li>
+        <li>After upgrading OnWatch, select the data_inserted file from the dropdown and click <strong>Validate</strong> to check that data survived the upgrade.</li>
+      </ol>
+      <p><strong>UI sections:</strong></p>
+      <ul>
+        <li><strong>Actions</strong> – Run Population, Validate. Optional: enter your name to prefix the output file (e.g. <code>john_data_inserted_2026-02-16_12-00-00.yaml</code>).</li>
+        <li><strong>Config Status</strong> – View IP and version. Click <em>Preview config.yaml</em> to see the full config.</li>
+        <li><strong>Data Inserted</strong> – List of run outputs. Click a filename to preview its YAML content.</li>
+        <li><strong>Results</strong> – Summary of the latest run, including any manual checks required.</li>
+      </ul>
+    </div>
+  </section>
+
   <section class="actions">
     <h2>Actions</h2>
     <div class="action-row">
