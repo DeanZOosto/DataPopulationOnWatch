@@ -498,3 +498,14 @@ select.input-error {
   max-height: 70vh;
   margin: 0;
 }
+
+/* YAML syntax highlighting in preview modal */
+.modal-body .yaml-comment {
+  color: #6e7681;
+}
+.modal-body .yaml-key {
+  color: #79c0ff;
+}
+.modal-body .yaml-value {
+  color: #a5d6ff;
+}

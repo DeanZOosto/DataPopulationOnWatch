@@ -181,9 +181,42 @@ async function showFilePreview(path, filename) {
   }
 }
 
+function highlightYaml(text) {
+  return text.split("\n").map((line) => {
+    const esc = (s) => {
+      const d = document.createElement("div");
+      d.textContent = s;
+      return d.innerHTML;
+    };
+    const trimmed = line.trimStart();
+    const indent = line.slice(0, line.length - trimmed.length);
+    if (trimmed.startsWith("#")) {
+      return esc(indent) + '<span class="yaml-comment">' + esc(trimmed) + "</span>";
+    }
+    const colonIdx = trimmed.indexOf(":");
+    if (colonIdx === -1) {
+      return esc(line);
+    }
+    const key = trimmed.slice(0, colonIdx);
+    let rest = trimmed.slice(colonIdx + 1);
+    const inlineComment = rest.match(/\s+#\s+(.*)$/);
+    let value = rest;
+    let commentPart = "";
+    if (inlineComment) {
+      value = rest.slice(0, rest.indexOf("#")).trimEnd();
+      commentPart = ' <span class="yaml-comment"># ' + esc(inlineComment[1]) + "</span>";
+    }
+    const valuePart = value ? '<span class="yaml-value">' + esc(value) + "</span>" : "";
+    return esc(indent) + '<span class="yaml-key">' + esc(key) + "</span>: " + valuePart + commentPart;
+  }).join("\n");
+}
+
 function showPreviewModal(title, content) {
   DOM.previewModalTitle().textContent = title;
-  DOM.previewModalBody().textContent = content;
+  const looksLikeYaml =
+    !content.trimStart().startsWith("Error:") &&
+    (/\.(yaml|yml)$/i.test(title) || content.trimStart().startsWith("#") || (content.includes("\n  ") && content.includes(":\n")));
+  DOM.previewModalBody().innerHTML = looksLikeYaml ? highlightYaml(content) : escapeHtml(content);
   DOM.previewModal().classList.remove("hidden");
   DOM.previewModal().setAttribute("aria-hidden", "false");
 }
@@ -366,11 +399,16 @@ function buildValidationCompleteSummary(ev) {
 // Progress stream — connect EventSource, handle events
 // =============================================================================
 
+function scrollToProgressAndResults() {
+  document.getElementById("progress-section").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 function streamProgress(jobId, jobType) {
   currentJobId = jobId;
   setActionsEnabled(false);
   clearProgress();
   DOM.progressSource().textContent = `(${jobType})`;
+  scrollToProgressAndResults();
 
   const ctx = { steps: [], warnings: [], total: jobType === "population" ? 11 : 0 };
 

@@ -1,32 +1,21 @@
 # OnWatch Automation Configuration
-# Complete baseline data from machine 10.1.25.90
-#
-# This configuration file defines all data that will be populated on the OnWatch system.
-# All paths are relative to the project root unless specified as absolute paths.
-# After running the automation, an output YAML file will be generated for validation.
+# Paths are relative to project root unless absolute.
 
 # OnWatch API Connection
-# Required: All fields must be configured for the automation to work
 onwatch:
   ip_address: "10.1.25.14"
   username: "Administrator"
   password: "pa$$word!"
   base_url: "https://10.1.25.14"
-  # OnWatch version: "2.6" or "2.8" (required - must be set manually)
-  version: "2.8"  # Set to "2.6" or "2.8" based on your OnWatch system version
-  # Optional: Leave bind_address unset for use from office, home, or VPN. The script will try all
-  # local interfaces automatically. Only set this if you must force one interface (use your current
-  # IP from System Settings → Network or ifconfig); the value is network-specific and not portable.
-  # bind_address: "192.168.1.100"
+  version: "2.8"  # "2.6" or "2.8"
+  # bind_address: "192.168.1.100"  # Optional: force specific interface
 
-# SSH Configuration (for translation file upload)
+# SSH (translation file upload)
 ssh:
-  ip_address: "10.1.25.14"  # Usually same as onwatch IP
-  username: "user"  # SSH user (will sudo to root for translation-util)
-  password: "user1!"  # SSH password (default for user "user")
-  sudo_password: "user1!"  # Sudo password (if different from SSH password, leave empty to use SSH password)
-  # Path to translation-util script on the device (optional - will auto-detect if not provided)
-  # Auto-detection finds the latest ansible-installer-* directory in /opt/
+  ip_address: "10.1.25.14"
+  username: "user"
+  password: "user1!"
+  sudo_password: "user1!"
   # translation_util_path: "/opt/ansible-installer-1.4.0-8/support-scripts/translation-util"
 
 rancher:
@@ -35,15 +24,10 @@ rancher:
   username: "admin"
   password: "administrator"
   base_url: "https://10.1.25.14:9443"
-  # Set to true to skip Rancher env vars validation (e.g. after 2.8 upgrade when API is unavailable). Verify env vars in Rancher UI.
-  # skip_env_validation: false
-  # Workload URL path (relative to base_url) - update workloadId if needed
-  # Format: /p/local:p-p6l45/workloads/run?launchConfigIndex=-1&namespaceId=default&upgrade=true&workloadId=statefulset%3Adefault%3Acv-engine
+  # skip_env_validation: false  # Set true to skip validation (e.g. after 2.8 upgrade)
   workload_path: "/p/local:p-p6l45/workloads/run?launchConfigIndex=-1&namespaceId=default&upgrade=true&workloadId=statefulset%3Adefault%3Acv-engine"
 
-# KV Parameters (Key-Value Settings)
-# These are application-level settings stored as key-value pairs.
-# All parameters will be validated after population.
+# KV Parameters
 kv_parameters:
   "applicationSettings/watchVideo/secondsAfterDetection": 6
   "applicationSettings/watchVideo/secondsBeforeDetection": 6
@@ -52,8 +36,6 @@ kv_parameters:
   "DEFAULT/collate-service/TRACKS_RETENTION_TIME_MS": 80000
 
 # System Settings
-# Comprehensive system configuration including thresholds, retention periods, and UI customization.
-# All settings will be validated after population.
 system_settings:
   general:
     blur_all_faces_except_selected: false
@@ -71,14 +53,12 @@ system_settings:
     masks_access_control: false
   
   system_interface:
-    translation_file: "assets/Polski-updated3.json"  # Path to translation file (relative to project root)
+    translation_file: "assets/Polski-updated3.json"
     product_name: "metropolis"
-    # Logo and favicon configuration
-    # Paths are relative to project root, or absolute paths
     logos:
-      company: "assets/images/me.jpg"  # Company logo (displayed in top-left of UI)
-      sidebar: "assets/images/me.jpg"  # Sidebar logo (displayed in navigation sidebar)
-    favicon: "assets/images/favicon.ico"  # Browser favicon (displayed in browser tab)
+      company: "assets/images/me.jpg"
+      sidebar: "assets/images/me.jpg"
+    favicon: "assets/images/favicon.ico"
   
   engine:
     video_storage:
@@ -88,11 +68,8 @@ system_settings:
     alert_storage_days: 9
     inquiry_storage_days: 8
 
-# Environment Variables (set via Rancher/Kubernetes)
-# These are set in the cv-engine workload via Rancher API.
-# NOTE: OnWatch 2.8 does NOT support automated Rancher env var configuration.
-# For 2.8, these must be configured manually via Rancher UI.
-# All environment variables will be validated after population.
+# Environment Variables (Rancher/Kubernetes)
+# OnWatch 2.8: configure manually via Rancher UI (no automated support).
 env_vars:
   ENABLE_DVR: "false"
   OVERWRITE_FFMPEG_OPTIONS_VALUES: "ffmpeg-opts:rtsp_transport=udp,reorder_queue_size=8192,max_delay=500000,buffer_size=4194304"
@@ -100,9 +77,7 @@ env_vars:
   SERVICE_DOMAIN: "cv-engine.default"
   CUDA_DEVICE_ORDER: "PCI_BUS_ID"
 
-# Device/Camera Settings
-# Each device/camera will be created with the specified configuration.
-# All cameras will be validated after population (existence check).
+# Devices / Cameras
 devices:
   - name: "face camera"
     video_url: "rtsp://10.1.70.16:8554/Faces720"
@@ -192,10 +167,7 @@ devices:
     security_access:
       liveness: false
 
-# Groups and Profiles
-# Subject groups define authorization and visibility rules for watch list subjects.
-# Device groups organize cameras (currently not fully utilized in automation).
-# All groups will be validated after population.
+# Groups
 groups:
   subject_groups:
     - name: "OnPatrol subject"
@@ -220,10 +192,8 @@ groups:
       description: "none"
   
 
-# Account Management
-# User accounts and user groups define access control.
-# All users will be validated after population (existence check).
-# Note: Passwords are only set for new users (null means keep existing password).
+# Accounts
+# null password = keep existing.
 accounts:
   users:
     - username: "Test"
@@ -241,19 +211,17 @@ accounts:
       role: "super admin"
       user_group: "full data group"
       api_key: null
-      password: null  # Keep existing password
+      password: null
   
   user_groups:
     - title: "testUser group"
-      subject_groups: []  # List of subject group names to assign
-      camera_groups: []  # List of camera group names to assign (not yet implemented)
+      subject_groups: []
+      camera_groups: []
     - title: "Full Data Group"
-      subject_groups: []  # List of subject group names to assign
-      camera_groups: []  # List of camera group names to assign (not yet implemented)
+      subject_groups: []
+      camera_groups: []
 
-# Inquiries (Forensic Analysis Cases)
-# Inquiry cases with video/image files for analysis.
-# All inquiry cases will be validated after population (existence check).
+# Inquiries
 inquiries:
   - name: "upgrade test"
     files:
@@ -261,9 +229,9 @@ inquiries:
         settings: "DEFAULT VALUES"
       - path: "assets/videos/Neo.webm"
         settings:
-          type: "custom"  # Use custom ROI and threshold instead of defaults
-          threshold: 0.37  # Detection threshold for this file
-          roi:  # Region of Interest (camera padding)
+          type: "custom"
+          threshold: 0.37
+          roi:
             top: 15
             right: 15
             bottom: 22
@@ -275,15 +243,11 @@ inquiries:
     priority: "Medium"
 
 # Mass Import
-# Bulk import of subjects from a tar file.
-# The mass import will be validated after population (existence check by ID).
 mass_import:
   name: "mass-import 43"
   file_path: "assets/mass-import/mass-import-43.tar"
 
 # Watch List
-# Subjects to be added to the watch list with their images.
-# All subjects will be validated after population (existence and image count check).
 watch_list:
   subjects:
     - name: "Yonatan"
