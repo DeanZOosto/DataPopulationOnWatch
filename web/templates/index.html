@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OnWatch Data Population Hub</title>
+  <title>OnWatch Data Population UI</title>
+  <link rel="icon" href="/static/favicon.png" type="image/png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -11,17 +12,19 @@
 </head>
 <body>
   <header>
-    <h1>OnWatch Data Population Hub</h1>
+    <h1>OnWatch Data Population UI</h1>
     <div id="config-badge" class="badge">Checking config…</div>
   </header>
 
   <section class="actions">
     <h2>Actions</h2>
     <div class="action-row">
+      <label>Your name (optional):</label>
+      <input type="text" id="user-name" placeholder="e.g. john" maxlength="64" />
       <button id="btn-run-population" class="btn btn-primary">Run Population</button>
       <button id="btn-validate" class="btn btn-accent">Validate</button>
       <select id="export-select">
-        <option value="">-- Select export file --</option>
+        <option value="">-- Select data inserted file --</option>
       </select>
       <button id="btn-refresh-exports" class="btn btn-outline">Refresh</button>
     </div>
@@ -29,7 +32,7 @@
   </section>
 
   <section class="config-status" id="config-section">
-    <h2>Config Status</h2>
+    <h2>Config Status <a href="#" id="config-preview-link" class="preview-link">Preview config.yaml</a></h2>
     <div id="config-content"></div>
     <div class="config-edit">
       <label>Set IP:</label>
@@ -47,7 +50,7 @@
   </section>
 
   <section class="exports" id="exports-section">
-    <h2>Exports (run outputs)</h2>
+    <h2>Data Inserted (run outputs)</h2>
     <div id="exports-list"></div>
   </section>
 
@@ -66,6 +69,17 @@
     <h2>Results (latest run)</h2>
     <div id="results-content"></div>
   </section>
+
+  <div id="preview-modal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="preview-modal-title">Preview</h3>
+        <button type="button" id="preview-modal-close" class="modal-close" aria-label="Close">&times;</button>
+      </div>
+      <pre id="preview-modal-body" class="modal-body"></pre>
+    </div>
+  </div>
 
   <script src="/static/app.js"></script>
 </body>

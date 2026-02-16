@@ -108,16 +108,18 @@ class OnWatchAutomation:
     """Main automation orchestrator."""
 
     # ---- Configuration & API ----
-    def __init__(self, config_path="config.yaml", progress_callback=None):
+    def __init__(self, config_path="config.yaml", progress_callback=None, export_name=None):
         """
         Initialize automation with configuration.
         
         Args:
             config_path: Path to YAML configuration file
             progress_callback: Optional callable(event_dict) for UI progress reporting
+            export_name: Optional name prefix for data_inserted file (e.g. "john" -> john_data_inserted_2025-02-11_12-00-00.yaml)
         """
         self.config_path = config_path
         self.config_manager = ConfigManager(config_path)
+        self.export_name = (export_name or "").strip() or None
         self.config = self.config_manager.load_config()
         self.client_api = None
         self.rancher_automation = None
@@ -2339,7 +2341,7 @@ class OnWatchAutomation:
         self.summary.print_summary()
         
         # Export created items to file
-        export_path = self.summary.export_to_file(format='yaml')
+        export_path = self.summary.export_to_file(format='yaml', name_prefix=self.export_name)
         if export_path:
             logger.info(f"💾 Data export saved for post-upgrade validation: {export_path}")
 
@@ -2359,9 +2361,7 @@ class OnWatchAutomation:
             "duration": self.summary.format_duration(self.summary.get_total_duration()),
         })
         
-        # Exit with appropriate code (when run from CLI)
-        if failed_steps > 0:
-            sys.exit(1)
+        return str(export_path) if export_path else None
 
 
 def _preview_dataset(config_path):

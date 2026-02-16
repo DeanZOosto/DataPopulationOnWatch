@@ -39,9 +39,19 @@ progress_queues = {}
 # -----------------------------------------------------------------------------
 
 def get_exports():
-    """List export YAML files with metadata, newest first."""
+    """List data_inserted YAML files with metadata, newest first.
+    Includes both onwatch_data_export_*.yaml and *_data_inserted_*.yaml for backward compatibility.
+    """
+    seen = set()
+    all_files = []
+    for pattern in ["onwatch_data_export_*.yaml", "*_data_inserted_*.yaml"]:
+        for f in Path(".").glob(pattern):
+            if f.name in seen:
+                continue
+            seen.add(f.name)
+            all_files.append(f)
     exports = []
-    for f in sorted(Path(".").glob("onwatch_data_export_*.yaml"), key=lambda p: p.stat().st_mtime, reverse=True):
+    for f in sorted(all_files, key=lambda p: p.stat().st_mtime, reverse=True):
         try:
             with open(f) as fp:
                 data = yaml.safe_load(fp)
@@ -163,6 +173,19 @@ def set_ip():
         return jsonify({"success": False, "message": str(e)}), 500
 
 
+@app.route("/api/config/preview")
+def config_preview():
+    """Return raw config.yaml content for preview."""
+    config_path = PROJECT_ROOT / "config.yaml"
+    if not config_path.exists():
+        return jsonify({"error": "config.yaml not found"}), 404
+    try:
+        content = config_path.read_text(encoding="utf-8")
+        return Response(content, mimetype="text/plain; charset=utf-8")
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/api/config/set-version", methods=["POST"])
 def set_version():
     data = request.get_json() or {}
@@ -187,14 +210,40 @@ def exports():
     return jsonify(get_exports())
 
 
+@app.route("/api/file/preview")
+def file_preview():
+    """Return YAML file content for preview. Path must be under project root."""
+    path_arg = request.args.get("path")
+    if not path_arg:
+        return jsonify({"error": "Missing 'path' parameter"}), 400
+    try:
+        resolved = Path(path_arg).resolve()
+        try:
+            resolved.relative_to(PROJECT_ROOT.resolve())
+        except ValueError:
+            return jsonify({"error": "Path must be within project directory"}), 403
+        if not resolved.exists() or not resolved.is_file():
+            return jsonify({"error": "File not found"}), 404
+        content = resolved.read_text(encoding="utf-8")
+        return Response(content, mimetype="text/plain; charset=utf-8")
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 # -----------------------------------------------------------------------------
 # Routes — job execution
 # -----------------------------------------------------------------------------
 
 @app.route("/api/run-population", methods=["POST"])
 def start_population():
+    data = request.get_json() or {}
+    user_name = (data.get("name") or "").strip() or None
     job_id = str(uuid.uuid4())
-    t = threading.Thread(target=run_population, args=(job_id, jobs, log_queues, progress_queues, jobs_lock))
+    t = threading.Thread(
+        target=run_population,
+        args=(job_id, jobs, log_queues, progress_queues, jobs_lock),
+        kwargs={"user_name": user_name},
+    )
     t.daemon = True
     t.start()
     return jsonify({"job_id": job_id})
@@ -263,7 +312,7 @@ def active_jobs():
 # -----------------------------------------------------------------------------
 
 def main():
-    print("OnWatch Data Population Hub")
+    print("OnWatch Data Population UI")
     print("Open http://127.0.0.1:5000 in your browser")
     print("Press Ctrl+C to stop")
     app.run(host="127.0.0.1", port=5000, debug=False, threaded=True)

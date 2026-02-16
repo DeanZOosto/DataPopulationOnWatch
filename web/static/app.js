@@ -12,6 +12,7 @@ const DOM = {
   configBadge: () => document.getElementById("config-badge"),
   configContent: () => document.getElementById("config-content"),
   configStatusMsg: () => document.getElementById("config-status-msg"),
+  configPreviewLink: () => document.getElementById("config-preview-link"),
   exportsList: () => document.getElementById("exports-list"),
   exportSelect: () => document.getElementById("export-select"),
   actionError: () => document.getElementById("action-error"),
@@ -23,6 +24,10 @@ const DOM = {
   progressSteps: () => document.getElementById("progress-steps"),
   progressWarnings: () => document.getElementById("progress-warnings"),
   progressSummary: () => document.getElementById("progress-summary"),
+  previewModal: () => document.getElementById("preview-modal"),
+  previewModalTitle: () => document.getElementById("preview-modal-title"),
+  previewModalBody: () => document.getElementById("preview-modal-body"),
+  previewModalClose: () => document.getElementById("preview-modal-close"),
 };
 
 // =============================================================================
@@ -131,18 +136,61 @@ async function fetchExports() {
           .map(
             (e) =>
               `<div class="exports-item">
-                <span class="filename">${e.filename}</span>
+                <span class="filename preview-link" data-file-path="${escapeHtml(e.path)}" data-file-name="${escapeHtml(e.filename)}">${e.filename}</span>
                 <div class="meta">${e.generated_at || ""} | ${e.total_duration || ""} | ${e.successful_steps ?? ""}/${e.total_steps ?? ""} steps</div>
               </div>`
           )
           .join("")
-      : "<div class='exports-item'>No export files found. Run population first.</div>";
+      : "<div class='exports-item'>No data inserted files found. Run population first.</div>";
 
     DOM.exportSelect().innerHTML =
-      '<option value="">-- Select export file --</option>' + exports.map((e) => `<option value="${e.path}">${e.filename}</option>`).join("");
+      '<option value="">-- Select data inserted file --</option>' + exports.map((e) => `<option value="${e.path}">${e.filename}</option>`).join("");
+
+    // Attach click handlers for file preview
+    DOM.exportsList().querySelectorAll(".filename.preview-link").forEach((el) => {
+      el.addEventListener("click", () => showFilePreview(el.dataset.filePath, el.dataset.fileName));
+    });
   } catch (e) {
-    DOM.exportsList().innerHTML = "<div class='exports-item'>Could not load exports</div>";
+    DOM.exportsList().innerHTML = "<div class='exports-item'>Could not load data inserted files</div>";
   }
+}
+
+// =============================================================================
+// Preview modal
+// =============================================================================
+
+async function showConfigPreview() {
+  try {
+    const r = await fetch("/api/config/preview");
+    if (!r.ok) throw new Error(await r.text());
+    const content = await r.text();
+    showPreviewModal("config.yaml", content);
+  } catch (e) {
+    showPreviewModal("config.yaml", `Error: ${e.message}`);
+  }
+}
+
+async function showFilePreview(path, filename) {
+  try {
+    const r = await fetch("/api/file/preview?path=" + encodeURIComponent(path));
+    if (!r.ok) throw new Error(await r.text());
+    const content = await r.text();
+    showPreviewModal(filename || "Preview", content);
+  } catch (e) {
+    showPreviewModal(filename || "Preview", `Error: ${e.message}`);
+  }
+}
+
+function showPreviewModal(title, content) {
+  DOM.previewModalTitle().textContent = title;
+  DOM.previewModalBody().textContent = content;
+  DOM.previewModal().classList.remove("hidden");
+  DOM.previewModal().setAttribute("aria-hidden", "false");
+}
+
+function hidePreviewModal() {
+  DOM.previewModal().classList.add("hidden");
+  DOM.previewModal().setAttribute("aria-hidden", "true");
 }
 
 // =============================================================================
@@ -185,7 +233,7 @@ function escapeHtml(s) {
 function showValidationError(message) {
   DOM.actionError().innerHTML = `<div class="action-error-card">
     <strong>⚠️ ${escapeHtml(message)}</strong>
-    <span>Select an export file from the dropdown above, then click Validate.</span>
+    <span>Select a data inserted file from the dropdown above, then click Validate.</span>
   </div>`;
   DOM.actionError().classList.add("visible");
   DOM.exportSelect().focus();
@@ -300,7 +348,7 @@ function buildPopulationCompleteSummary(ev) {
   return `<div class="summary-card ${ev.success ? "success" : "failure"}">
     <strong>${ev.success ? "✓ Population complete" : "✗ Population had failures"}</strong>
     <div class="detail">${rs.successful_steps ?? 0} successful, ${rs.failed_steps ?? 0} failed, ${rs.skipped_steps ?? 0} skipped | ${ev.duration || ""}</div>
-    ${ev.export_path ? `<div class="detail">Export: ${ev.export_path.split("/").pop()}</div>` : ""}
+    ${ev.export_path ? `<div class="detail">Data inserted: ${ev.export_path.split("/").pop()}</div>` : ""}
     ${(ev.warnings || []).length ? `<div class="warnings-inline">⚠️ ${ev.warnings.length} warning(s)</div>` : ""}
   </div>`;
 }
@@ -386,7 +434,7 @@ function renderResults() {
   if (!html) {
     html = `<div class="results-empty">
       <p class="results-empty-text">No runs yet.</p>
-      <p class="results-empty-hint">Run <strong>Population</strong> first, then select an export file and run <strong>Validate</strong> to check data after upgrade.</p>
+      <p class="results-empty-hint">Run <strong>Population</strong> first, then select a data inserted file and run <strong>Validate</strong> to check data after upgrade.</p>
     </div>`;
   }
   DOM.resultsContent().innerHTML = html;
@@ -397,7 +445,7 @@ function buildPopulationResultCard(r) {
   const rs = r.run_status || {};
   return `<div class="result-card ${status}">
     <h3>Population: ${r.success ? "✓" : "✗"} ${rs.successful_steps ?? "?"}/${rs.total_steps ?? "?"} steps</h3>
-    <div class="detail">${r.duration || ""} | Export: ${r.export_path ? r.export_path.split("/").pop() : "—"}</div>
+    <div class="detail">${r.duration || ""} | Data inserted: ${r.export_path ? r.export_path.split("/").pop() : "—"}</div>
     ${r.error ? `<div class="errors-list"><ul><li>${r.error}</li></ul></div>` : ""}
   </div>`;
 }
@@ -420,8 +468,13 @@ function buildValidationResultCard(r) {
 async function runPopulation() {
   if (currentJobId) return;
   clearActionError();
+  const userName = document.getElementById("user-name").value.trim() || null;
   try {
-    const r = await fetch("/api/run-population", { method: "POST" });
+    const r = await fetch("/api/run-population", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: userName }),
+    });
     const data = await r.json();
     if (data.job_id) {
       streamProgress(data.job_id, "population");
@@ -438,7 +491,7 @@ async function runValidation() {
   clearActionError();
   const file = DOM.exportSelect().value;
   if (!file) {
-    showValidationError("Please select an export file (last population run) to validate against.");
+    showValidationError("Please select a data inserted file (last population run) to validate against.");
     return;
   }
   try {
@@ -467,6 +520,16 @@ document.getElementById("btn-validate").addEventListener("click", runValidation)
 document.getElementById("btn-refresh-exports").addEventListener("click", fetchExports);
 document.getElementById("btn-set-ip").addEventListener("click", setIp);
 document.getElementById("btn-set-version").addEventListener("click", setVersion);
+
+DOM.configPreviewLink().addEventListener("click", (e) => {
+  e.preventDefault();
+  showConfigPreview();
+});
+DOM.previewModalClose().addEventListener("click", hidePreviewModal);
+DOM.previewModal().querySelector(".modal-backdrop").addEventListener("click", hidePreviewModal);
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !DOM.previewModal().classList.contains("hidden")) hidePreviewModal();
+});
 
 fetchConfig();
 fetchExports();

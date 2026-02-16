@@ -229,6 +229,9 @@ Examples:
     # Run full automation
     try:
         asyncio.run(automation.run())
+        failed = sum(1 for s in automation.summary.steps.values() if s["status"] == "failed")
+        if failed > 0:
+            sys.exit(1)
     except Exception as e:
         error_message = str(e)
         logger.error(f"\n❌ FATAL ERROR: {error_message}")

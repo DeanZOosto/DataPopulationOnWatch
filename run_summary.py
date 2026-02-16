@@ -277,21 +277,26 @@ class RunSummary:
             logger.warning("  → Please review the warnings and manual actions above.")
         logger.info("=" * 80 + "\n")
     
-    def export_to_file(self, output_path=None, format='yaml'):
+    def export_to_file(self, output_path=None, format='yaml', name_prefix=None):
         """
         Export created items to a file for post-upgrade validation.
         
         Args:
             output_path: Path to output file (if None, auto-generates filename)
             format: 'yaml' or 'json'
+            name_prefix: Optional name prefix. When provided, filename is {name}_data_inserted_{timestamp}.{format}
         
         Returns:
             Path to exported file
         """
         if output_path is None:
-            # Auto-generate filename with timestamp
             timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-            filename = f"onwatch_data_export_{timestamp}.{format}"
+            if name_prefix:
+                # Sanitize: alphanumeric and underscore only
+                safe = "".join(c for c in name_prefix if c.isalnum() or c == "_").strip("_") or "data"
+                filename = f"{safe}_data_inserted_{timestamp}.{format}"
+            else:
+                filename = f"onwatch_data_export_{timestamp}.{format}"
             output_path = Path(filename)
         
         output_path = Path(output_path)

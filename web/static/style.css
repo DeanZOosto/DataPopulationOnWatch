@@ -1,16 +1,16 @@
 :root {
-  --bg: #141619;
-  --bg-card: #1e2128;
-  --bg-input: #272b33;
-  --text: #e8eaed;
-  --text-muted: #9aa0a8;
-  --accent: #3b82f6;
-  --accent-hover: #2563eb;
-  --accent-teal: #14b8a6;
-  --accent-teal-hover: #0d9488;
-  --success: #22c55e;
-  --error: #ef4444;
-  --warning: #f59e0b;
+  --bg: #1c2128;
+  --bg-card: #252b33;
+  --bg-input: #323842;
+  --text: #f0f3f6;
+  --text-muted: #b4bac4;
+  --accent: #4a8ff7;
+  --accent-hover: #3b82f6;
+  --accent-teal: #2dd4bf;
+  --accent-teal-hover: #14b8a6;
+  --success: #3fb950;
+  --error: #f85149;
+  --warning: #d29922;
 }
 
 * {
@@ -33,7 +33,7 @@ header {
   justify-content: space-between;
   margin-bottom: 1.5rem;
   padding-bottom: 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 h1 {
@@ -49,6 +49,12 @@ h2 {
   margin: 0 0 0.75rem 0;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+h2 .preview-link {
+  margin-left: 0.5rem;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 .badge {
@@ -69,7 +75,7 @@ h2 {
 }
 
 .badge.pending {
-  background: rgba(156, 163, 175, 0.2);
+  background: rgba(180, 186, 196, 0.25);
   color: var(--text-muted);
 }
 
@@ -78,8 +84,8 @@ section {
   border-radius: 10px;
   padding: 1.25rem 1.5rem;
   margin-bottom: 1.25rem;
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 }
 
 .actions .action-row {
@@ -87,6 +93,19 @@ section {
   flex-wrap: wrap;
   gap: 0.75rem;
   align-items: center;
+}
+.actions .action-row label {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+.actions .action-row input[type="text"] {
+  background: var(--bg-input);
+  color: var(--text);
+  border: 1px solid var(--bg-input);
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.9rem;
+  width: 120px;
 }
 
 .btn {
@@ -118,7 +137,7 @@ section {
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: #3d424b;
+  background: #454d58;
 }
 
 .btn-accent {
@@ -178,7 +197,7 @@ select {
   gap: 0.5rem 1rem;
   margin-top: 1rem;
   padding-top: 1rem;
-  border-top: 1px solid var(--bg-input);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .config-edit label {
@@ -210,7 +229,7 @@ select {
 
 .exports-item {
   padding: 0.6rem 0;
-  border-bottom: 1px solid var(--bg-input);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   font-size: 0.9rem;
 }
 
@@ -236,7 +255,7 @@ select {
   height: 32px;
   overflow: hidden;
   margin-bottom: 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .progress-bar {
@@ -292,10 +311,10 @@ select {
   padding: 0.35rem 0.5rem;
   margin-bottom: 0.25rem;
   border-radius: 4px;
-  background: rgba(245, 158, 11, 0.15);
+  background: rgba(210, 153, 34, 0.2);
 }
 .progress-warning.error {
-  background: rgba(239, 68, 68, 0.15);
+  background: rgba(248, 81, 73, 0.2);
   color: var(--error);
 }
 
@@ -303,7 +322,7 @@ select {
   padding: 1.25rem;
   background: var(--bg-input);
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 .progress-summary .summary-card.success { border-left: 4px solid var(--success); }
 .progress-summary .summary-card.failure { border-left: 4px solid var(--error); }
@@ -319,7 +338,7 @@ select {
   padding: 1.25rem;
   background: var(--bg-input);
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .result-card h3 {
@@ -388,8 +407,8 @@ select {
   flex-direction: column;
   gap: 0.25rem;
   padding: 0.75rem 1rem;
-  background: rgba(239, 68, 68, 0.12);
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: rgba(248, 81, 73, 0.15);
+  border: 1px solid rgba(248, 81, 73, 0.4);
   border-radius: 8px;
   color: var(--error);
   font-size: 0.9rem;
@@ -403,4 +422,79 @@ select {
 select.input-error {
   border-color: var(--error);
   box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+}
+
+/* Preview link (config, data inserted filenames) */
+.preview-link {
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: none;
+}
+.preview-link:hover {
+  text-decoration: underline;
+}
+
+/* Modal */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.modal.hidden {
+  display: none;
+}
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+}
+.modal-content {
+  position: relative;
+  background: var(--bg-card);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  max-width: 90vw;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+.modal-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0 0.25rem;
+  line-height: 1;
+}
+.modal-close:hover {
+  color: var(--text);
+}
+.modal-body {
+  padding: 1.25rem;
+  overflow: auto;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 70vh;
+  margin: 0;
 }

@@ -108,7 +108,7 @@ def detach_job_handlers(log_handler, progress_handler):
 # Population job
 # -----------------------------------------------------------------------------
 
-def run_population(job_id, jobs, log_queues, progress_queues, jobs_lock):
+def run_population(job_id, jobs, log_queues, progress_queues, jobs_lock, user_name=None):
     """Run population automation in thread. Updates jobs[job_id] with result."""
     with jobs_lock:
         jobs[job_id] = {"type": "population", "status": "running", "logs": [], "result": None}
@@ -122,12 +122,14 @@ def run_population(job_id, jobs, log_queues, progress_queues, jobs_lock):
     try:
         from main import OnWatchAutomation
 
-        automation = OnWatchAutomation(config_path="config.yaml", progress_callback=progress_callback)
+        automation = OnWatchAutomation(
+            config_path="config.yaml",
+            progress_callback=progress_callback,
+            export_name=user_name,
+        )
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        loop.run_until_complete(automation.run())
-
-        export_path = automation.summary.export_to_file(format="yaml")
+        export_path = loop.run_until_complete(automation.run())
         result = _build_population_result(automation, export_path)
     except Exception as e:
         result = {"success": False, "error": str(e)}

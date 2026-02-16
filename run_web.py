@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Start the OnWatch Data Population Hub (web UI).
+Start the OnWatch Data Population UI.
 
 Usage:
     python run_web.py
