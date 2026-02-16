@@ -589,10 +589,6 @@ class DataValidator:
             (CATEGORY_RANCHER_ENV_VARS, f"{len(env_vars_dict)} variable(s) set during population")
         )
         logger.info(f"{LOG_PASS} In export: {len(env_vars_dict)} env var(s) recorded")
-        logger.warning(
-            f"{LOG_SKIP} MANUAL CHECK REQUIRED: Rancher environment variables were set during population and could not be verified here. "
-            "Please confirm in Rancher UI (workload environment) that they match your config/export."
-        )
     
     def validate_translation_file(self, translation_file):
         """Acknowledge translation file from export (uploaded via SSH; no OnWatch API to verify)."""
@@ -602,10 +598,6 @@ class DataValidator:
         filename = translation_file.get("filename") or translation_file.get("path", "unknown")
         self.results["acknowledged"].append((CATEGORY_TRANSLATION_FILE, filename))
         logger.info(f"{LOG_PASS} In export: {filename}")
-        logger.warning(
-            f"{LOG_SKIP} MANUAL CHECK REQUIRED: Translation file was uploaded via SSH and could not be verified here. "
-            "Please confirm on the OnWatch server that the file is present and loaded (e.g. via translation-util or UI)."
-        )
     
     def validate(self):
         """Run full validation."""
@@ -766,7 +758,7 @@ class DataValidator:
                 logger.info("\n✅ Validation PASSED for all checked categories.")
             else:
                 logger.info("\n✅ Validation PASSED - All data is present and correct!")
-        if has_skipped_or_ack and failed == 0:
+        if has_skipped_or_ack and failed == 0 and not self.progress_callback:
             for line in self._manual_verification_checklist():
                 logger.warning(line)
         logger.info("=" * 80 + "\n")

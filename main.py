@@ -275,7 +275,7 @@ class OnWatchAutomation:
             self._verify_and_store_system_settings(system_settings)
             self._apply_acknowledge_from_config(system_settings)
             self._upload_system_logos_and_favicon(system_settings)
-            logger.warning("→ Refresh the system settings page in the browser to see the updated data.")
+            self.summary.add_warning("MANUAL CHECK REQUIRED: Refresh the system settings page in the browser to see the updated data.")
         except Exception as e:
             logger.error(f"Failed to configure system settings via API: {e}")
             raise
@@ -564,11 +564,6 @@ class OnWatchAutomation:
                 skipped_count += 1
         
         logger.info(f"Devices configuration complete: {created_count} created, {skipped_count} skipped")
-        if created_count >= 1:
-            logger.warning("")
-            logger.warning("⚠️  IMPORTANT – DO NOT SKIP:")
-            logger.warning("   Remember to disable streams before running the upgrade to have a steady state of alerts to remember.")
-            logger.warning("")
         if devices and created_count == 0:
             raise StepSkipped("All cameras already exist")
 
@@ -1798,9 +1793,8 @@ class OnWatchAutomation:
                     if started_count == final_total:
                         logger.info(f"✓ All {final_total} file(s) started analysis ({final_done} DONE, {final_analyzing} ANALYZING)")
                         if final_done < final_total:
-                            logger.warning("⚠️  IMPORTANT – INQUIRY ANALYSIS INCOMPLETE:")
-                            logger.warning("   Not all files are DONE yet. You may need to open the inquiry in the UI and start or wait for analysis for the remaining file(s).")
-                            logger.warning("")
+                            inquiry_msg = "MANUAL CHECK REQUIRED: Inquiry analysis incomplete – not all files are DONE yet. Open the inquiry in the UI and start or wait for analysis for the remaining file(s)."
+                            self.summary.add_warning(inquiry_msg)
                     elif started_count > 0:
                         status_msg = f"✓ Inquiry case configured: {inquiry_name} ({len(successful_uploads)} file(s) uploaded)"
                         status_msg += f" - Analysis: {final_done} DONE, {final_analyzing} ANALYZING"
@@ -1810,9 +1804,8 @@ class OnWatchAutomation:
                             status_msg += f", {final_failed} FAILED"
                         logger.info(status_msg)
                         if final_done < final_total:
-                            logger.warning("⚠️  IMPORTANT – INQUIRY ANALYSIS INCOMPLETE:")
-                            logger.warning("   Not all files are DONE yet. You may need to open the inquiry in the UI and start or wait for analysis for the remaining file(s).")
-                            logger.warning("")
+                            inquiry_msg = "MANUAL CHECK REQUIRED: Inquiry analysis incomplete – not all files are DONE yet. Open the inquiry in the UI and start or wait for analysis for the remaining file(s)."
+                            self.summary.add_warning(inquiry_msg)
                         if final_queued > 0:
                             logger.warning(f"→ {final_queued} file(s) are QUEUED and may need manual analysis:")
                             for queued_file in final_files_by_status.get('QUEUED', []):
@@ -1981,8 +1974,8 @@ class OnWatchAutomation:
                 self.client_api.upload_mass_import_file(full_file_path, upload_id)
                 logger.info(f"✓ Uploaded mass import file: {filename}")
                 logger.info(f"✓ Mass import '{mass_import_name}' upload started successfully")
-                logger.warning("→ Processing continues in the background. Check the UI for status updates.")
-                logger.warning("→ You may need to manually resolve issues in the mass import report after processing completes.")
+                mass_import_msg = "MANUAL CHECK REQUIRED: Mass import processing continues in the background. Check the UI for status updates and resolve any issues in the mass import report after processing completes."
+                self.summary.add_warning(mass_import_msg)
                 
                 # Track mass import
                 self.summary.add_created_item('mass_import', {
@@ -2028,12 +2021,15 @@ class OnWatchAutomation:
         onwatch_config = self.config.get('onwatch', {})
         version = onwatch_config.get('version')
         if version == "2.8":
-            logger.warning("⚠️  Rancher environment variables are not supported on OnWatch 2.8")
-            logger.warning("   This step will be skipped. Environment variables must be configured manually.")
-            logger.warning("   To configure manually:")
-            logger.warning("   1. Access Rancher UI at the configured base_url")
-            logger.warning("   2. Navigate to the cv-engine workload")
-            logger.warning("   3. Edit environment variables in the workload configuration")
+            rancher_manual_msg = (
+                "MANUAL CHECK REQUIRED: Rancher environment variables are not supported on OnWatch 2.8. "
+                "This step will be skipped. Environment variables must be configured manually.\n"
+                "To configure manually:\n"
+                "1. Access Rancher UI at the configured base_url\n"
+                "2. Navigate to the cv-engine workload\n"
+                "3. Edit environment variables in the workload configuration"
+            )
+            self.summary.add_warning(rancher_manual_msg)
             raise StepSkipped("Not supported on OnWatch 2.8")
         
         rancher_config = self.config.get('rancher', {})
@@ -2358,6 +2354,7 @@ class OnWatchAutomation:
                 "skipped_steps": sum(1 for s in self.summary.steps.values() if s["status"] == "skipped"),
             },
             "warnings": list(self.summary.warnings),
+            "manual_checklist": self.summary.get_manual_checklist_for_ui(),
             "duration": self.summary.format_duration(self.summary.get_total_duration()),
         })
         

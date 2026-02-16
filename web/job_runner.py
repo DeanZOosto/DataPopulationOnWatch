@@ -155,6 +155,7 @@ def _build_population_result(automation, export_path):
             "skipped_steps": sum(1 for s in steps.values() if s["status"] == "skipped"),
         },
         "duration": automation.summary.format_duration(automation.summary.get_total_duration()),
+        "manual_checklist": automation.summary.get_manual_checklist_for_ui(),
     }
 
 

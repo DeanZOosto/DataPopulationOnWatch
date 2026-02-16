@@ -344,8 +344,6 @@ function handleProgressEvent(ev, jobType, ctx) {
     if (jobType === "population" && ev.run_status) {
       const rs = ev.run_status;
       DOM.progressText().textContent = `Done: ${rs.successful_steps ?? 0}/${rs.total_steps ?? 0} steps | ${ev.duration || ""}`;
-      DOM.progressSummary().innerHTML = buildPopulationCompleteSummary(ev);
-      // Update Results section from complete event (fallback if pollStatus hasn't run yet)
       lastRunType = "population";
       latestPopulationResult = {
         success: ev.success,
@@ -353,13 +351,13 @@ function handleProgressEvent(ev, jobType, ctx) {
         duration: ev.duration,
         export_path: ev.export_path,
         error: ev.error,
+        manual_checklist: ev.manual_checklist || [],
       };
       renderResults();
+      scrollToResults();
     }
     if (jobType === "validation" && ev.passed !== undefined) {
       DOM.progressText().textContent = `Done: ${ev.passed} passed, ${ev.failed} failed`;
-      DOM.progressSummary().innerHTML = buildValidationCompleteSummary(ev);
-      // Update Results section from complete event
       lastRunType = "validation";
       latestValidationResult = {
         success: ev.success,
@@ -372,27 +370,9 @@ function handleProgressEvent(ev, jobType, ctx) {
         error: ev.error,
       };
       renderResults();
+      scrollToResults();
     }
   }
-}
-
-function buildPopulationCompleteSummary(ev) {
-  const rs = ev.run_status || {};
-  return `<div class="summary-card ${ev.success ? "success" : "failure"}">
-    <strong>${ev.success ? "✓ Population complete" : "✗ Population had failures"}</strong>
-    <div class="detail">${rs.successful_steps ?? 0} successful, ${rs.failed_steps ?? 0} failed, ${rs.skipped_steps ?? 0} skipped | ${ev.duration || ""}</div>
-    ${ev.export_path ? `<div class="detail">Data inserted: ${ev.export_path.split("/").pop()}</div>` : ""}
-    ${(ev.warnings || []).length ? `<div class="warnings-inline">⚠️ ${ev.warnings.length} warning(s)</div>` : ""}
-  </div>`;
-}
-
-function buildValidationCompleteSummary(ev) {
-  return `<div class="summary-card ${ev.success ? "success" : "failure"}">
-    <strong>${ev.success ? "✓ Validation passed" : "✗ Validation had failures"}</strong>
-    <div class="detail">${ev.passed} passed, ${ev.failed} failed (${ev.validated} validated)</div>
-    ${(ev.errors || []).length ? `<ul class="errors-list">${(ev.errors || []).map((err) => `<li>${err}</li>`).join("")}</ul>` : ""}
-    ${(ev.manual_checklist || []).length ? `<ul class="checklist">${(ev.manual_checklist || []).map((c) => `<li>${c}</li>`).join("")}</ul>` : ""}
-  </div>`;
 }
 
 // =============================================================================
@@ -401,6 +381,10 @@ function buildValidationCompleteSummary(ev) {
 
 function scrollToProgressAndResults() {
   document.getElementById("progress-section").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function scrollToResults() {
+  document.getElementById("results-section").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function streamProgress(jobId, jobType) {
@@ -455,6 +439,7 @@ async function pollStatus(jobId, jobType) {
         }
         renderResults();
         fetchExports();
+        scrollToResults();
         break;
       }
     } catch (_) {}
@@ -485,6 +470,7 @@ function buildPopulationResultCard(r) {
     <h3>Population: ${r.success ? "✓" : "✗"} ${rs.successful_steps ?? "?"}/${rs.total_steps ?? "?"} steps</h3>
     <div class="detail">${r.duration || ""} | Data inserted: ${r.export_path ? r.export_path.split("/").pop() : "—"}</div>
     ${r.error ? `<div class="errors-list"><ul><li>${r.error}</li></ul></div>` : ""}
+    ${(r.manual_checklist || []).length ? `<ul class="checklist">${(r.manual_checklist || []).map((c) => `<li>${escapeHtml(c)}</li>`).join("")}</ul>` : ""}
   </div>`;
 }
 

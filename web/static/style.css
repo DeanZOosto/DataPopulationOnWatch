@@ -36,10 +36,17 @@ header {
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 }
 
-h1 {
-  font-size: 1.5rem;
+header h1 {
+  font-family: "Outfit", "Inter", sans-serif;
+  font-size: 1.65rem;
   font-weight: 600;
+  letter-spacing: -0.02em;
   margin: 0;
+  color: #f0f3f6;
+  background: linear-gradient(135deg, #f0f3f6 0%, #79c0ff 60%, #58a6ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 h2 {
@@ -362,6 +369,7 @@ select {
 .checklist li {
   margin: 0.35rem 0;
   color: var(--warning);
+  white-space: pre-wrap;
 }
 
 .errors-list {

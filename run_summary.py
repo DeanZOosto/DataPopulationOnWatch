@@ -121,6 +121,24 @@ class RunSummary:
         secs = int(seconds % 60)
         return f"{minutes}m {secs}s"
     
+    def get_manual_checklist_for_ui(self):
+        """Build manual verification checklist for UI (population run)."""
+        items = []
+        for action in self.manual_actions_needed:
+            items.append(action)
+        if self.created_items.get('rancher_env_vars'):
+            items.append(
+                "MANUAL CHECK REQUIRED: Rancher env vars – Please confirm in Rancher UI (workload environment) that they match your config/export."
+            )
+        if self.created_items.get('cameras'):
+            items.append(
+                "MANUAL CHECK REQUIRED: Remember to disable streams before running the upgrade to have a steady state of alerts to remember."
+            )
+        for w in self.warnings:
+            if 'manual' in w.lower():
+                items.append(w)
+        return items
+
     def add_created_item(self, category, item_data):
         """
         Track an item that was created/set on OnWatch.
