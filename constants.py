@@ -30,6 +30,9 @@ MAX_FILE_UPLOAD_RETRIES = 3
 FILE_ANALYSIS_CHECK_INTERVAL = 5
 FILE_ANALYSIS_MAX_WAIT = 300  # 5 minutes
 
+# Translation file upload (SSH/SCP + translation-util)
+TRANSLATION_UPLOAD_TIMEOUT = 180  # 3 minutes total
+
 # Subject Image Settings
 MAX_SUBJECT_IMAGES = 10  # Maximum images per subject
 

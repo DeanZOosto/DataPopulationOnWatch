@@ -206,6 +206,7 @@ class SSHUtil:
             
             # List /opt/ directories matching ansible-installer-*
             stdin, stdout, stderr = ssh.exec_command("ls -d /opt/ansible-installer-* 2>/dev/null | sort -V | tail -1")
+            stdout.channel.settimeout(30)  # Avoid indefinite block if command hangs
             exit_status = stdout.channel.recv_exit_status()
             
             if exit_status == 0:
@@ -214,6 +215,7 @@ class SSHUtil:
                     support_scripts_path = os.path.join(ansible_dir, 'support-scripts')
                     # Verify the directory exists
                     stdin, stdout, stderr = ssh.exec_command(f"test -d {support_scripts_path} && echo 'exists'")
+                    stdout.channel.settimeout(30)
                     if stdout.read().decode('utf-8').strip() == 'exists':
                         logger.info(f"Auto-detected ansible-installer directory: {ansible_dir}")
                         ssh.close()
@@ -332,7 +334,9 @@ class SSHUtil:
             logger.info("Waiting for sudo password prompt...")
             for attempt in range(15):
                 time.sleep(0.5)
-                chunk = shell.recv(4096).decode('utf-8', errors='ignore')
+                if attempt > 0 and attempt % 5 == 0:
+                    logger.info(f"Still waiting for sudo prompt... (attempt {attempt + 1}/15)")
+                chunk = shell.recv(4096).decode('utf-8', errors='ignore') if shell.recv_ready() else ""
                 if chunk:
                     output += chunk
                     logger.debug(f"Received (attempt {attempt+1}): {chunk[:200]}")
@@ -389,7 +393,9 @@ class SSHUtil:
             # Continue reading output until we see the exact prompt
             for attempt in range(20):
                 time.sleep(0.5)
-                chunk = shell.recv(4096).decode('utf-8', errors='ignore')
+                if attempt > 0 and attempt % 5 == 0:
+                    logger.info(f"Still waiting for translation-util prompt... (attempt {attempt + 1}/20)")
+                chunk = shell.recv(4096).decode('utf-8', errors='ignore') if shell.recv_ready() else ""
                 if chunk:
                     output += chunk
                     logger.debug(f"Reading script output (attempt {attempt+1}): {chunk[:200]}")
@@ -417,9 +423,11 @@ class SSHUtil:
             # Step 6: Provide the exact file path: /tmp/Polski-updated3.json.json
             logger.info(f"Providing file path: {remote_tmp_path}")
             shell.send(f"{remote_tmp_path}\n")
+            logger.info("Waiting for translation-util to process file (this may take 30-90 seconds)...")
             time.sleep(3)  # Wait for processing
             
-            # Read final output
+            # Read final output - script can take 30-90s for large files; use longer timeout
+            shell.settimeout(90)
             final_output = shell.recv(4096).decode('utf-8', errors='ignore')
             logger.info(f"Final output:\n{final_output}")
             

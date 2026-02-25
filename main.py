@@ -22,6 +22,8 @@ from pathlib import Path
 # ClientApi, RancherApi, SSHUtil imported lazily where used (so --list-steps, --dry-run work without requests)
 from run_summary import RunSummary
 from config_manager import ConfigManager
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
+
 from constants import (
     INQUIRY_PRIORITY_MAP,
     INQUIRY_PRIORITY_DEFAULT,
@@ -29,7 +31,8 @@ from constants import (
     FILE_STATUS_CHECK_DELAY,
     RETRY_DELAY,
     FILE_ANALYSIS_CHECK_INTERVAL,
-    FILE_ANALYSIS_MAX_WAIT
+    FILE_ANALYSIS_MAX_WAIT,
+    TRANSLATION_UPLOAD_TIMEOUT,
 )
 
 # Store original exception hook for verbose mode
@@ -2228,13 +2231,30 @@ class OnWatchAutomation:
                 # Use sudo_password if specified, otherwise fall back to SSH password
                 sudo_password = ssh_config.get('sudo_password')
                 if not sudo_password:
-                    sudo_password = ssh_config.get('password')
+                    sudo_password = ssh_config.get('password') or ssh_password
                 
-                success = ssh_util.upload_translation_file(
-                    local_file_path=local_file_path,
-                    translation_util_path=translation_util_path,
-                    sudo_password=sudo_password
-                )
+                logger.info(f"Starting translation file upload (timeout: {TRANSLATION_UPLOAD_TIMEOUT}s)...")
+                with ThreadPoolExecutor(max_workers=1) as ex:
+                    future = ex.submit(
+                        ssh_util.upload_translation_file,
+                        local_file_path=local_file_path,
+                        translation_util_path=translation_util_path,
+                        sudo_password=sudo_password
+                    )
+                    try:
+                        success = future.result(timeout=TRANSLATION_UPLOAD_TIMEOUT)
+                    except FuturesTimeoutError:
+                        logger.error(
+                            f"Translation file upload timed out after {TRANSLATION_UPLOAD_TIMEOUT}s. "
+                            "The device may be slow or the translation-util script may be stuck."
+                        )
+                        logger.info(
+                            "Manual step: SSH to the device, run 'sudo su -', cd to the translation-util "
+                            "directory, run './translation-util upload', and provide the file path when prompted."
+                        )
+                        raise RuntimeError(
+                            f"Translation upload timed out after {TRANSLATION_UPLOAD_TIMEOUT}s. See logs for manual steps."
+                        )
                 
                 if success:
                     logger.info(f"✓ Successfully uploaded translation file: {translation_file}")
