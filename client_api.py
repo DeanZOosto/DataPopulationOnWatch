@@ -13,6 +13,8 @@ import requests
 import urllib3
 from urllib3.exceptions import InsecureRequestWarning
 from constants import (
+    API_REQUEST_TIMEOUT,
+    FILE_UPLOAD_TIMEOUT,
     INQUIRY_PRIORITY_MAP,
     INQUIRY_PRIORITY_DEFAULT,
     INQUIRY_PRIORITY_LOW,
@@ -1866,7 +1868,8 @@ class ClientApi:
             response = self.session.post(
                 f"{self.url}/upload/prepare/forensic",
                 headers=self.headers,
-                json=payload
+                json=payload,
+                timeout=API_REQUEST_TIMEOUT
             )
             response.raise_for_status()
             result = response.json()
@@ -1917,7 +1920,8 @@ class ClientApi:
             response = self.session.post(
                 f"{self.url}/upload/file/{upload_id}?type={filetype}",
                 headers=self.headers,
-                files=files
+                files=files,
+                timeout=(API_REQUEST_TIMEOUT, FILE_UPLOAD_TIMEOUT)  # connect, read (long for large files)
             )
             response.raise_for_status()
             logger.info(f"Uploaded forensic file: {filename} (type: {filetype})")
@@ -1993,7 +1997,8 @@ class ClientApi:
             response = self.session.post(
                 f"{self.url}/inquiry/{case_id}/add-files",
                 headers=self.headers,
-                json=payload
+                json=payload,
+                timeout=API_REQUEST_TIMEOUT
             )
             response.raise_for_status()
             # Endpoint may return empty response - that's OK, file was added
@@ -2066,7 +2071,8 @@ class ClientApi:
             response = self.session.post(
                 graphql_url,
                 headers=self.headers,
-                json=payload
+                json=payload,
+                timeout=API_REQUEST_TIMEOUT
             )
             response.raise_for_status()
             result = response.json()
@@ -2168,7 +2174,8 @@ class ClientApi:
             response = self.session.post(
                 graphql_url,
                 headers=self.headers,
-                json=payload
+                json=payload,
+                timeout=API_REQUEST_TIMEOUT
             )
             response.raise_for_status()
             
@@ -2309,7 +2316,8 @@ class ClientApi:
             response = self.session.post(
                 graphql_url,
                 headers=self.headers,
-                json=payload
+                json=payload,
+                timeout=API_REQUEST_TIMEOUT
             )
             response.raise_for_status()
             
@@ -2372,7 +2380,8 @@ class ClientApi:
             response = self.session.post(
                 graphql_url,
                 headers=self.headers,
-                json=payload
+                json=payload,
+                timeout=API_REQUEST_TIMEOUT
             )
             response.raise_for_status()
             

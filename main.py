@@ -1561,7 +1561,12 @@ class OnWatchAutomation:
                             })
                         
                     except Exception as e:
-                        logger.error(f"❌ Failed to process file '{file_config.get('path', 'unknown')}': {e}")
+                        err_str = str(e).lower()
+                        if 'timeout' in err_str or 'timed out' in err_str:
+                            logger.error(f"❌ Timeout processing file '{file_config.get('path', 'unknown')}'. Server may be busy or file too large.")
+                            logger.warning("→ Add this file manually in the OnWatch UI: Inquiries → select case → Add files")
+                        else:
+                            logger.error(f"❌ Failed to process file '{file_config.get('path', 'unknown')}': {e}")
                         self.summary.add_error(f"Inquiry File Upload", file_config.get('path', 'unknown'), str(e))
                         continue
                 
@@ -1760,13 +1765,18 @@ class OnWatchAutomation:
                             elif analyzing_count > 0 or done_count > 0:
                                 logger.info(f"✓ Analysis status: {done_count} DONE, {analyzing_count} ANALYZING")
                                 if queued_count > 0:
-                                    logger.warning(f"→ {queued_count} file(s) are QUEUED - may need manual attention")
+                                    logger.warning(f"→ {queued_count} file(s) QUEUED - start them manually in the UI if needed")
                             else:
                                 logger.warning("→ Could not verify all files started analyzing - please check UI")
                         else:
                             logger.debug("No file IDs found to start analysis")
                     except Exception as e:
-                        logger.warning(f"Could not configure files or start analysis: {e}")
+                        err_str = str(e).lower()
+                        if 'timeout' in err_str or 'timed out' in err_str:
+                            logger.warning(f"Timeout configuring files or starting analysis: {e}")
+                            logger.warning("→ MANUAL STEP: Open the inquiry in OnWatch UI and start analysis for each file")
+                        else:
+                            logger.warning(f"Could not configure files or start analysis: {e}")
                 
                 # Quick final check to verify all files started analyzing (don't wait for completion)
                 time.sleep(FILE_STATUS_CHECK_DELAY)  # Brief wait for status to update
@@ -1807,9 +1817,10 @@ class OnWatchAutomation:
                             inquiry_msg = "MANUAL CHECK REQUIRED: Inquiry analysis incomplete – not all files are DONE yet. Open the inquiry in the UI and start or wait for analysis for the remaining file(s)."
                             self.summary.add_warning(inquiry_msg)
                         if final_queued > 0:
-                            logger.warning(f"→ {final_queued} file(s) are QUEUED and may need manual analysis:")
+                            logger.warning(f"→ {final_queued} file(s) stuck in QUEUED (not analyzing):")
                             for queued_file in final_files_by_status.get('QUEUED', []):
                                 logger.warning(f"     • {queued_file}")
+                            logger.warning("→ MANUAL STEP: Open the inquiry in OnWatch UI → click each queued file → Start analysis")
                         if final_failed > 0:
                             logger.warning(f"→ {final_failed} file(s) failed analysis:")
                             for failed_file in final_files_by_status.get('ANALYSIS_FAILED', []):

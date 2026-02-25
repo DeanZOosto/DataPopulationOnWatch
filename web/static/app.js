@@ -517,6 +517,10 @@ function buildValidationResultCard(r) {
 async function runPopulation() {
   if (currentJobId) return;
   clearActionError();
+  const ip = document.getElementById("config-ip").value.trim() || "—";
+  const version = document.getElementById("config-version").value || "—";
+  const msg = `Run population on:\n  IP: ${ip}\n  Version: ${version}\n\nVerify this is the correct target before continuing.`;
+  if (!confirm(msg)) return;
   const userName = document.getElementById("user-name").value.trim() || null;
   try {
     const r = await fetch("/api/run-population", {
