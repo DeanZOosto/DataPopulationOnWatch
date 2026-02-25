@@ -62,9 +62,9 @@ system_settings:
     translation_file: "assets/Polski-updated3.json"
     product_name: "metropolis"
     logos:
-      company: "assets/images/me.jpg"
-      sidebar: "assets/images/me.jpg"
-    favicon: "assets/images/favicon.ico"
+      company: "assets/images/Metropolis_FullLogo_Black_08302019.jpg"
+      sidebar: "assets/images/Metropolis_Logo.jpg"
+    favicon: "assets/images/metropolis-favicon.ico"
   
   engine:
     video_storage:
