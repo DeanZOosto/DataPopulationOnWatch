@@ -77,7 +77,6 @@ system_settings:
 # Environment Variables (Rancher/Kubernetes)
 # OnWatch 2.8: configure manually via Rancher UI (no automated support).
 env_vars:
-  ENABLE_DVR: "false"
   OVERWRITE_FFMPEG_OPTIONS_VALUES: "ffmpeg-opts:rtsp_transport=udp,reorder_queue_size=8192,max_delay=500000,buffer_size=4194304"
   SERVICE_TAGS: "engine-service,body-from-face-pipeline,body-pipeline,dvr,face-pipeline,ffmpeg-options,forensics,gdpr,image-processing,live-stream,roi,watch-video,webrtc"
   SERVICE_DOMAIN: "cv-engine.default"
