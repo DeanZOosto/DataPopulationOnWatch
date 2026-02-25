@@ -62,7 +62,7 @@ system_settings:
     translation_file: "assets/Polski-updated3.json"
     product_name: "metropolis"
     logos:
-      company: "assets/images/Metropolis_FullLogo_Black_08302019.jpg"
+      company: "assets/images/metropolis-purple.jpg"
       sidebar: "assets/images/Metropolis_Logo.jpg"
     favicon: "assets/images/metropolis-favicon.ico"
   
