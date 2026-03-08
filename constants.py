@@ -28,10 +28,10 @@ RETRY_DELAY = 2
 # File Upload Settings
 MAX_FILE_UPLOAD_RETRIES = 3
 FILE_ANALYSIS_CHECK_INTERVAL = 5
-FILE_ANALYSIS_MAX_WAIT = 300  # 5 minutes
+FILE_ANALYSIS_MAX_WAIT = 30  # 30 seconds max - don't block user
 
 # Translation file upload (SSH/SCP + translation-util)
-TRANSLATION_UPLOAD_TIMEOUT = 180  # 3 minutes total
+TRANSLATION_UPLOAD_TIMEOUT = 40  # 40 seconds max
 
 # Subject Image Settings
 MAX_SUBJECT_IMAGES = 10  # Maximum images per subject

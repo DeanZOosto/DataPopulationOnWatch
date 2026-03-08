@@ -34,6 +34,7 @@ from constants import (
     FILE_ANALYSIS_MAX_WAIT,
     TRANSLATION_UPLOAD_TIMEOUT,
 )
+INQUIRY_STEP_TIMEOUT = FILE_ANALYSIS_MAX_WAIT  # 30s - don't block on stuck inquiry files
 
 # Store original exception hook for verbose mode
 _original_excepthook = sys.excepthook
@@ -2301,7 +2302,10 @@ class OnWatchAutomation:
         callable_fn = getattr(self, method_name)
         status, message = "success", success_detail or ""
         try:
-            if is_async:
+            if method_name == "configure_inquiries":
+                # Timeout to avoid blocking when files stuck in QUEUED
+                await asyncio.wait_for(callable_fn(), timeout=INQUIRY_STEP_TIMEOUT)
+            elif is_async:
                 await callable_fn()
             else:
                 callable_fn()
@@ -2317,6 +2321,16 @@ class OnWatchAutomation:
                     self.summary.record_step(step_num, name, "success", success_detail)
             else:
                 self.summary.record_step(step_num, name, "success", success_detail)
+        except asyncio.TimeoutError:
+            step_end = time.time()
+            self.summary.record_step_timing(step_num, step_start, step_end)
+            error_msg = f"Inquiry step timed out after {INQUIRY_STEP_TIMEOUT}s (files may be stuck in queue)"
+            status, message = "failed", error_msg
+            logger.error(f"❌ {error_msg}")
+            logger.warning("→ MANUAL STEP: Open the inquiry in OnWatch UI and start analysis for each queued file")
+            self.summary.add_warning("Inquiry step timed out - start analysis manually for queued files")
+            self.summary.record_step(step_num, name, "failed", error_msg, manual_action=True)
+            # Not fatal - continue to next step
         except StepSkipped as e:
             step_end = time.time()
             self.summary.record_step_timing(step_num, step_start, step_end)
@@ -2334,6 +2348,11 @@ class OnWatchAutomation:
                 raise
         finally:
             self._emit_progress({"type": "step_done", "step": step_num, "total": NUM_STEPS, "name": name, "status": status, "message": message})
+            # Checkpoint after each step so partial progress is saved if run gets stuck
+            try:
+                self.summary.checkpoint_to_file(name_prefix=self.export_name)
+            except Exception:
+                pass  # Non-fatal
 
     # ---- Run loop ----
     async def run(self):

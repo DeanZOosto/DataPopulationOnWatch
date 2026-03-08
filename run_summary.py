@@ -364,6 +364,21 @@ class RunSummary:
             logger.error(f"Failed to export data to {output_path}: {e}")
             return None
     
+    def checkpoint_to_file(self, format='yaml', name_prefix=None):
+        """
+        Save current state to checkpoint file (overwrites). Use after each step so
+        partial progress is saved if run gets stuck.
+        
+        Returns:
+            Path to checkpoint file, or None on failure
+        """
+        if name_prefix:
+            safe = "".join(c for c in name_prefix if c.isalnum() or c == "_").strip("_") or "data"
+            filename = f"{safe}_data_inserted_checkpoint.{format}"
+        else:
+            filename = f"onwatch_data_inserted_checkpoint.{format}"
+        return self.export_to_file(output_path=Path(filename), format=format, name_prefix=name_prefix)
+    
     def _clean_system_settings(self, settings):
         """
         Clean system settings for export.

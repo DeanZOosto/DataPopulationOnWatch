@@ -331,6 +331,13 @@ def file_preview():
 def start_population():
     data = request.get_json() or {}
     user_name = (data.get("name") or "").strip() or None
+    status = get_config_status()
+    ip = (status.get("onwatch_ip") or "").strip()
+    version = (status.get("onwatch_version") or "").strip()
+    if not ip or not version:
+        return jsonify({
+            "error": "Set IP and Version before running population. Use Config Status and click Set IP / Set Version."
+        }), 400
     job_id = str(uuid.uuid4())
     t = threading.Thread(
         target=run_population,

@@ -517,8 +517,12 @@ function buildValidationResultCard(r) {
 async function runPopulation() {
   if (currentJobId) return;
   clearActionError();
-  const ip = document.getElementById("config-ip").value.trim() || "—";
-  const version = document.getElementById("config-version").value || "—";
+  const ip = document.getElementById("config-ip").value.trim();
+  const version = document.getElementById("config-version").value;
+  if (!ip || !version) {
+    showConfigStatus("Set IP and Version before running population", true);
+    return;
+  }
   const msg = `Run population on:\n  IP: ${ip}\n  Version: ${version}\n\nVerify this is the correct target before continuing.`;
   if (!confirm(msg)) return;
   const userName = document.getElementById("user-name").value.trim() || null;
@@ -534,7 +538,9 @@ async function runPopulation() {
     if (data.job_id) {
       streamProgress(data.job_id, "population");
     } else {
-      DOM.progressSummary().innerHTML = `<div class="summary-card failure">Error: ${data.error || "Unknown error"}</div>`;
+      const errMsg = data.error || "Unknown error";
+      showConfigStatus(errMsg, true);
+      DOM.progressSummary().innerHTML = `<div class="summary-card failure">Error: ${escapeHtml(errMsg)}</div>`;
     }
   } catch (e) {
     DOM.progressSummary().innerHTML = `<div class="summary-card failure">Error: ${e.message}</div>`;
