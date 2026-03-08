@@ -2305,6 +2305,22 @@ class OnWatchAutomation:
             if method_name == "configure_inquiries":
                 # Timeout to avoid blocking when files stuck in QUEUED
                 await asyncio.wait_for(callable_fn(), timeout=INQUIRY_STEP_TIMEOUT)
+            elif method_name == "upload_files":
+                # Run in thread with timeout - asyncio.wait_for cannot fire when coroutine blocks
+                # (e.g. future.result() or getpass blocks event loop). Thread timeout always fires.
+                def _run_upload_files():
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    try:
+                        return loop.run_until_complete(callable_fn())
+                    finally:
+                        loop.close()
+                with ThreadPoolExecutor(max_workers=1) as ex:
+                    future = ex.submit(_run_upload_files)
+                    try:
+                        future.result(timeout=TRANSLATION_UPLOAD_TIMEOUT)
+                    except FuturesTimeoutError:
+                        raise asyncio.TimeoutError()  # Re-raise so existing handler catches it
             elif is_async:
                 await callable_fn()
             else:
@@ -2324,11 +2340,18 @@ class OnWatchAutomation:
         except asyncio.TimeoutError:
             step_end = time.time()
             self.summary.record_step_timing(step_num, step_start, step_end)
-            error_msg = f"Inquiry step timed out after {INQUIRY_STEP_TIMEOUT}s (files may be stuck in queue)"
-            status, message = "failed", error_msg
-            logger.error(f"❌ {error_msg}")
-            logger.warning("→ MANUAL STEP: Open the inquiry in OnWatch UI and start analysis for each queued file")
-            self.summary.add_warning("Inquiry step timed out - start analysis manually for queued files")
+            if method_name == "upload_files":
+                error_msg = f"Translation upload timed out after {TRANSLATION_UPLOAD_TIMEOUT}s"
+                status, message = "failed", error_msg
+                logger.error(f"❌ {error_msg}")
+                logger.warning("→ MANUAL STEP: SSH to the device, run 'sudo su -', cd to translation-util dir, run './translation-util upload'")
+                self.summary.add_warning("Translation upload timed out - upload manually via SSH")
+            else:
+                error_msg = f"Inquiry step timed out after {INQUIRY_STEP_TIMEOUT}s (files may be stuck in queue)"
+                status, message = "failed", error_msg
+                logger.error(f"❌ {error_msg}")
+                logger.warning("→ MANUAL STEP: Open the inquiry in OnWatch UI and start analysis for each queued file")
+                self.summary.add_warning("Inquiry step timed out - start analysis manually for queued files")
             self.summary.record_step(step_num, name, "failed", error_msg, manual_action=True)
             # Not fatal - continue to next step
         except StepSkipped as e:
