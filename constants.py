@@ -2,6 +2,19 @@
 """
 Constants used throughout the OnWatch Data Population Automation project.
 """
+from datetime import datetime, timezone, timedelta
+
+try:
+    from zoneinfo import ZoneInfo
+    ISRAEL_TZ = ZoneInfo("Asia/Jerusalem")  # Handles DST: GMT+2 winter, GMT+3 summer
+except ImportError:
+    ISRAEL_TZ = timezone(timedelta(hours=2))  # Fallback: fixed GMT+2 (Python < 3.9)
+
+
+def now_israel():
+    """Return current datetime in Israel timezone (GMT+2, or GMT+3 during DST)."""
+    return datetime.now(ISRAEL_TZ)
+
 
 # Inquiry Case Priority Values
 # These map to the actual API values used by OnWatch

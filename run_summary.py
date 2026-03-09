@@ -12,6 +12,8 @@ import yaml
 from datetime import datetime
 from pathlib import Path
 
+from constants import now_israel
+
 logger = logging.getLogger(__name__)
 
 
@@ -89,7 +91,7 @@ class RunSummary:
     def start_timing(self, onwatch_ip=None):
         """Start timing for the automation run."""
         self.start_time = time.time()
-        self.run_timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        self.run_timestamp = now_israel().strftime('%Y-%m-%d %H:%M:%S')
         self.onwatch_ip = onwatch_ip
     
     def record_step_timing(self, step_num, start_time, end_time):
@@ -308,7 +310,7 @@ class RunSummary:
             Path to exported file
         """
         if output_path is None:
-            timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+            timestamp = now_israel().strftime('%Y-%m-%d_%H-%M-%S')
             if name_prefix:
                 # Sanitize: alphanumeric and underscore only
                 safe = "".join(c for c in name_prefix if c.isalnum() or c == "_").strip("_") or "data"
@@ -322,7 +324,7 @@ class RunSummary:
         # Prepare export data
         export_data = {
             'metadata': {
-                'generated_at': self.run_timestamp or datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'generated_at': self.run_timestamp or now_israel().strftime('%Y-%m-%d %H:%M:%S'),
                 'onwatch_ip': self.onwatch_ip or 'unknown',
                 'onwatch_version': getattr(self, 'onwatch_version', None),  # Version if available
                 'total_duration': self.format_duration(self.get_total_duration()),

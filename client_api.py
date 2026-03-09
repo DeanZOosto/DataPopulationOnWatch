@@ -2699,8 +2699,8 @@ class ClientApi:
             }
             """
             
-            # Get current date range (last 30 days to current)
-            from_date = (datetime.utcnow() - timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+            # Use 365-day range so mass imports from before upgrade are included
+            from_date = (datetime.utcnow() - timedelta(days=365)).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
             to_date = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
             
             payload = {
@@ -2721,7 +2721,8 @@ class ClientApi:
             response = self.session.post(
                 graphql_url,
                 headers=self.headers,
-                json=payload
+                json=payload,
+                timeout=API_REQUEST_TIMEOUT
             )
             response.raise_for_status()
             result = response.json()
@@ -2784,8 +2785,8 @@ class ClientApi:
             }
             """
             
-            # Get current date range (last 30 days to current)
-            from_date = (datetime.utcnow() - timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+            # Use 365-day range so mass imports from before upgrade are included
+            from_date = (datetime.utcnow() - timedelta(days=365)).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
             to_date = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
             
             payload = {
@@ -2806,7 +2807,8 @@ class ClientApi:
             response = self.session.post(
                 graphql_url,
                 headers=self.headers,
-                json=payload
+                json=payload,
+                timeout=API_REQUEST_TIMEOUT
             )
             response.raise_for_status()
             result = response.json()
@@ -2814,10 +2816,11 @@ class ClientApi:
                 logger.error(f"GraphQL errors for getMassImportLists: {result['errors']}")
                 raise Exception(f"GraphQL error: {result['errors']}")
             
-            # Find the mass import by ID
+            # Find the mass import by ID (normalize types - API may return str or int)
             items = result.get('data', {}).get('getMassImportLists', {}).get('items', [])
+            mass_import_id_str = str(mass_import_id) if mass_import_id is not None else ""
             for item in items:
-                if item.get('id') == mass_import_id:
+                if str(item.get('id', '')) == mass_import_id_str:
                     return item
             
             return None

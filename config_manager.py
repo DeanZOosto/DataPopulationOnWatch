@@ -310,8 +310,8 @@ class ConfigManager:
         # Create backup if requested
         if backup:
             import shutil
-            from datetime import datetime
-            backup_path = f"{self.config_path}.backup.{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            from constants import now_israel
+            backup_path = f"{self.config_path}.backup.{now_israel().strftime('%Y%m%d_%H%M%S')}"
             try:
                 shutil.copy2(self.config_path, backup_path)
                 logger.info(f"Created backup: {backup_path}")
@@ -493,8 +493,8 @@ class ConfigManager:
         # Create backup if requested
         if backup:
             import shutil
-            from datetime import datetime
-            backup_path = f"{self.config_path}.backup.{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            from constants import now_israel
+            backup_path = f"{self.config_path}.backup.{now_israel().strftime('%Y%m%d_%H%M%S')}"
             try:
                 shutil.copy2(self.config_path, backup_path)
                 logger.info(f"Created backup: {backup_path}")

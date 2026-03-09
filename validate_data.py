@@ -561,12 +561,16 @@ class DataValidator:
         self.results["validated"] += 1
         try:
             status = self.client_api.get_mass_import_status(mass_import_id)
+            # Fallback: search by name (ID may differ post-upgrade or date filter may exclude)
+            if status is None and mass_import_name:
+                status = self.client_api.check_mass_import_exists_by_name(mass_import_name)
             display_name = mass_import_name or mass_import_id
             if status is None:
                 self._record_failure(f"Mass import '{display_name}': NOT FOUND")
             else:
                 self.results["passed"] += 1
-                logger.info(f"{LOG_PASS} Mass import '{display_name}' exists (status: {status})")
+                status_str = status.get('status', '') if isinstance(status, dict) else status
+                logger.info(f"{LOG_PASS} Mass import '{display_name}' exists (status: {status_str})")
             return True
         except Exception as e:
             self._record_failure(

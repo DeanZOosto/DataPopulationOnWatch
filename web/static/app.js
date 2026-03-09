@@ -550,6 +550,12 @@ async function runPopulation() {
 async function runValidation() {
   if (currentJobId) return;
   clearActionError();
+  const ip = document.getElementById("config-ip").value.trim();
+  const version = document.getElementById("config-version").value;
+  if (!ip || !version) {
+    showConfigStatus("Set IP and Version before running validation", true);
+    return;
+  }
   const file = DOM.exportSelect().value;
   if (!file) {
     showValidationError("Please select a data inserted file (last population run) to validate against.");
@@ -567,7 +573,9 @@ async function runValidation() {
     if (data.job_id) {
       streamProgress(data.job_id, "validation");
     } else {
-      DOM.progressSummary().innerHTML = `<div class="summary-card failure">Error: ${data.error || "Unknown error"}</div>`;
+      const errMsg = data.error || "Unknown error";
+      showConfigStatus(errMsg, true);
+      DOM.progressSummary().innerHTML = `<div class="summary-card failure">Error: ${escapeHtml(errMsg)}</div>`;
     }
   } catch (e) {
     DOM.progressSummary().innerHTML = `<div class="summary-card failure">Error: ${e.message}</div>`;

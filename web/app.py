@@ -356,6 +356,13 @@ def start_validation():
     export_file = data.get("file") or request.args.get("file")
     if not export_file:
         return jsonify({"error": "Missing 'file' parameter"}), 400
+    status = get_config_status()
+    ip = (status.get("onwatch_ip") or "").strip()
+    version = (status.get("onwatch_version") or "").strip()
+    if not ip or not version:
+        return jsonify({
+            "error": "Set IP and Version before running validation. Use Config Status and click Set IP / Set Version."
+        }), 400
     job_id = str(uuid.uuid4())
     t = threading.Thread(target=run_validation, args=(job_id, export_file, jobs, log_queues, progress_queues, jobs_lock))
     t.daemon = True
