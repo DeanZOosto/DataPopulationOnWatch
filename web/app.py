@@ -27,19 +27,27 @@ from web.job_runner import run_population, run_validation
 # -----------------------------------------------------------------------------
 
 def _load_auth_config():
-    """Load web UI credentials from config. Falls back to onwatch if web_ui not set."""
+    """Load web UI credentials from config. Supports multiple users (web_ui.users) or single user (web_ui.username/password)."""
     try:
         with open(PROJECT_ROOT / "config.yaml") as f:
             config = yaml.safe_load(f) or {}
         web_ui = config.get("web_ui") or {}
         onwatch = config.get("onwatch") or {}
+        users = web_ui.get("users")
+        if users and isinstance(users, list):
+            # Multi-user: list of {username, password}
+            user_map = {}
+            for u in users:
+                if isinstance(u, dict) and u.get("username"):
+                    user_map[u["username"]] = u.get("password", "")
+            return {"users": user_map, "secret_key": os.environ.get("OW_WEB_SECRET_KEY") or web_ui.get("secret_key") or "dev-secret-change-in-production"}
+        # Single user (backward compat)
         return {
-            "username": web_ui.get("username") or onwatch.get("username") or "Administrator",
-            "password": web_ui.get("password") or onwatch.get("password") or "",
+            "users": {web_ui.get("username") or onwatch.get("username") or "Administrator": web_ui.get("password") or onwatch.get("password") or ""},
             "secret_key": os.environ.get("OW_WEB_SECRET_KEY") or web_ui.get("secret_key") or "dev-secret-change-in-production",
         }
     except Exception:
-        return {"username": "Administrator", "password": "", "secret_key": "dev-secret"}
+        return {"users": {"Administrator": ""}, "secret_key": "dev-secret"}
 
 
 def _require_login(f):
@@ -113,21 +121,33 @@ def get_exports():
 
 
 def get_config_status():
-    """Validate config and return status for UI."""
+    """Validate config and return status for UI. Never exposes IP/version - user must always choose."""
     try:
         from config_manager import ConfigManager
         manager = ConfigManager("config.yaml")
         is_valid, errors = manager.validate_config(verbose=False)
-        config = manager.load_config()
-        onwatch = config.get("onwatch", {})
         return {
             "valid": is_valid,
             "errors": errors,
-            "onwatch_ip": onwatch.get("ip_address", ""),
-            "onwatch_version": onwatch.get("version", ""),
+            "onwatch_ip": "",
+            "onwatch_version": "",
         }
     except Exception as e:
         return {"valid": False, "errors": [str(e)], "onwatch_ip": "", "onwatch_version": ""}
+
+
+def _config_has_ip_and_version():
+    """Return (ip, version) from config for run validation. Used internally by run/validate endpoints."""
+    try:
+        from config_manager import ConfigManager
+        manager = ConfigManager("config.yaml")
+        config = manager.load_config()
+        onwatch = config.get("onwatch", {})
+        ip = (onwatch.get("ip_address") or "").strip()
+        version = (onwatch.get("version") or "").strip()
+        return ip, version
+    except Exception:
+        return "", ""
 
 
 # -----------------------------------------------------------------------------
@@ -204,8 +224,10 @@ def login():
     data = request.get_json(silent=True) or request.form
     username = (data.get("username") or "").strip()
     password = (data.get("password") or "")
-    if username == auth_config["username"] and password == auth_config["password"]:
+    users = auth_config.get("users") or {}
+    if username in users and users[username] == password:
         session["logged_in"] = True
+        session["username"] = username
         next_url = request.args.get("next") or request.form.get("next") or "/"
         if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.is_json:
             return jsonify({"success": True, "redirect": next_url})
@@ -330,10 +352,10 @@ def file_preview():
 @_require_login
 def start_population():
     data = request.get_json() or {}
-    user_name = (data.get("name") or "").strip() or None
-    status = get_config_status()
-    ip = (status.get("onwatch_ip") or "").strip()
-    version = (status.get("onwatch_version") or "").strip()
+    user_name = (data.get("name") or "").strip()
+    if not user_name:
+        return jsonify({"error": "Your name is required. Enter your name to prefix the export file."}), 400
+    ip, version = _config_has_ip_and_version()
     if not ip or not version:
         return jsonify({
             "error": "Set IP and Version before running population. Use Config Status and click Set IP / Set Version."
@@ -356,9 +378,7 @@ def start_validation():
     export_file = data.get("file") or request.args.get("file")
     if not export_file:
         return jsonify({"error": "Missing 'file' parameter"}), 400
-    status = get_config_status()
-    ip = (status.get("onwatch_ip") or "").strip()
-    version = (status.get("onwatch_version") or "").strip()
+    ip, version = _config_has_ip_and_version()
     if not ip or not version:
         return jsonify({
             "error": "Set IP and Version before running validation. Use Config Status and click Set IP / Set Version."

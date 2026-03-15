@@ -1,10 +1,17 @@
 # OnWatch Automation Configuration
 # Paths are relative to project root unless absolute.
 
-# Web UI login (same credentials as OnWatch UI by default)
+# Web UI login - supports multiple users or single user
 web_ui:
-  username: "Administrator"
-  password: "pa$$word!"
+  # Multi-user: list of {username, password} (each user logs in with own credentials)
+  users:
+    - username: "Administrator"
+      password: "pa$$word!"
+    # - username: "alice"
+    #   password: "alice-secret"
+  # Single user (alternative): username/password - used if 'users' is not set
+  # username: "Administrator"
+  # password: "pa$$word!"
   secret_key: "change-me-in-production"  # Session signing; override with env OW_WEB_SECRET_KEY
 
 # OnWatch API Connection

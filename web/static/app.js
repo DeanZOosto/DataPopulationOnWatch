@@ -63,14 +63,14 @@ async function fetchConfig() {
     if (data.valid) {
       DOM.configBadge().textContent = "Config ✓";
       DOM.configBadge().className = "badge ok";
-      DOM.configContent().innerHTML = `OnWatch: ${data.onwatch_ip || "—"} | Version: ${data.onwatch_version || "—"}`;
+      DOM.configContent().innerHTML = "Set IP and Version below before running.";
     } else {
       DOM.configBadge().textContent = "Config ✗";
       DOM.configBadge().className = "badge error";
       DOM.configContent().innerHTML = `<span class="error-list">${(data.errors || []).join("<br>")}</span>`;
     }
-    document.getElementById("config-ip").value = data.onwatch_ip || "";
-    document.getElementById("config-version").value = data.onwatch_version || "";
+    document.getElementById("config-ip").value = "";
+    document.getElementById("config-version").value = "";
   } catch (e) {
     DOM.configBadge().textContent = "Config ?";
     DOM.configBadge().className = "badge pending";
@@ -523,15 +523,19 @@ async function runPopulation() {
     showConfigStatus("Set IP and Version before running population", true);
     return;
   }
-  const msg = `Run population on:\n  IP: ${ip}\n  Version: ${version}\n\nVerify this is the correct target before continuing.`;
+  const userName = document.getElementById("user-name").value.trim();
+  if (!userName) {
+    showConfigStatus("Your name is required", true);
+    return;
+  }
+  const msg = `Run population on:\n  IP: ${ip}\n  Version: ${version}\n  As: ${userName}\n\nVerify this is correct before continuing.`;
   if (!confirm(msg)) return;
-  const userName = document.getElementById("user-name").value.trim() || null;
   try {
     const r = await fetch("/api/run-population", {
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: userName }),
+      body: JSON.stringify({ name: userName || "" }),
     });
     if (redirectToLoginIfUnauthorized(r)) return;
     const data = await r.json();
