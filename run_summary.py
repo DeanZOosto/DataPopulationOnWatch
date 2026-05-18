@@ -16,6 +16,8 @@ from constants import now_israel
 
 logger = logging.getLogger(__name__)
 
+EXPORTS_DIR = "exports"
+
 
 class RunSummary:
     """Track and report automation run summary."""
@@ -317,9 +319,14 @@ class RunSummary:
                 filename = f"{safe}_data_inserted_{timestamp}.{format}"
             else:
                 filename = f"onwatch_data_inserted_{timestamp}.{format}"
-            output_path = Path(filename)
-        
+            exports_dir = Path(EXPORTS_DIR)
+            exports_dir.mkdir(exist_ok=True)
+            output_path = exports_dir / filename
+
         output_path = Path(output_path)
+        # Ensure parent dir exists (covers callers that pass an explicit path under exports/)
+        if output_path.parent and str(output_path.parent) not in ("", "."):
+            output_path.parent.mkdir(parents=True, exist_ok=True)
         
         # Prepare export data
         export_data = {
@@ -379,7 +386,9 @@ class RunSummary:
             filename = f"{safe}_data_inserted_checkpoint.{format}"
         else:
             filename = f"onwatch_data_inserted_checkpoint.{format}"
-        return self.export_to_file(output_path=Path(filename), format=format, name_prefix=name_prefix)
+        exports_dir = Path(EXPORTS_DIR)
+        exports_dir.mkdir(exist_ok=True)
+        return self.export_to_file(output_path=exports_dir / filename, format=format, name_prefix=name_prefix)
     
     def _clean_system_settings(self, settings):
         """

@@ -10,13 +10,33 @@ import os
 import sys
 import re
 import logging
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
+
+CONFIG_BACKUP_DIR = ".config_backups"
+
+
+def _make_backup(config_path):
+    """Copy config_path into a hidden backup dir with a timestamped name. Returns backup path or None on failure."""
+    import shutil
+    from constants import now_israel
+    src = Path(config_path)
+    backup_dir = src.parent / CONFIG_BACKUP_DIR
+    try:
+        backup_dir.mkdir(exist_ok=True)
+        backup_path = backup_dir / f"{src.name}.backup.{now_israel().strftime('%Y%m%d_%H%M%S')}"
+        shutil.copy2(src, backup_path)
+        logger.info(f"Created backup: {backup_path}")
+        return str(backup_path)
+    except Exception as e:
+        logger.warning(f"Could not create backup: {e}")
+        return None
 
 
 class ConfigManager:
     """Manages configuration loading, validation, and environment variable substitution."""
-    
+
     def __init__(self, config_path="config.yaml"):
         """
         Initialize configuration manager.
@@ -309,15 +329,8 @@ class ConfigManager:
         
         # Create backup if requested
         if backup:
-            import shutil
-            from constants import now_israel
-            backup_path = f"{self.config_path}.backup.{now_israel().strftime('%Y%m%d_%H%M%S')}"
-            try:
-                shutil.copy2(self.config_path, backup_path)
-                logger.info(f"Created backup: {backup_path}")
-            except Exception as e:
-                logger.warning(f"Could not create backup: {e}")
-        
+            _make_backup(self.config_path)
+
         # Update specific connection IPs in config dict (preserves camera IPs)
         replacement_count = 0
         
@@ -492,15 +505,8 @@ class ConfigManager:
         
         # Create backup if requested
         if backup:
-            import shutil
-            from constants import now_israel
-            backup_path = f"{self.config_path}.backup.{now_israel().strftime('%Y%m%d_%H%M%S')}"
-            try:
-                shutil.copy2(self.config_path, backup_path)
-                logger.info(f"Created backup: {backup_path}")
-            except Exception as e:
-                logger.warning(f"Could not create backup: {e}")
-        
+            _make_backup(self.config_path)
+
         # Determine Rancher password based on version
         rancher_password = "administrator" if version == "2.8" else "admin"
         

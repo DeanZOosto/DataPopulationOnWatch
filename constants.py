@@ -43,6 +43,13 @@ MAX_FILE_UPLOAD_RETRIES = 3
 FILE_ANALYSIS_CHECK_INTERVAL = 5
 FILE_ANALYSIS_MAX_WAIT = 30  # 30 seconds max - don't block user
 
+# Inquiry step total wall-clock budget. The step uploads multiple files and
+# starts analysis on each; per-request timeouts are still bounded by
+# API_REQUEST_TIMEOUT, but the whole step can legitimately need more time on
+# slow systems. If this fires the step is aborted and analysis can be finished
+# manually in the UI.
+INQUIRY_STEP_TIMEOUT = 180
+
 # Translation file upload (SSH/SCP + translation-util)
 TRANSLATION_UPLOAD_TIMEOUT = 40  # 40 seconds max
 

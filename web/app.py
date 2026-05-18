@@ -85,16 +85,22 @@ progress_queues = {}
 
 def get_exports():
     """List data_inserted YAML files with metadata, newest first.
-    Includes both onwatch_data_export_*.yaml and *_data_inserted_*.yaml for backward compatibility.
+    Scans exports/ first (current), then project root (legacy files left from before
+    the exports/ migration). Patterns include onwatch_data_export_*.yaml and
+    *_data_inserted_*.yaml for backward compatibility.
     """
     seen = set()
     all_files = []
-    for pattern in ["onwatch_data_export_*.yaml", "*_data_inserted_*.yaml"]:
-        for f in Path(".").glob(pattern):
-            if f.name in seen:
-                continue
-            seen.add(f.name)
-            all_files.append(f)
+    search_dirs = [Path("exports"), Path(".")]
+    for d in search_dirs:
+        if not d.exists():
+            continue
+        for pattern in ["onwatch_data_export_*.yaml", "*_data_inserted_*.yaml"]:
+            for f in d.glob(pattern):
+                if f.name in seen:
+                    continue
+                seen.add(f.name)
+                all_files.append(f)
     exports = []
     for f in sorted(all_files, key=lambda p: p.stat().st_mtime, reverse=True):
         try:
@@ -121,16 +127,19 @@ def get_exports():
 
 
 def get_config_status():
-    """Validate config and return status for UI. Never exposes IP/version - user must always choose."""
+    """Validate config and return status for UI. Reports current IP/version so users see
+    what they're about to run against; never exposes credentials."""
     try:
         from config_manager import ConfigManager
         manager = ConfigManager("config.yaml")
         is_valid, errors = manager.validate_config(verbose=False)
+        config = manager.load_config()
+        onwatch = config.get("onwatch", {}) or {}
         return {
             "valid": is_valid,
             "errors": errors,
-            "onwatch_ip": "",
-            "onwatch_version": "",
+            "onwatch_ip": (onwatch.get("ip_address") or "").strip(),
+            "onwatch_version": (onwatch.get("version") or "").strip(),
         }
     except Exception as e:
         return {"valid": False, "errors": [str(e)], "onwatch_ip": "", "onwatch_version": ""}

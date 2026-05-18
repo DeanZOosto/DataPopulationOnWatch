@@ -136,25 +136,32 @@ class DataValidator:
         logger.info(f"✓ Connected to OnWatch API (OnWatch {detected_version})")
     
     def load_output_yaml(self):
-        """Load output YAML file."""
+        """Load output YAML file. If the path isn't found, also check the exports/ dir."""
+        # Allow user to pass just a filename; try exports/ as a fallback location
         if not self.output_yaml_path.exists():
-            # Try to find similar files to help user
-            current_dir = self.output_yaml_path.parent if self.output_yaml_path.parent != Path('.') else Path.cwd()
-            pattern = str(current_dir / "onwatch_data_export*.yaml")
-            found_files = glob.glob(pattern)
-            
+            alt = Path("exports") / self.output_yaml_path.name
+            if alt.exists():
+                self.output_yaml_path = alt
+
+        if not self.output_yaml_path.exists():
+            # Try to find similar files to help user — look in both exports/ and project root
+            found_files = []
+            for d in (Path("exports"), Path.cwd()):
+                if d.exists():
+                    for pattern in ("onwatch_data_export*.yaml", "*_data_inserted_*.yaml"):
+                        found_files.extend(str(p) for p in d.glob(pattern))
+
             error_msg = f"Output YAML file not found: {self.output_yaml_path}\n"
-            
+
             if found_files:
-                error_msg += f"\nFound similar files in current directory:\n"
-                for f in sorted(found_files)[:5]:
-                    error_msg += f"  - {Path(f).name}\n"
+                error_msg += f"\nFound similar files:\n"
+                for f in sorted(set(found_files))[:5]:
+                    error_msg += f"  - {f}\n"
                 error_msg += f"\nTry using one of these files, or check if the file exists in a different location."
             else:
-                error_msg += f"\nNo output YAML files found matching pattern 'onwatch_data_export*.yaml' in current directory.\n"
+                error_msg += f"\nNo output YAML files found in exports/ or project root.\n"
                 error_msg += f"Make sure you've run the population script first to generate an output file.\n"
-                error_msg += f"The output file is typically created in the same directory where you run main.py."
-            
+
             raise FileNotFoundError(error_msg)
         
         with open(self.output_yaml_path, 'r') as f:

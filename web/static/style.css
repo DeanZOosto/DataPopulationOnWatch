@@ -260,6 +260,15 @@ select {
   margin-top: 0.5rem;
 }
 
+.config-current {
+  color: var(--text);
+  margin-bottom: 0.25rem;
+}
+.config-current strong {
+  color: var(--accent);
+  font-weight: 600;
+}
+
 .config-edit {
   display: flex;
   flex-wrap: wrap;

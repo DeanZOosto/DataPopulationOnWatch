@@ -84,6 +84,24 @@ class _BindAddressAdapter(requests.adapters.HTTPAdapter):
         super().init_poolmanager(connections, maxsize, block=block, **pool_kw)
 
 
+class _TimeoutSession(requests.Session):
+    """Session that injects a default timeout when caller omits one.
+
+    Why: requests.Session.request() with no timeout will block forever on a stuck
+    socket (TCP keepalive ~2h). Many call sites in this module forget to pass
+    timeout=, which has caused the inquiry step to hang indefinitely. This makes
+    the default explicit and uniform; callers can still override per-call.
+    """
+    def __init__(self, default_timeout=API_REQUEST_TIMEOUT):
+        super().__init__()
+        self._default_timeout = default_timeout
+
+    def request(self, method, url, **kwargs):
+        if kwargs.get("timeout") is None:
+            kwargs["timeout"] = self._default_timeout
+        return super().request(method, url, **kwargs)
+
+
 class ClientApi:
     """Client API for interacting with OnWatch system."""
 
@@ -112,7 +130,7 @@ class ClientApi:
         self.url = f"https://{ip_address}/bt/api"
         self.headers = {"accept": "application/json"}
         self.token = ""
-        self.session = requests.Session()
+        self.session = _TimeoutSession()
         # Bind outgoing connections to a specific interface (e.g. Wi‑Fi) when set
         if bind_address:
             adapter = _BindAddressAdapter(source_address=(bind_address, 0))
@@ -131,8 +149,8 @@ class ClientApi:
         self.version_compat = VersionCompat(version=version)
 
     def _make_session_for_bind(self, bind_ip):
-        """Create a requests.Session bound to the given local IP, with same verify_ssl as current session."""
-        session = requests.Session()
+        """Create a Session bound to the given local IP, with same verify_ssl and default timeout."""
+        session = _TimeoutSession()
         session.verify = self.session.verify
         adapter = _BindAddressAdapter(source_address=(bind_ip, 0))
         session.mount("https://", adapter)

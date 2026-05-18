@@ -32,9 +32,9 @@ from constants import (
     RETRY_DELAY,
     FILE_ANALYSIS_CHECK_INTERVAL,
     FILE_ANALYSIS_MAX_WAIT,
+    INQUIRY_STEP_TIMEOUT,
     TRANSLATION_UPLOAD_TIMEOUT,
 )
-INQUIRY_STEP_TIMEOUT = FILE_ANALYSIS_MAX_WAIT  # 30s - don't block on stuck inquiry files
 
 # Store original exception hook for verbose mode
 _original_excepthook = sys.excepthook
@@ -2294,6 +2294,30 @@ class OnWatchAutomation:
             except Exception:
                 pass
 
+    @staticmethod
+    def _run_coro_with_thread_timeout(coro_factory, timeout_seconds):
+        """Run an async method in a worker thread with a wall-clock timeout.
+
+        Why: several "async" methods in this class (upload_files, configure_inquiries)
+        are async in name only — their bodies are blocking I/O and time.sleep. Plain
+        asyncio.wait_for cannot cancel them because there are no real await points.
+        Running them in a worker thread lets future.result(timeout=...) actually fire,
+        and we re-raise asyncio.TimeoutError so the caller's existing handler catches it.
+        """
+        def _runner():
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                return loop.run_until_complete(coro_factory())
+            finally:
+                loop.close()
+        with ThreadPoolExecutor(max_workers=1) as ex:
+            future = ex.submit(_runner)
+            try:
+                return future.result(timeout=timeout_seconds)
+            except FuturesTimeoutError:
+                raise asyncio.TimeoutError()
+
     async def _run_step(self, step_num, name, method_name, is_async, fatal, success_detail, manual_msg):
         """Run one automation step: call method, record timing and success/failure. Raises on fatal failure."""
         step_start = time.time()
@@ -2303,24 +2327,9 @@ class OnWatchAutomation:
         status, message = "success", success_detail or ""
         try:
             if method_name == "configure_inquiries":
-                # Timeout to avoid blocking when files stuck in QUEUED
-                await asyncio.wait_for(callable_fn(), timeout=INQUIRY_STEP_TIMEOUT)
+                self._run_coro_with_thread_timeout(callable_fn, INQUIRY_STEP_TIMEOUT)
             elif method_name == "upload_files":
-                # Run in thread with timeout - asyncio.wait_for cannot fire when coroutine blocks
-                # (e.g. future.result() or getpass blocks event loop). Thread timeout always fires.
-                def _run_upload_files():
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-                    try:
-                        return loop.run_until_complete(callable_fn())
-                    finally:
-                        loop.close()
-                with ThreadPoolExecutor(max_workers=1) as ex:
-                    future = ex.submit(_run_upload_files)
-                    try:
-                        future.result(timeout=TRANSLATION_UPLOAD_TIMEOUT)
-                    except FuturesTimeoutError:
-                        raise asyncio.TimeoutError()  # Re-raise so existing handler catches it
+                self._run_coro_with_thread_timeout(callable_fn, TRANSLATION_UPLOAD_TIMEOUT)
             elif is_async:
                 await callable_fn()
             else:

@@ -14,10 +14,24 @@ from urllib3.exceptions import InsecureRequestWarning
 import urllib3
 import logging
 
+from constants import API_REQUEST_TIMEOUT
+
 # Disable SSL warnings for self-signed certificates
 urllib3.disable_warnings(InsecureRequestWarning)
 
 logger = logging.getLogger(__name__)
+
+
+class _TimeoutSession(requests.Session):
+    """Session with a default timeout applied when caller omits one."""
+    def __init__(self, default_timeout=API_REQUEST_TIMEOUT):
+        super().__init__()
+        self._default_timeout = default_timeout
+
+    def request(self, method, url, **kwargs):
+        if kwargs.get("timeout") is None:
+            kwargs["timeout"] = self._default_timeout
+        return super().request(method, url, **kwargs)
 
 
 class RancherApi:
@@ -36,7 +50,7 @@ class RancherApi:
         self.username = username
         self.password = password
         self.token = None
-        self.session = requests.Session()
+        self.session = _TimeoutSession()
         self.session.verify = False
         self.headers = {
             "Content-Type": "application/json",

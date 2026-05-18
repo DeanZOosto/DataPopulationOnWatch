@@ -60,14 +60,19 @@ async function fetchConfig() {
     const r = await fetch("/api/config/status", { credentials: "same-origin" });
     if (redirectToLoginIfUnauthorized(r)) return;
     const data = await r.json();
+    const ip = data.onwatch_ip || "";
+    const version = data.onwatch_version || "";
+    const currentLine = (ip || version)
+      ? `<div class="config-current">Current target — IP: <strong>${escapeHtml(ip || "—")}</strong> · Version: <strong>${escapeHtml(version || "—")}</strong></div>`
+      : `<div class="config-current">No IP/Version set yet.</div>`;
     if (data.valid) {
-      DOM.configBadge().textContent = "Config ✓";
+      DOM.configBadge().textContent = ip && version ? `Config ✓ (${ip} · ${version})` : "Config ✓";
       DOM.configBadge().className = "badge ok";
-      DOM.configContent().innerHTML = "Set IP and Version below before running.";
+      DOM.configContent().innerHTML = currentLine + "<div>Set IP and Version below to change them before running.</div>";
     } else {
       DOM.configBadge().textContent = "Config ✗";
       DOM.configBadge().className = "badge error";
-      DOM.configContent().innerHTML = `<span class="error-list">${(data.errors || []).join("<br>")}</span>`;
+      DOM.configContent().innerHTML = currentLine + `<span class="error-list">${(data.errors || []).join("<br>")}</span>`;
     }
     document.getElementById("config-ip").value = "";
     document.getElementById("config-version").value = "";
@@ -304,10 +309,11 @@ function clearActionError() {
 // =============================================================================
 
 function handleProgressEvent(ev, jobType, ctx) {
-  const { steps, total } = ctx;
+  const { steps } = ctx;
 
   if (ev.type === "step_start") {
-    const t = ev.total || 11;
+    if (ev.total) ctx.total = ev.total;
+    const t = ctx.total || ev.step;
     steps.push({ num: ev.step, name: ev.name, status: "running" });
     DOM.progressBar().style.width = `${((ev.step - 1) / t) * 100}%`;
     DOM.progressText().textContent = `Step ${ev.step}/${t}: ${ev.name}...`;
@@ -318,7 +324,8 @@ function handleProgressEvent(ev, jobType, ctx) {
   if (ev.type === "step_done") {
     const s = steps.find((x) => x.num === ev.step);
     if (s) s.status = ev.status;
-    const t = ev.total || total || 11;
+    if (ev.total) ctx.total = ev.total;
+    const t = ctx.total || ev.step;
     DOM.progressBar().style.width = `${(ev.step / t) * 100}%`;
     DOM.progressText().textContent = `Step ${ev.step}/${t}: ${ev.name} — ${ev.status}`;
     renderProgressSteps(steps);
@@ -414,7 +421,7 @@ function streamProgress(jobId, jobType) {
   DOM.progressSource().textContent = `(${jobType})`;
   scrollToProgressAndResults();
 
-  const ctx = { steps: [], warnings: [], total: jobType === "population" ? 11 : 0 };
+  const ctx = { steps: [], warnings: [], total: 0 };
 
   const es = new EventSource(`/api/progress/${jobId}`);
   es.onmessage = (e) => {
@@ -596,13 +603,22 @@ document.getElementById("btn-refresh-exports").addEventListener("click", fetchEx
 document.getElementById("btn-set-ip").addEventListener("click", setIp);
 document.getElementById("btn-set-version").addEventListener("click", setVersion);
 
-document.getElementById("guidance-toggle").addEventListener("click", () => {
+// Guidance section — default open on first visit; persist user choice.
+const GUIDANCE_KEY = "ow:guidance-collapsed";
+function applyGuidanceState() {
   const btn = document.getElementById("guidance-toggle");
   const content = document.getElementById("guidance-content");
+  const collapsed = localStorage.getItem(GUIDANCE_KEY) === "1";
+  btn.setAttribute("aria-expanded", String(!collapsed));
+  content.classList.toggle("hidden", collapsed);
+}
+document.getElementById("guidance-toggle").addEventListener("click", () => {
+  const btn = document.getElementById("guidance-toggle");
   const expanded = btn.getAttribute("aria-expanded") === "true";
-  btn.setAttribute("aria-expanded", !expanded);
-  content.classList.toggle("hidden", expanded);
+  localStorage.setItem(GUIDANCE_KEY, expanded ? "1" : "0");
+  applyGuidanceState();
 });
+applyGuidanceState();
 DOM.configPreviewLink().addEventListener("click", (e) => {
   e.preventDefault();
   showConfigPreview();

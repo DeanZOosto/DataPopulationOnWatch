@@ -77,13 +77,15 @@ kv_page_debug.png
 *.swp
 
 # Automation artifacts
-# Output files from automation runs
+# Output files from automation runs (current location: exports/, legacy: project root)
+exports/
 onwatch_data_export_*.yaml
 onwatch_data_export_*.json
 *_data_inserted_*.yaml
 *_data_inserted_*.json
 
-# Config backup files
+# Config backup files (current location: .config_backups/, legacy: project root)
+.config_backups/
 *.backup.*
 config.yaml.backup.*
 
