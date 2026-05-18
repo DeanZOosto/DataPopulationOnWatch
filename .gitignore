@@ -46,6 +46,11 @@ Thumbs.db
 *.log
 automation.log
 
+# Operator overrides (IP, version, etc.) — written by the web UI / CLI.
+# Deep-merged on top of config.yaml at load time. Never commit.
+config.local.yaml
+*.local.yaml
+
 # Config files with sensitive data (optional - user can decide)
 # config.yaml
 # config-test-simple.yaml

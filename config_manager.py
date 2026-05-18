@@ -18,10 +18,16 @@ CONFIG_BACKUP_DIR = ".config_backups"
 
 
 def _make_backup(config_path):
-    """Copy config_path into a hidden backup dir with a timestamped name. Returns backup path or None on failure."""
+    """Copy config_path into a hidden backup dir with a timestamped name. Returns backup path or None on failure.
+
+    Used when something writes to an existing user-managed file so the previous
+    state can be recovered. Not needed for files we author from scratch.
+    """
     import shutil
     from constants import now_israel
     src = Path(config_path)
+    if not src.exists():
+        return None
     backup_dir = src.parent / CONFIG_BACKUP_DIR
     try:
         backup_dir.mkdir(exist_ok=True)
@@ -34,18 +40,89 @@ def _make_backup(config_path):
         return None
 
 
+def _deep_merge(base, overlay):
+    """Recursively merge overlay into base. Returns a new dict.
+
+    - Nested dicts merge key-by-key.
+    - Scalars and lists in overlay replace whatever's in base.
+    - Does not mutate either input.
+    """
+    if not isinstance(base, dict):
+        return overlay
+    if not isinstance(overlay, dict):
+        return overlay
+    result = dict(base)
+    for k, v in overlay.items():
+        if k in result and isinstance(result[k], dict) and isinstance(v, dict):
+            result[k] = _deep_merge(result[k], v)
+        else:
+            result[k] = v
+    return result
+
+
 class ConfigManager:
-    """Manages configuration loading, validation, and environment variable substitution."""
+    """Manages configuration loading, validation, and environment variable substitution.
+
+    Operator overrides (IP, version, etc.) are kept in an untracked overlay file
+    next to the main config: e.g. config.yaml + config.local.yaml. The overlay
+    is deep-merged on top of the base at load time, and update_* methods write
+    only the changed fields to the overlay — so the tracked config.yaml stays
+    free of per-machine state and `git status` stays clean.
+    """
 
     def __init__(self, config_path="config.yaml"):
         """
         Initialize configuration manager.
-        
+
         Args:
             config_path: Path to YAML configuration file
         """
         self.config_path = config_path
         self.config = None
+
+    def _overlay_path(self):
+        """Return the path to the local overlay file (sibling of config_path).
+
+        config.yaml -> config.local.yaml
+        my-config.yaml -> my-config.local.yaml
+        """
+        return Path(self.config_path).with_suffix(".local.yaml")
+
+    def _load_overlay(self):
+        """Load the overlay file if it exists; return {} otherwise."""
+        path = self._overlay_path()
+        if not path.exists():
+            return {}
+        try:
+            with open(path, "r") as f:
+                data = yaml.safe_load(f) or {}
+            if not isinstance(data, dict):
+                logger.warning(f"Overlay {path} is not a YAML mapping; ignoring")
+                return {}
+            return data
+        except yaml.YAMLError as e:
+            logger.error(f"Could not parse overlay {path}: {e}")
+            return {}
+
+    def _save_overlay(self, updates):
+        """Deep-merge `updates` into the overlay file (creating it if needed) and persist.
+
+        Returns (success: bool, message: str).
+        """
+        path = self._overlay_path()
+        current = self._load_overlay()
+        merged = _deep_merge(current, updates)
+        try:
+            with open(path, "w") as f:
+                f.write(
+                    "# Operator overrides for OnWatch automation.\n"
+                    "# This file is gitignored and written by the web UI / CLI.\n"
+                    "# Values here are deep-merged over config.yaml at load time.\n"
+                )
+                yaml.dump(merged, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+            return True, str(path)
+        except Exception as e:
+            return False, f"Failed to write overlay {path}: {e}"
     
     def _substitute_env_vars(self, value):
         """Substitute environment variables in config values."""
@@ -82,14 +159,19 @@ class ConfigManager:
             return obj
     
     def load_config(self):
-        """Load configuration from YAML file with environment variable substitution."""
+        """Load configuration: base YAML + overlay file, with environment variable substitution."""
         try:
             with open(self.config_path, 'r') as f:
-                config = yaml.safe_load(f)
-            
-            # Substitute environment variables
+                config = yaml.safe_load(f) or {}
+
+            overlay = self._load_overlay()
+            if overlay:
+                config = _deep_merge(config, overlay)
+                logger.debug(f"Applied overlay from {self._overlay_path()}")
+
+            # Substitute environment variables (applies to merged result so $VARS work in overlay too)
             config = self._recursive_substitute_env(config)
-            
+
             logger.debug(f"Configuration loaded from {self.config_path}")
             self.config = config
             return config
@@ -297,307 +379,106 @@ class ConfigManager:
         return len(errors) == 0, errors
     
     def update_ip_address(self, new_ip, backup=True):
-        """
-        Update connection IP addresses in the configuration file.
-        
-        Updates only connection-related IPs (not camera IPs):
-        - onwatch.ip_address
-        - onwatch.base_url (replaces IP in URL)
-        - ssh.ip_address
-        - rancher.ip_address
-        - rancher.base_url (replaces IP in URL)
-        
-        Does NOT update:
-        - Camera video_url IPs (devices[].video_url) - these are immutable
-        
+        """Write connection IPs to the overlay file. The tracked config.yaml is not touched.
+
+        Updates onwatch.ip_address + base_url, ssh.ip_address, rancher.ip_address + base_url.
+        Camera video_url IPs are never touched.
+
         Args:
             new_ip: New IP address to set
-            backup: If True, create a backup of the original config file
-            
+            backup: If True and overlay exists, snapshot it before writing
+
         Returns:
             tuple: (success: bool, message: str)
         """
-        import yaml
-        
-        # Validate IP address format
         if not self._validate_ip_address(new_ip, "new_ip"):
             return False, f"Invalid IP address format: {new_ip}"
-        
-        # Load current config
+
+        # Need the merged config to derive base_url ports/paths
         if self.config is None:
             self.load_config()
-        
-        # Create backup if requested
-        if backup:
-            _make_backup(self.config_path)
 
-        # Update specific connection IPs in config dict (preserves camera IPs)
-        replacement_count = 0
-        
-        # Update onwatch.ip_address
-        if 'onwatch' in self.config and 'ip_address' in self.config['onwatch']:
-            old_ip = self.config['onwatch']['ip_address']
-            if old_ip != new_ip:
-                self.config['onwatch']['ip_address'] = new_ip
-                replacement_count += 1
-                logger.debug(f"Updated onwatch.ip_address: {old_ip} -> {new_ip}")
-        
-        # Update onwatch.base_url (IP in URL)
-        if 'onwatch' in self.config and 'base_url' in self.config['onwatch']:
-            base_url = self.config['onwatch']['base_url']
-            # Extract IP from URL and replace
+        if backup:
+            _make_backup(self._overlay_path())
+
+        def _replace_ip_in_url(url):
+            if not isinstance(url, str):
+                return None
             ip_pattern = r'\b(\d{1,3}\.){3}\d{1,3}\b'
-            if re.search(ip_pattern, base_url):
-                new_base_url = re.sub(ip_pattern, new_ip, base_url)
-                if new_base_url != base_url:
-                    self.config['onwatch']['base_url'] = new_base_url
-                    replacement_count += 1
-                    logger.debug(f"Updated onwatch.base_url: {base_url} -> {new_base_url}")
-        
-        # Update ssh.ip_address
-        if 'ssh' in self.config and 'ip_address' in self.config['ssh']:
-            old_ip = self.config['ssh']['ip_address']
-            if old_ip != new_ip:
-                self.config['ssh']['ip_address'] = new_ip
-                replacement_count += 1
-                logger.debug(f"Updated ssh.ip_address: {old_ip} -> {new_ip}")
-        
-        # Update rancher.ip_address
-        if 'rancher' in self.config and 'ip_address' in self.config['rancher']:
-            old_ip = self.config['rancher']['ip_address']
-            if old_ip != new_ip:
-                self.config['rancher']['ip_address'] = new_ip
-                replacement_count += 1
-                logger.debug(f"Updated rancher.ip_address: {old_ip} -> {new_ip}")
-        
-        # Update rancher.base_url (IP in URL)
-        if 'rancher' in self.config and 'base_url' in self.config['rancher']:
-            base_url = self.config['rancher']['base_url']
-            # Extract IP from URL and replace
-            ip_pattern = r'\b(\d{1,3}\.){3}\d{1,3}\b'
-            if re.search(ip_pattern, base_url):
-                new_base_url = re.sub(ip_pattern, new_ip, base_url)
-                if new_base_url != base_url:
-                    self.config['rancher']['base_url'] = new_base_url
-                    replacement_count += 1
-                    logger.debug(f"Updated rancher.base_url: {base_url} -> {new_base_url}")
-        
-        if replacement_count == 0:
-            return False, "No connection IP addresses found to update in config file"
-        
-        # Write back to file using targeted line-by-line replacement (preserves formatting and comments)
-        try:
-            # Read file as lines
-            with open(self.config_path, 'r') as f:
-                lines = f.readlines()
-            
-            # Update specific lines only (preserves rest of file)
-            ip_pattern = r'\b(\d{1,3}\.){3}\d{1,3}\b'
-            updated_lines = []
-            i = 0
-            in_onwatch_section = False
-            in_ssh_section = False
-            in_rancher_section = False
-            
-            while i < len(lines):
-                line = lines[i]
-                original_line = line
-                
-                # Track which section we're in
-                if re.match(r'^onwatch:\s*$', line):
-                    in_onwatch_section = True
-                    in_ssh_section = False
-                    in_rancher_section = False
-                elif re.match(r'^ssh:\s*$', line):
-                    in_onwatch_section = False
-                    in_ssh_section = True
-                    in_rancher_section = False
-                elif re.match(r'^rancher:\s*$', line):
-                    in_onwatch_section = False
-                    in_ssh_section = False
-                    in_rancher_section = True
-                elif line.strip() and not line.strip().startswith('#'):
-                    # If we hit a new top-level key, reset section flags
-                    if re.match(r'^[a-z_]+:\s*$', line):
-                        in_onwatch_section = False
-                        in_ssh_section = False
-                        in_rancher_section = False
-                
-                # Update onwatch.ip_address line
-                if in_onwatch_section and re.match(r'^\s*ip_address:\s*"' + ip_pattern, line):
-                    line = re.sub(ip_pattern, new_ip, line)
-                    replacement_count += 1
-                    logger.debug(f"Updated onwatch.ip_address line: {original_line.strip()} -> {line.strip()}")
-                
-                # Update onwatch.base_url line - simple string replacement
-                elif in_onwatch_section and 'base_url' in line and 'https://' in line:
-                    # Find IP in the line and replace it - simple and safe
-                    # Line format: base_url: "https://10.1.71.14"
-                    old_line = line
-                    # Find the IP address in the URL and replace it
-                    line = re.sub(r'https://' + ip_pattern, 'https://' + new_ip, line)
-                    if line != old_line:
-                        replacement_count += 1
-                        logger.debug(f"Updated onwatch.base_url line: {original_line.strip()} -> {line.strip()}")
-                
-                # Update ssh.ip_address line
-                elif in_ssh_section and re.match(r'^\s*ip_address:\s*"' + ip_pattern, line):
-                    line = re.sub(ip_pattern, new_ip, line)
-                    replacement_count += 1
-                    logger.debug(f"Updated ssh.ip_address line: {original_line.strip()} -> {line.strip()}")
-                
-                # Update rancher.ip_address line
-                elif in_rancher_section and re.match(r'^\s*ip_address:\s*"' + ip_pattern, line):
-                    line = re.sub(ip_pattern, new_ip, line)
-                    replacement_count += 1
-                    logger.debug(f"Updated rancher.ip_address line: {original_line.strip()} -> {line.strip()}")
-                
-                # Update rancher.base_url line - simple string replacement
-                elif in_rancher_section and 'base_url' in line and 'https://' in line:
-                    # Find IP in the line and replace it - simple and safe
-                    # Line format: base_url: "https://10.1.71.14:9443"
-                    old_line = line
-                    # Find the IP address in the URL and replace it (preserves https:// and :9443)
-                    line = re.sub(r'https://' + ip_pattern, 'https://' + new_ip, line)
-                    if line != old_line:
-                        replacement_count += 1
-                        logger.debug(f"Updated rancher.base_url line: {original_line.strip()} -> {line.strip()}")
-                
-                updated_lines.append(line)
-                i += 1
-            
-            # Write back
-            with open(self.config_path, 'w') as f:
-                f.writelines(updated_lines)
-            
-            # Reload config to reflect changes
-            self.config = None
-            self.load_config()
-            
-            return True, f"Successfully updated {replacement_count} connection IP address(es) to {new_ip} (camera IPs preserved)"
-        except Exception as e:
-            return False, f"Failed to write config file: {e}"
+            if not re.search(ip_pattern, url):
+                return None
+            return re.sub(ip_pattern, new_ip, url)
+
+        updates = {}
+        onwatch = (self.config or {}).get("onwatch", {}) or {}
+        ssh = (self.config or {}).get("ssh", {}) or {}
+        rancher = (self.config or {}).get("rancher", {}) or {}
+
+        if onwatch:
+            ow_updates = {"ip_address": new_ip}
+            new_url = _replace_ip_in_url(onwatch.get("base_url"))
+            if new_url:
+                ow_updates["base_url"] = new_url
+            updates["onwatch"] = ow_updates
+
+        if ssh:
+            updates["ssh"] = {"ip_address": new_ip}
+
+        if rancher:
+            r_updates = {"ip_address": new_ip}
+            new_url = _replace_ip_in_url(rancher.get("base_url"))
+            if new_url:
+                r_updates["base_url"] = new_url
+            updates["rancher"] = r_updates
+
+        if not updates:
+            return False, "No onwatch/ssh/rancher sections found to update"
+
+        ok, info = self._save_overlay(updates)
+        if not ok:
+            return False, info
+
+        # Reload merged config so future reads see the change
+        self.config = None
+        self.load_config()
+
+        sections = ", ".join(updates.keys())
+        return True, f"Saved IP {new_ip} to {info} ({sections})"
     
     def update_version(self, version, backup=True):
-        """
-        Update OnWatch version in config.yaml and automatically update Rancher password based on version.
-        
-        Version-specific updates:
-        - onwatch.version: Set to the specified version
-        - rancher.password: Auto-updated based on version
-          - 2.6: "admin" (short form)
-          - 2.8: "administrator" (full word)
-        
+        """Write OnWatch version + matching Rancher password to the overlay file.
+
+        Rancher password defaults:
+          - 2.6 -> "admin"
+          - 2.8 -> "administrator"
+
         Args:
             version: OnWatch version ("2.6" or "2.8")
-            backup: If True, create a backup of the original config file
-            
+            backup: If True and overlay exists, snapshot it before writing
+
         Returns:
             tuple: (success: bool, message: str)
         """
-        # Validate version
         if version not in ["2.6", "2.8"]:
             return False, f"Invalid version: {version}. Must be '2.6' or '2.8'"
-        
-        # Load current config
-        if self.config is None:
-            self.load_config()
-        
-        # Create backup if requested
-        if backup:
-            _make_backup(self.config_path)
 
-        # Determine Rancher password based on version
+        if backup:
+            _make_backup(self._overlay_path())
+
         rancher_password = "administrator" if version == "2.8" else "admin"
-        
-        # Read file as lines for line-by-line replacement
-        try:
-            with open(self.config_path, 'r') as f:
-                lines = f.readlines()
-            
-            updated_lines = []
-            i = 0
-            in_onwatch_section = False
-            in_rancher_section = False
-            version_updated = False
-            rancher_password_updated = False
-            
-            while i < len(lines):
-                line = lines[i]
-                original_line = line
-                
-                # Track which section we're in
-                if re.match(r'^onwatch:\s*$', line):
-                    in_onwatch_section = True
-                    in_rancher_section = False
-                elif re.match(r'^rancher:\s*$', line):
-                    in_onwatch_section = False
-                    in_rancher_section = True
-                elif line.strip() and not line.strip().startswith('#'):
-                    # If we hit a new top-level key, reset section flags
-                    if re.match(r'^[a-z_]+:\s*$', line):
-                        in_onwatch_section = False
-                        in_rancher_section = False
-                
-                # Update onwatch.version line
-                if in_onwatch_section and re.match(r'^\s*version:\s*', line):
-                    # Replace version value, preserving comments
-                    if '#' in line:
-                        comment = line[line.index('#'):]
-                        line = f'  version: "{version}"  {comment}'
-                    else:
-                        line = f'  version: "{version}"\n'
-                    version_updated = True
-                    logger.debug(f"Updated onwatch.version: {original_line.strip()} -> {line.strip()}")
-                
-                # Update rancher.password line
-                elif in_rancher_section and re.match(r'^\s*password:\s*', line):
-                    # Replace password value, preserving comments
-                    if '#' in line:
-                        comment = line[line.index('#'):]
-                        line = f'  password: "{rancher_password}"  {comment}'
-                    else:
-                        line = f'  password: "{rancher_password}"\n'
-                    rancher_password_updated = True
-                    logger.debug(f"Updated rancher.password: {original_line.strip()} -> {line.strip()}")
-                
-                updated_lines.append(line)
-                i += 1
-            
-            # If version wasn't found, add it to onwatch section
-            if not version_updated:
-                # Find the onwatch section and add version after base_url
-                for i, line in enumerate(updated_lines):
-                    if in_onwatch_section and 'base_url' in line:
-                        # Insert version after base_url
-                        indent = len(line) - len(line.lstrip())
-                        updated_lines.insert(i + 1, f'{" " * indent}version: "{version}"  # Set to "2.6" or "2.8" based on your OnWatch system version\n')
-                        version_updated = True
-                        break
-                    elif re.match(r'^onwatch:\s*$', line):
-                        in_onwatch_section = True
-                    elif line.strip() and not line.strip().startswith('#') and re.match(r'^[a-z_]+:\s*$', line):
-                        in_onwatch_section = False
-            
-            # Write back
-            with open(self.config_path, 'w') as f:
-                f.writelines(updated_lines)
-            
-            # Reload config to reflect changes
-            self.config = None
-            self.load_config()
-            
-            messages = []
-            if version_updated:
-                messages.append(f"Updated onwatch.version to {version}")
-            if rancher_password_updated:
-                messages.append(f"Updated rancher.password to '{rancher_password}' (default for {version})")
-            
-            if messages:
-                return True, "Successfully updated: " + ", ".join(messages)
-            else:
-                return False, "Could not find version or rancher.password fields to update"
-                
-        except Exception as e:
-            return False, f"Failed to write config file: {e}"
+        updates = {
+            "onwatch": {"version": version},
+            "rancher": {"password": rancher_password},
+        }
+
+        ok, info = self._save_overlay(updates)
+        if not ok:
+            return False, info
+
+        self.config = None
+        self.load_config()
+
+        return True, (
+            f"Saved version {version} (and matching rancher.password) to {info}"
+        )
 

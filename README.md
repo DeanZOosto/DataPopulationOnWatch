@@ -140,6 +140,26 @@ onwatch:
   password: "${ONWATCH_PASSWORD}"  # Set: export ONWATCH_PASSWORD="your-password"
 ```
 
+### Operator overrides — `config.local.yaml`
+
+Per-machine values (target IP, OnWatch version, etc.) are kept in `config.local.yaml`, a gitignored overlay next to `config.yaml`. It's created automatically the first time you click **Set IP** or **Set Version** in the web UI (or run `--set-ip` / `--set-version` on the CLI). Anything in the overlay is deep-merged over `config.yaml` at load time, so the tracked file stays clean and `git status` doesn't churn between runs.
+
+```yaml
+# config.local.yaml — gitignored, written by the UI/CLI
+onwatch:
+  ip_address: "10.1.25.241"
+  base_url: "https://10.1.25.241"
+  version: "2.8"
+ssh:
+  ip_address: "10.1.25.241"
+rancher:
+  ip_address: "10.1.25.241"
+  base_url: "https://10.1.25.241:9443"
+  password: "administrator"
+```
+
+If `config.yaml` already has local edits from before this change, run `git checkout config.yaml` once, then use **Set IP** / **Set Version** to repopulate the overlay.
+
 
 ## What It Does
 

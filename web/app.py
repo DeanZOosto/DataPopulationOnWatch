@@ -27,10 +27,12 @@ from web.job_runner import run_population, run_validation
 # -----------------------------------------------------------------------------
 
 def _load_auth_config():
-    """Load web UI credentials from config. Supports multiple users (web_ui.users) or single user (web_ui.username/password)."""
+    """Load web UI credentials from config. Supports multiple users (web_ui.users) or single user (web_ui.username/password).
+    Reads through ConfigManager so config.local.yaml overrides apply (e.g. operator can keep web_ui creds out of git).
+    """
     try:
-        with open(PROJECT_ROOT / "config.yaml") as f:
-            config = yaml.safe_load(f) or {}
+        from config_manager import ConfigManager
+        config = ConfigManager(str(PROJECT_ROOT / "config.yaml")).load_config() or {}
         web_ui = config.get("web_ui") or {}
         onwatch = config.get("onwatch") or {}
         users = web_ui.get("users")
@@ -293,12 +295,13 @@ def set_ip():
 @app.route("/api/config/preview")
 @_require_login
 def config_preview():
-    """Return config.yaml content for preview, with web_ui section redacted."""
+    """Return the effective merged config (base + overlay) for preview, with web_ui redacted."""
     config_path = PROJECT_ROOT / "config.yaml"
     if not config_path.exists():
         return jsonify({"error": "config.yaml not found"}), 404
     try:
-        data = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+        from config_manager import ConfigManager
+        data = ConfigManager(str(config_path)).load_config() or {}
         data.pop("web_ui", None)
         content = yaml.dump(data, default_flow_style=False, sort_keys=False, allow_unicode=True)
         return Response(content, mimetype="text/plain; charset=utf-8")
