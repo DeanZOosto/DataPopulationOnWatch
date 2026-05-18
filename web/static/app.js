@@ -93,6 +93,12 @@ function showConfigStatus(msg, isError = false) {
   }, 4000);
 }
 
+function clearConfigStatus() {
+  const el = DOM.configStatusMsg();
+  el.textContent = "";
+  el.className = "config-status-msg";
+}
+
 async function setIp() {
   const ip = document.getElementById("config-ip").value.trim();
   if (!ip) {
@@ -110,6 +116,7 @@ async function setIp() {
     const data = await r.json();
     if (data.success) {
       showConfigStatus("✓ " + data.message);
+      clearActionError();  // any prior "no IP/version" error no longer applies
       fetchConfig();
     } else {
       showConfigStatus("Error: " + (data.message || "Failed to set IP"), true);
@@ -136,6 +143,7 @@ async function setVersion() {
     const data = await r.json();
     if (data.success) {
       showConfigStatus("✓ " + data.message);
+      clearActionError();  // any prior "no IP/version" error no longer applies
       fetchConfig();
     } else {
       showConfigStatus("Error: " + (data.message || "Failed to set version"), true);
@@ -521,32 +529,51 @@ function buildValidationResultCard(r) {
 // Actions — run population, run validation
 // =============================================================================
 
+async function fetchSavedTarget() {
+  // Read the IP/version that are actually saved on the server. The input fields
+  // are write-only ("change this"); they're cleared after a successful Set, so
+  // reading them here would falsely report "no IP/version" on every subsequent run.
+  try {
+    const r = await fetch("/api/config/status", { credentials: "same-origin" });
+    if (redirectToLoginIfUnauthorized(r)) return null;
+    const data = await r.json();
+    return { ip: (data.onwatch_ip || "").trim(), version: (data.onwatch_version || "").trim() };
+  } catch (_) {
+    return null;
+  }
+}
+
 async function runPopulation() {
   if (currentJobId) return;
   clearActionError();
-  const ip = document.getElementById("config-ip").value.trim();
-  const version = document.getElementById("config-version").value;
-  if (!ip || !version) {
-    showConfigStatus("Set IP and Version before running population", true);
+  const target = await fetchSavedTarget();
+  if (!target) {
+    showConfigStatus("Could not read config status. Try again.", true);
+    return;
+  }
+  if (!target.ip || !target.version) {
+    showConfigStatus("No IP/Version configured. Use the Set IP / Set Version buttons below.", true);
     return;
   }
   const userName = document.getElementById("user-name").value.trim();
   if (!userName) {
     showConfigStatus("Your name is required", true);
+    document.getElementById("user-name").focus();
     return;
   }
-  const msg = `Run population on:\n  IP: ${ip}\n  Version: ${version}\n  As: ${userName}\n\nVerify this is correct before continuing.`;
+  const msg = `Run population on:\n  IP: ${target.ip}\n  Version: ${target.version}\n  As: ${userName}\n\nVerify this is correct before continuing.`;
   if (!confirm(msg)) return;
   try {
     const r = await fetch("/api/run-population", {
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: userName || "" }),
+      body: JSON.stringify({ name: userName }),
     });
     if (redirectToLoginIfUnauthorized(r)) return;
     const data = await r.json();
     if (data.job_id) {
+      clearConfigStatus();
       streamProgress(data.job_id, "population");
     } else {
       const errMsg = data.error || "Unknown error";
@@ -561,10 +588,13 @@ async function runPopulation() {
 async function runValidation() {
   if (currentJobId) return;
   clearActionError();
-  const ip = document.getElementById("config-ip").value.trim();
-  const version = document.getElementById("config-version").value;
-  if (!ip || !version) {
-    showConfigStatus("Set IP and Version before running validation", true);
+  const target = await fetchSavedTarget();
+  if (!target) {
+    showConfigStatus("Could not read config status. Try again.", true);
+    return;
+  }
+  if (!target.ip || !target.version) {
+    showConfigStatus("No IP/Version configured. Use the Set IP / Set Version buttons below.", true);
     return;
   }
   const file = DOM.exportSelect().value;
@@ -582,6 +612,7 @@ async function runValidation() {
     if (redirectToLoginIfUnauthorized(r)) return;
     const data = await r.json();
     if (data.job_id) {
+      clearConfigStatus();
       streamProgress(data.job_id, "validation");
     } else {
       const errMsg = data.error || "Unknown error";
@@ -602,6 +633,18 @@ document.getElementById("btn-validate").addEventListener("click", runValidation)
 document.getElementById("btn-refresh-exports").addEventListener("click", fetchExports);
 document.getElementById("btn-set-ip").addEventListener("click", setIp);
 document.getElementById("btn-set-version").addEventListener("click", setVersion);
+
+// Remember the operator's name across visits so they don't retype it every time.
+const NAME_KEY = "ow:user-name";
+(function restoreName() {
+  const saved = localStorage.getItem(NAME_KEY);
+  if (saved) document.getElementById("user-name").value = saved;
+})();
+document.getElementById("user-name").addEventListener("input", (e) => {
+  const v = (e.target.value || "").trim();
+  if (v) localStorage.setItem(NAME_KEY, v);
+  else localStorage.removeItem(NAME_KEY);
+});
 
 // Guidance section — default open on first visit; persist user choice.
 const GUIDANCE_KEY = "ow:guidance-collapsed";

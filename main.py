@@ -2208,71 +2208,55 @@ class OnWatchAutomation:
                 logger.error(f"Translation file not found: {local_file_path}")
                 return
             
-            try:
-                # Get SSH password - prompt if not in config
-                ssh_password = ssh_config.get('password', '').strip()
+            # Get SSH password - prompt if not in config
+            ssh_password = ssh_config.get('password', '').strip()
+            if not ssh_password:
+                logger.warning("SSH password not set in config.yaml")
+                logger.info("Prompting for SSH password (will not be saved)...")
+                import getpass
+                ssh_password = getpass.getpass(f"Enter SSH password for {ssh_config['username']}@{ssh_config['ip_address']}: ")
                 if not ssh_password:
-                    logger.warning("SSH password not set in config.yaml")
-                    logger.info("Prompting for SSH password (will not be saved)...")
-                    import getpass
-                    ssh_password = getpass.getpass(f"Enter SSH password for {ssh_config['username']}@{ssh_config['ip_address']}: ")
-                    if not ssh_password:
-                        logger.error("SSH password is required")
-                        return
-                
-                from ssh_util import SSHUtil
-                ssh_util = SSHUtil(
-                    ip_address=ssh_config['ip_address'],
-                    username=ssh_config['username'],
-                    password=ssh_password,
-                    ssh_key_path=ssh_config.get('ssh_key_path')
+                    logger.error("SSH password is required")
+                    return
+
+            from ssh_util import SSHUtil
+            ssh_util = SSHUtil(
+                ip_address=ssh_config['ip_address'],
+                username=ssh_config['username'],
+                password=ssh_password,
+                ssh_key_path=ssh_config.get('ssh_key_path')
+            )
+
+            # Use sudo_password if specified, otherwise fall back to SSH password
+            sudo_password = ssh_config.get('sudo_password') or ssh_config.get('password') or ssh_password
+
+            logger.info(f"Starting translation file upload (timeout: {TRANSLATION_UPLOAD_TIMEOUT}s)...")
+            with ThreadPoolExecutor(max_workers=1) as ex:
+                future = ex.submit(
+                    ssh_util.upload_translation_file,
+                    local_file_path=local_file_path,
+                    translation_util_path=translation_util_path,
+                    sudo_password=sudo_password
                 )
-                
-                # Upload translation file
-                # Use sudo_password if specified, otherwise fall back to SSH password
-                sudo_password = ssh_config.get('sudo_password')
-                if not sudo_password:
-                    sudo_password = ssh_config.get('password') or ssh_password
-                
-                logger.info(f"Starting translation file upload (timeout: {TRANSLATION_UPLOAD_TIMEOUT}s)...")
-                with ThreadPoolExecutor(max_workers=1) as ex:
-                    future = ex.submit(
-                        ssh_util.upload_translation_file,
-                        local_file_path=local_file_path,
-                        translation_util_path=translation_util_path,
-                        sudo_password=sudo_password
-                    )
-                    try:
-                        success = future.result(timeout=TRANSLATION_UPLOAD_TIMEOUT)
-                    except FuturesTimeoutError:
-                        logger.error(
-                            f"Translation file upload timed out after {TRANSLATION_UPLOAD_TIMEOUT}s. "
-                            "The device may be slow or the translation-util script may be stuck."
-                        )
-                        logger.info(
-                            "Manual step: SSH to the device, run 'sudo su -', cd to the translation-util "
-                            "directory, run './translation-util upload', and provide the file path when prompted."
-                        )
-                        raise RuntimeError(
-                            f"Translation upload timed out after {TRANSLATION_UPLOAD_TIMEOUT}s. See logs for manual steps."
-                        )
-                
-                if success:
-                    logger.info(f"✓ Successfully uploaded translation file: {translation_file}")
-                    
-                    # Track translation file
-                    self.summary.add_created_item('translation_file', {
-                        'filename': os.path.basename(translation_file),
-                        'path': translation_file,
-                        'local_path': local_file_path
-                    })
-                else:
-                    logger.error("Failed to upload translation file")
-                    raise RuntimeError("Translation file upload failed")
-                    
-            except Exception as e:
-                logger.error(f"Error uploading translation file: {e}")
-                raise
+                try:
+                    success = future.result(timeout=TRANSLATION_UPLOAD_TIMEOUT)
+                except FuturesTimeoutError:
+                    # Re-raise as asyncio.TimeoutError so _run_step's upload_files timeout
+                    # branch prints the single canonical "timed out + manual SSH steps" line.
+                    raise asyncio.TimeoutError()
+
+            if success:
+                logger.info(f"✓ Successfully uploaded translation file: {translation_file}")
+                self.summary.add_created_item('translation_file', {
+                    'filename': os.path.basename(translation_file),
+                    'path': translation_file,
+                    'local_path': local_file_path
+                })
+            else:
+                # ssh_util has already logged the root cause at ERROR level (e.g. missing
+                # translation-util path). _run_step will log the step-level failure once.
+                # Don't re-log here.
+                raise RuntimeError("Translation file upload failed")
         
         # Handle icons directory (not yet implemented)
         if icons:
