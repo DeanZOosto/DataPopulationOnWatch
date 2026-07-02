@@ -12,7 +12,7 @@
 </head>
 <body>
   <header>
-    <h1>OnWatch Data Population UI</h1>
+    <h1>OnWatch · Populate &amp; Validate</h1>
     <div class="header-actions">
       <div id="config-badge" class="badge">Checking config…</div>
       <a href="/api/logout" class="btn btn-outline btn-sm" id="btn-logout">Log out</a>
@@ -33,33 +33,34 @@
         <li>Click <strong>Run Population</strong> to populate the OnWatch system. A data_inserted YAML file is saved for later validation.</li>
         <li>After upgrading OnWatch, select the data_inserted file from the dropdown and click <strong>Validate</strong> to check that data survived the upgrade.</li>
       </ol>
-      <p><strong>UI sections:</strong></p>
+      <p><strong>Page sections:</strong></p>
       <ul>
-        <li><strong>Actions</strong> – Run Population, Validate. Optional: enter your name to prefix the output file (e.g. <code>john_data_inserted_2026-02-16_12-00-00.yaml</code>).</li>
-        <li><strong>Config Status</strong> – View IP and version. Click <em>Preview config.yaml</em> to see the full config.</li>
-        <li><strong>Data Inserted</strong> – List of run outputs. Click a filename to preview its YAML content.</li>
-        <li><strong>Results</strong> – Summary of the latest run, including any manual checks required.</li>
+        <li><strong>1 · Run</strong> – Populate the system, or Validate after an upgrade. Enter your name so the saved snapshot is easy to find later (e.g. <code>john_data_inserted_2026-02-16_12-00-00.yaml</code>).</li>
+        <li><strong>Target OnWatch system</strong> – The IP and version you're about to run against. Click <em>Preview config.yaml</em> to see the full dataset.</li>
+        <li><strong>Saved snapshots</strong> – Every population run saves a snapshot of what actually went in. Validate against these after an upgrade. Click a filename to preview its contents.</li>
+        <li><strong>Run progress</strong> / <strong>Results</strong> – Live progress of the current run and a summary of the latest one, including any manual checks required.</li>
       </ul>
     </div>
   </section>
 
   <section class="actions">
-    <h2>Actions</h2>
+    <h2>1 · Run</h2>
     <div class="action-row">
-      <label>Your name (required):</label>
+      <label for="user-name">Your name:</label>
       <input type="text" id="user-name" placeholder="e.g. john" maxlength="64" required />
-      <button id="btn-run-population" class="btn btn-primary">Run Population</button>
-      <button id="btn-validate" class="btn btn-accent">Validate</button>
+      <button id="btn-run-population" class="btn btn-primary">Populate system</button>
+      <span class="action-sep">or, after an upgrade:</span>
       <select id="export-select">
-        <option value="">-- Select data inserted file --</option>
+        <option value="">-- Select a saved snapshot --</option>
       </select>
-      <button id="btn-refresh-exports" class="btn btn-outline">Refresh</button>
+      <button id="btn-validate" class="btn btn-accent">Validate after upgrade</button>
+      <button id="btn-refresh-exports" class="btn btn-outline btn-sm">Refresh</button>
     </div>
     <div id="action-error" class="action-error"></div>
   </section>
 
   <section class="config-status" id="config-section">
-    <h2>Config Status <a href="#" id="config-preview-link" class="preview-link">Preview config.yaml</a></h2>
+    <h2>Target OnWatch system <a href="#" id="config-preview-link" class="preview-link">Preview config.yaml</a></h2>
     <div id="config-content"></div>
     <div class="config-edit">
       <label>Set IP:</label>
@@ -77,12 +78,12 @@
   </section>
 
   <section class="exports" id="exports-section">
-    <h2>Data Inserted (run outputs)</h2>
-    <div id="exports-list"></div>
+    <h2>Saved snapshots <span class="section-hint">— validate against these after an upgrade</span></h2>
+    <div id="exports-list" class="exports-scroll"></div>
   </section>
 
   <section class="progress-section" id="progress-section">
-    <h2>Run Progress <span id="progress-source"></span></h2>
+    <h2>Run progress <span id="progress-source"></span></h2>
     <div class="progress-bar-container">
       <div class="progress-bar" id="progress-bar"></div>
       <span class="progress-text" id="progress-text"></span>
@@ -93,7 +94,7 @@
   </section>
 
   <section class="results" id="results-section">
-    <h2>Results (latest run)</h2>
+    <h2>Results <span class="section-hint">— latest run</span></h2>
     <div id="results-content"></div>
   </section>
 

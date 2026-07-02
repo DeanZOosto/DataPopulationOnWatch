@@ -306,6 +306,28 @@ select {
 .config-status-msg.ok { color: var(--success); }
 .config-status-msg.error { color: var(--error); }
 
+/* Keep the (potentially long) snapshot list from dominating the page. */
+.exports-scroll {
+  max-height: 260px;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.section-hint {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text-muted);
+  opacity: 0.75;
+}
+
+.action-sep {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  opacity: 0.8;
+  padding: 0 0.25rem;
+}
+
 .exports-item {
   padding: 0.6rem 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);

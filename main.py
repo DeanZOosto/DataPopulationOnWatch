@@ -2167,8 +2167,8 @@ class OnWatchAutomation:
         icons = self.config.get('system_settings', {}).get('system_interface', {}).get('icons', '')
         
         if not translation_file and not icons:
-            logger.info("No translation file or icons directory specified in config")
-            return
+            # Nothing to do — record as skipped, not a silent success.
+            raise StepSkipped("No translation file or icons configured")
         
         # Handle translation file upload
         if translation_file:
@@ -2177,16 +2177,14 @@ class OnWatchAutomation:
             # Get SSH configuration
             ssh_config = self.config.get('ssh', {})
             if not ssh_config:
-                logger.error("SSH configuration not found in config.yaml")
-                logger.error("Translation file upload requires SSH configuration")
-                return
+                # Configured to upload but can't — this is a failure, not a success.
+                raise RuntimeError("Translation file upload requires an 'ssh' section in config, but none was found")
             
             # Validate SSH config (translation_util_path is optional - will auto-detect if not provided)
             required_ssh_fields = ['ip_address', 'username']
             missing_fields = [field for field in required_ssh_fields if not ssh_config.get(field)]
             if missing_fields:
-                logger.error(f"Missing required SSH configuration fields: {', '.join(missing_fields)}")
-                return
+                raise RuntimeError(f"Cannot upload translation file: missing SSH config field(s): {', '.join(missing_fields)}")
             
             # translation_util_path is optional - will auto-detect if not provided
             translation_util_path = ssh_config.get('translation_util_path')
@@ -2205,19 +2203,19 @@ class OnWatchAutomation:
                 local_file_path = os.path.join(project_root, translation_file)
             
             if not os.path.exists(local_file_path):
-                logger.error(f"Translation file not found: {local_file_path}")
-                return
+                raise RuntimeError(
+                    f"Translation file not found: {local_file_path} "
+                    f"(check system_settings.system_interface.translation_file)"
+                )
             
-            # Get SSH password - prompt if not in config
-            ssh_password = ssh_config.get('password', '').strip()
+            # SSH password must come from config. We never prompt: this can run
+            # inside the web server / a background thread with no console, where
+            # getpass would hang the whole step.
+            ssh_password = (ssh_config.get('password') or '').strip()
             if not ssh_password:
-                logger.warning("SSH password not set in config.yaml")
-                logger.info("Prompting for SSH password (will not be saved)...")
-                import getpass
-                ssh_password = getpass.getpass(f"Enter SSH password for {ssh_config['username']}@{ssh_config['ip_address']}: ")
-                if not ssh_password:
-                    logger.error("SSH password is required")
-                    return
+                raise RuntimeError(
+                    "SSH password not set (ssh.password in config) — cannot upload translation file"
+                )
 
             from ssh_util import SSHUtil
             ssh_util = SSHUtil(
@@ -2305,7 +2303,14 @@ class OnWatchAutomation:
     async def _run_step(self, step_num, name, method_name, is_async, fatal, success_detail, manual_msg):
         """Run one automation step: call method, record timing and success/failure. Raises on fatal failure."""
         step_start = time.time()
-        self._emit_progress({"type": "step_start", "step": step_num, "total": NUM_STEPS, "name": name})
+        # Surface the wall-clock budget for steps that self-abort on timeout so
+        # the UI can show "running 45s / max 180s" instead of looking frozen.
+        step_timeout = None
+        if method_name == "configure_inquiries":
+            step_timeout = INQUIRY_STEP_TIMEOUT
+        elif method_name == "upload_files":
+            step_timeout = TRANSLATION_UPLOAD_TIMEOUT
+        self._emit_progress({"type": "step_start", "step": step_num, "total": NUM_STEPS, "name": name, "timeout": step_timeout})
         logger.info(f"\n[Step {step_num}/{NUM_STEPS}] {name}...")
         callable_fn = getattr(self, method_name)
         status, message = "success", success_detail or ""
@@ -2409,9 +2414,16 @@ class OnWatchAutomation:
 
         # Emit completion with summary for UI
         failed_steps = sum(1 for s in self.summary.steps.values() if s['status'] == 'failed')
+        errors_count = len(self.summary.errors)
+        # "Success" means every step ran AND nothing failed at the item level.
+        # A step can finish while individual items (e.g. cameras blocked by an
+        # expired license) fail; those are real issues the operator must see, not
+        # a clean green result.
         self._emit_progress({
             "type": "complete",
-            "success": failed_steps == 0,
+            "success": failed_steps == 0 and errors_count == 0,
+            "errors_count": errors_count,
+            "errors": list(self.summary.errors),
             "export_path": str(export_path) if export_path else None,
             "run_status": {
                 "total_steps": len(self.summary.steps),
