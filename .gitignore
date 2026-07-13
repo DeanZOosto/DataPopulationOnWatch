@@ -81,6 +81,13 @@ kv_page_debug.png
 *.bak
 *.swp
 
+# Durable run store (per-run progress/log/status for the web UI)
+runs/
+
+# Playwright / QA capture artifacts
+.playwright-mcp/
+qa-*.png
+
 # Automation artifacts
 # Output files from automation runs (current location: exports/, legacy: project root)
 exports/

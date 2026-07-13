@@ -9,7 +9,6 @@ import sys
 import threading
 import time
 import uuid
-from collections import deque
 from pathlib import Path
 
 import yaml
@@ -20,6 +19,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 os.chdir(PROJECT_ROOT)
 
+from web import job_store
 from web.job_runner import run_population, run_validation
 
 # -----------------------------------------------------------------------------
@@ -79,6 +79,12 @@ jobs = {}
 jobs_lock = threading.Lock()
 log_queues = {}
 progress_queues = {}
+
+# Any run left "running" belongs to a previous process that no longer exists;
+# reconcile it to "interrupted" so the UI degrades gracefully on reconnect.
+_orphaned = job_store.mark_orphans_interrupted()
+if _orphaned:
+    print(f"Reconciled {len(_orphaned)} interrupted run(s) from a previous session")
 
 
 # -----------------------------------------------------------------------------
@@ -165,57 +171,70 @@ def _config_has_ip_and_version():
 # SSE stream generators
 # -----------------------------------------------------------------------------
 
+TERMINAL_STATUSES = ("done", "interrupted", "error")
+
+
 def _stream_progress_generator(job_id):
-    """Yield progress events as SSE JSON until job is done."""
-    seen = 0
-    start = time.time()
-    JOB_NOT_FOUND_TIMEOUT = 3.0  # If job missing for this long, likely different gunicorn worker
-    while True:
-        with jobs_lock:
-            job = jobs.get(job_id, {})
-            q = progress_queues.get(job_id, deque())
-        if job.get("status") == "done" and seen >= len(q):
-            break
-        # Job not in this worker (e.g. multi-worker gunicorn) — close quickly instead of hanging
-        if not job and (time.time() - start) > JOB_NOT_FOUND_TIMEOUT:
-            yield 'data: {"type":"stream_done","error":"job_not_found"}\n\n'
-            return
-        while seen < len(q):
-            try:
-                ev = q[seen]
-                seen += 1
-                yield f"data: {json.dumps(ev)}\n\n"
-            except (IndexError, TypeError):
-                break
-        time.sleep(0.2)
-    with jobs_lock:
-        if job_id in progress_queues:
-            del progress_queues[job_id]
-    yield 'data: {"type":"stream_done"}\n\n'
+    """Yield progress events as SSE JSON, replaying from the durable store.
 
-
-def _stream_logs_generator(job_id):
-    """Yield log lines as SSE until job is done."""
+    Reading from the on-disk event log (rather than a per-process queue) means a
+    client that reconnects, opens a second tab, or connects after a server
+    restart replays the whole run from the beginning and lands in the correct
+    UI state. A run left ``running`` by a crashed process is surfaced as an
+    explicit ``interrupted`` event instead of hanging forever.
+    """
     seen = 0
     start = time.time()
     JOB_NOT_FOUND_TIMEOUT = 3.0
     while True:
-        with jobs_lock:
-            job = jobs.get(job_id, {})
-            q = log_queues.get(job_id, deque())
-        if job.get("status") == "done" and seen >= len(q):
-            break
-        if not job and (time.time() - start) > JOB_NOT_FOUND_TIMEOUT:
-            yield "data: [DONE]\n\n"
-            return
-        while seen < len(q):
-            try:
-                line = q[seen]
+        for ev in job_store.read_events(job_id, offset=seen):
+            seen += 1
+            yield f"data: {json.dumps(ev)}\n\n"
+        meta = job_store.read_meta(job_id)
+        if meta is None:
+            if (time.time() - start) > JOB_NOT_FOUND_TIMEOUT:
+                yield 'data: {"type":"stream_done","error":"job_not_found"}\n\n'
+                return
+            time.sleep(0.3)
+            continue
+        if meta.get("status") in TERMINAL_STATUSES:
+            # Catch any events written just before the status flipped.
+            for ev in job_store.read_events(job_id, offset=seen):
                 seen += 1
-                yield f"data: {line}\n\n"
-            except IndexError:
-                break
-        time.sleep(0.2)
+                yield f"data: {json.dumps(ev)}\n\n"
+            if meta.get("status") == "interrupted":
+                yield "data: " + json.dumps({
+                    "type": "interrupted",
+                    "message": "Run was interrupted (the server restarted mid-run). "
+                               "Partial data may already be on OnWatch.",
+                    "checkpoint": meta.get("checkpoint"),
+                }) + "\n\n"
+            break
+        time.sleep(0.3)
+    yield 'data: {"type":"stream_done"}\n\n'
+
+
+def _stream_logs_generator(job_id):
+    """Yield log lines as SSE from the durable store until the job is terminal."""
+    seen = 0
+    start = time.time()
+    JOB_NOT_FOUND_TIMEOUT = 3.0
+    while True:
+        text = job_store.read_log(job_id)
+        lines = text.split("\n") if text else []
+        # Last element is a trailing empty string when text ends with newline.
+        available = len(lines) - 1 if lines and lines[-1] == "" else len(lines)
+        while seen < available:
+            yield f"data: {lines[seen]}\n\n"
+            seen += 1
+        meta = job_store.read_meta(job_id)
+        if meta is None:
+            if (time.time() - start) > JOB_NOT_FOUND_TIMEOUT:
+                yield "data: [DONE]\n\n"
+                return
+        elif meta.get("status") in TERMINAL_STATUSES:
+            break
+        time.sleep(0.3)
     yield "data: [DONE]\n\n"
 
 
@@ -376,7 +395,7 @@ def start_population():
     t = threading.Thread(
         target=run_population,
         args=(job_id, jobs, log_queues, progress_queues, jobs_lock),
-        kwargs={"user_name": user_name},
+        kwargs={"user_name": user_name, "target": {"ip": ip, "version": version}},
     )
     t.daemon = True
     t.start()
@@ -396,7 +415,11 @@ def start_validation():
             "error": "Set IP and Version before running validation. Use Config Status and click Set IP / Set Version."
         }), 400
     job_id = str(uuid.uuid4())
-    t = threading.Thread(target=run_validation, args=(job_id, export_file, jobs, log_queues, progress_queues, jobs_lock))
+    t = threading.Thread(
+        target=run_validation,
+        args=(job_id, export_file, jobs, log_queues, progress_queues, jobs_lock),
+        kwargs={"target": {"ip": ip, "version": version}},
+    )
     t.daemon = True
     t.start()
     return jsonify({"job_id": job_id})
@@ -432,9 +455,17 @@ def stream_logs(job_id):
 @_require_login
 def job_status(job_id):
     with jobs_lock:
-        job = jobs.get(job_id, {})
+        job = jobs.get(job_id)
     if not job:
-        return jsonify({"error": "Job not found"}), 404
+        # Fall back to the durable store (different worker, or after a restart).
+        meta = job_store.read_meta(job_id)
+        if not meta:
+            return jsonify({"error": "Job not found"}), 404
+        return jsonify({
+            "type": meta.get("type"),
+            "status": meta.get("status"),
+            "result": meta.get("result"),
+        })
     return jsonify({
         "type": job.get("type"),
         "status": job.get("status"),
@@ -442,13 +473,36 @@ def job_status(job_id):
     })
 
 
+def _job_summary(meta):
+    """Compact job view for the frontend to restore/reconnect after a reload."""
+    if not meta:
+        return None
+    return {
+        "job_id": meta.get("job_id"),
+        "type": meta.get("type"),
+        "status": meta.get("status"),
+        "started_at": meta.get("started_at"),
+        "target": meta.get("target"),
+        "checkpoint": meta.get("checkpoint"),
+        "result": meta.get("result"),
+    }
+
+
 @app.route("/api/jobs/active")
 @_require_login
 def active_jobs():
-    """Return whether any job is currently running (for disabling UI actions)."""
-    with jobs_lock:
-        running = [jid for jid, j in jobs.items() if j.get("status") == "running"]
-    return jsonify({"running": len(running) > 0, "job_ids": running})
+    """Report the currently running job (if any) and the most recent job.
+
+    The frontend uses this on page load to reconnect to an in-flight run or to
+    show the outcome of the last one, so refreshing the page never loses a run.
+    """
+    running = job_store.running_job()
+    latest = job_store.latest_job()
+    return jsonify({
+        "running": bool(running),
+        "running_job": _job_summary(running),
+        "latest_job": _job_summary(latest),
+    })
 
 
 # -----------------------------------------------------------------------------

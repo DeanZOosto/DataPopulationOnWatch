@@ -175,7 +175,7 @@ async function fetchExports() {
       : "<div class='exports-item'>No data inserted files found. Run population first.</div>";
 
     DOM.exportSelect().innerHTML =
-      '<option value="">-- Select data inserted file --</option>' + exports.map((e) => `<option value="${e.path}">${e.filename}</option>`).join("");
+      '<option value="">-- Select a saved snapshot --</option>' + exports.map((e) => `<option value="${e.path}">${e.filename}</option>`).join("");
 
     // Attach click handlers for file preview
     DOM.exportsList().querySelectorAll(".filename.preview-link").forEach((el) => {
@@ -316,6 +316,25 @@ function clearActionError() {
 // Progress event handlers — process SSE events and update UI
 // =============================================================================
 
+function stopStepTimer(ctx) {
+  if (ctx.tickTimer) {
+    clearInterval(ctx.tickTimer);
+    ctx.tickTimer = null;
+  }
+}
+
+function startStepTimer(ctx) {
+  stopStepTimer(ctx);
+  ctx.tickTimer = setInterval(() => {
+    if (!ctx.stepStart) return;
+    const elapsed = Math.floor((Date.now() - ctx.stepStart) / 1000);
+    const budget = ctx.stepTimeout ? ` / max ${ctx.stepTimeout}s` : "";
+    // A dedicated "elapsed" line reassures the operator a slow step (inquiry
+    // analysis, translation upload) is still working, not hung.
+    DOM.progressText().textContent = `${ctx.stepLabel} — running ${elapsed}s${budget}`;
+  }, 1000);
+}
+
 function handleProgressEvent(ev, jobType, ctx) {
   const { steps } = ctx;
 
@@ -324,12 +343,18 @@ function handleProgressEvent(ev, jobType, ctx) {
     const t = ctx.total || ev.step;
     steps.push({ num: ev.step, name: ev.name, status: "running" });
     DOM.progressBar().style.width = `${((ev.step - 1) / t) * 100}%`;
-    DOM.progressText().textContent = `Step ${ev.step}/${t}: ${ev.name}...`;
+    ctx.stepLabel = `Step ${ev.step}/${t}: ${ev.name}`;
+    ctx.stepStart = Date.now();
+    ctx.stepTimeout = ev.timeout || null;
+    DOM.progressText().textContent = `${ctx.stepLabel}...`;
+    startStepTimer(ctx);
     renderProgressSteps(steps);
     return;
   }
 
   if (ev.type === "step_done") {
+    stopStepTimer(ctx);
+    ctx.stepStart = null;
     const s = steps.find((x) => x.num === ev.step);
     if (s) s.status = ev.status;
     if (ev.total) ctx.total = ev.total;
@@ -374,7 +399,16 @@ function handleProgressEvent(ev, jobType, ctx) {
     return;
   }
 
+  if (ev.type === "interrupted") {
+    stopStepTimer(ctx);
+    DOM.progressText().textContent = "Run interrupted";
+    const cp = ev.checkpoint ? ` Partial data was checkpointed to <code>${escapeHtml(ev.checkpoint)}</code> — you can validate against it or re-run.` : "";
+    DOM.progressSummary().innerHTML = `<div class="summary-card failure">⚠️ ${escapeHtml(ev.message || "Run was interrupted.")}${cp}</div>`;
+    return;
+  }
+
   if (ev.type === "complete") {
+    stopStepTimer(ctx);
     DOM.progressBar().style.width = "100%";
     if (jobType === "population" && ev.run_status) {
       const rs = ev.run_status;
@@ -386,6 +420,8 @@ function handleProgressEvent(ev, jobType, ctx) {
         duration: ev.duration,
         export_path: ev.export_path,
         error: ev.error,
+        errors_count: ev.errors_count || 0,
+        errors: ev.errors || [],
         manual_checklist: ev.manual_checklist || [],
       };
       renderResults();
@@ -436,6 +472,7 @@ function streamProgress(jobId, jobType) {
     try {
       const ev = JSON.parse(e.data);
       if (ev.type === "stream_done") {
+        stopStepTimer(ctx);
         es.close();
         if (ev.error === "job_not_found") {
           DOM.progressSummary().innerHTML = `<div class="summary-card failure">Job not found (server may use multiple workers). Try again.</div>`;
@@ -451,6 +488,7 @@ function streamProgress(jobId, jobType) {
     } catch (_) {}
   };
   es.onerror = () => {
+    stopStepTimer(ctx);
     es.close();
     pollStatus(jobId, jobType);
     setActionsEnabled(true);
@@ -504,12 +542,25 @@ function renderResults() {
 }
 
 function buildPopulationResultCard(r) {
-  const status = r.success ? "success" : "failure";
   const rs = r.run_status || {};
+  const errorsCount = r.errors_count || 0;
+  const status = r.success ? "success" : "failure";
+  // Distinguish a clean run from one that finished but couldn't create some
+  // items (e.g. license-blocked cameras/inquiries) from an outright failure.
+  let heading;
+  if (r.success) {
+    heading = `Population: ✓ ${rs.successful_steps ?? "?"}/${rs.total_steps ?? "?"} steps`;
+  } else if (errorsCount > 0) {
+    heading = `Population: ⚠️ completed with ${errorsCount} issue${errorsCount === 1 ? "" : "s"} — ${rs.successful_steps ?? "?"}/${rs.total_steps ?? "?"} steps succeeded`;
+  } else {
+    heading = `Population: ✗ ${rs.successful_steps ?? "?"}/${rs.total_steps ?? "?"} steps`;
+  }
+  // Detailed errors stay in the live panel / run log; the card stays readable
+  // with the friendly manual checklist below (which names each affected item).
   return `<div class="result-card ${status}">
-    <h3>Population: ${r.success ? "✓" : "✗"} ${rs.successful_steps ?? "?"}/${rs.total_steps ?? "?"} steps</h3>
+    <h3>${heading}</h3>
     <div class="detail">${r.duration || ""} | Data inserted: ${r.export_path ? r.export_path.split("/").pop() : "—"}</div>
-    ${r.error ? `<div class="errors-list"><ul><li>${r.error}</li></ul></div>` : ""}
+    ${r.error ? `<div class="errors-list"><ul><li>${escapeHtml(r.error)}</li></ul></div>` : ""}
     ${(r.manual_checklist || []).length ? `<ul class="checklist">${(r.manual_checklist || []).map((c) => `<li>${escapeHtml(c)}</li>`).join("")}</ul>` : ""}
   </div>`;
 }
@@ -625,6 +676,40 @@ async function runValidation() {
 }
 
 // =============================================================================
+// Reconnect — restore an in-flight or most-recent run after a page reload
+// =============================================================================
+
+async function restoreActiveJob() {
+  // A run lives on the server, not in this tab. On load, reconnect to any
+  // in-flight run (the progress stream replays from the start) so refreshing
+  // the page, opening a second tab, or a brief disconnect never loses a run.
+  try {
+    const r = await fetch("/api/jobs/active", { credentials: "same-origin" });
+    if (redirectToLoginIfUnauthorized(r)) return;
+    const data = await r.json();
+    if (data.running && data.running_job) {
+      streamProgress(data.running_job.job_id, data.running_job.type);
+      return;
+    }
+    const last = data.latest_job;
+    if (last && last.status === "interrupted") {
+      DOM.progressSection().scrollIntoView({ behavior: "smooth", block: "start" });
+      const cp = last.checkpoint ? ` Partial data was checkpointed to <code>${escapeHtml(last.checkpoint)}</code> — you can validate against it or re-run.` : "";
+      DOM.progressSummary().innerHTML = `<div class="summary-card failure">⚠️ Your last run was interrupted (the server restarted mid-run). Partial data may already be on OnWatch.${cp}</div>`;
+      return;
+    }
+    if (last && last.result && (last.status === "done" || last.status === "error")) {
+      lastRunType = last.type;
+      if (last.type === "population") latestPopulationResult = last.result;
+      else latestValidationResult = last.result;
+      renderResults();
+    }
+  } catch (_) {
+    /* best-effort; a failed restore just leaves the page in its default state */
+  }
+}
+
+// =============================================================================
 // Init
 // =============================================================================
 
@@ -675,3 +760,4 @@ document.addEventListener("keydown", (e) => {
 fetchConfig();
 fetchExports();
 renderResults();
+restoreActiveJob();
