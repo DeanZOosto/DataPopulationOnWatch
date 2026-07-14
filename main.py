@@ -1406,6 +1406,7 @@ class OnWatchAutomation:
                     continue
                 
                 priority = inquiry_config.get('priority', 'Medium')  # Default to Medium if not specified
+                self._emit_progress({"type": "substep", "message": f"Preparing inquiry '{inquiry_name}'…"})
                 
                 # Check if case already exists before creating (prevent "case 2")
                 existing_cases = self.client_api.get_inquiry_cases()
@@ -1469,6 +1470,7 @@ class OnWatchAutomation:
                         
                         settings = file_config.get('settings', '')
                         filename = os.path.basename(file_path)
+                        self._emit_progress({"type": "substep", "message": f"Uploading {filename} ({idx + 1}/{len(files_config)}) to '{inquiry_name}'…"})
                         
                         # Parse settings - support both string (backward compatibility) and dict (new format)
                         custom_settings = None
@@ -1669,6 +1671,7 @@ class OnWatchAutomation:
                             # Explicitly start analysis for ALL files to ensure nothing is missed
                             # This ensures all 4 files start analyzing, even if some were already started
                             try:
+                                self._emit_progress({"type": "substep", "message": f"Starting analysis for {len(all_file_ids)} file(s)…"})
                                 logger.info(f"Starting analysis for all {len(all_file_ids)} file(s)...")
                                 
                                 # For files with custom settings, refresh their state first
@@ -1825,6 +1828,10 @@ class OnWatchAutomation:
                             for queued_file in final_files_by_status.get('QUEUED', []):
                                 logger.warning(f"     • {queued_file}")
                             logger.warning("→ MANUAL STEP: Open the inquiry in OnWatch UI → click each queued file → Start analysis")
+                            self.summary.add_warning(
+                                f"MANUAL CHECK REQUIRED: Inquiry '{inquiry_name}' left {final_queued} file(s) QUEUED on OnWatch "
+                                "(created but not analyzing). Open the inquiry in the UI and Start analysis for each queued file."
+                            )
                         if final_failed > 0:
                             logger.warning(f"→ {final_failed} file(s) failed analysis:")
                             for failed_file in final_files_by_status.get('ANALYSIS_FAILED', []):

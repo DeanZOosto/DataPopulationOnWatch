@@ -52,6 +52,123 @@ let latestValidationResult = null;
 let lastRunType = null; // "population" | "validation" — only show result for most recent run
 
 // =============================================================================
+// Micro-interactions — toasts, confetti, count-up, ripple
+// =============================================================================
+
+const prefersReducedMotion = () =>
+  window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function showToast(message, type = "info", timeout = 4200) {
+  const host = document.getElementById("toast-container");
+  if (!host) return;
+  const icon = { success: "✓", error: "✗", warning: "⚠️", info: "ℹ️" }[type] || "ℹ️";
+  const el = document.createElement("div");
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span class="toast-icon">${icon}</span><span class="toast-msg"></span>`;
+  el.querySelector(".toast-msg").textContent = message;
+  host.appendChild(el);
+  const remove = () => {
+    el.classList.add("leaving");
+    setTimeout(() => el.remove(), 320);
+  };
+  el.addEventListener("click", remove);
+  setTimeout(remove, timeout);
+}
+
+// Animate every [data-count] number inside a container from 0 to its target.
+function animateCounts(container) {
+  if (!container) return;
+  container.querySelectorAll("[data-count]").forEach((el) => {
+    const target = parseInt(el.dataset.count, 10);
+    if (isNaN(target)) return;
+    if (prefersReducedMotion()) {
+      el.textContent = String(target);
+      return;
+    }
+    const duration = 750;
+    const start = performance.now();
+    const tick = (now) => {
+      const p = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - p, 3); // easeOutCubic
+      el.textContent = String(Math.round(target * eased));
+      if (p < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
+}
+
+// Lightweight, dependency-free confetti burst for a fully successful run.
+function celebrate() {
+  if (prefersReducedMotion()) return;
+  let canvas = document.getElementById("confetti-canvas");
+  if (!canvas) {
+    canvas = document.createElement("canvas");
+    canvas.id = "confetti-canvas";
+    document.body.appendChild(canvas);
+  }
+  const ctx = canvas.getContext("2d");
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = window.innerWidth * dpr;
+  canvas.height = window.innerHeight * dpr;
+  ctx.scale(dpr, dpr);
+  const W = window.innerWidth;
+  const colors = ["#4a8ff7", "#2dd4bf", "#3fb950", "#7c5cff", "#f7c948"];
+  const parts = Array.from({ length: 140 }, () => ({
+    x: W / 2 + (Math.random() - 0.5) * 220,
+    y: window.innerHeight * 0.28,
+    vx: (Math.random() - 0.5) * 9,
+    vy: Math.random() * -11 - 4,
+    size: Math.random() * 7 + 4,
+    color: colors[(Math.random() * colors.length) | 0],
+    rot: Math.random() * Math.PI,
+    vr: (Math.random() - 0.5) * 0.3,
+    life: 1,
+  }));
+  const start = performance.now();
+  const draw = (now) => {
+    const elapsed = now - start;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    parts.forEach((p) => {
+      p.vy += 0.25; // gravity
+      p.x += p.vx;
+      p.y += p.vy;
+      p.rot += p.vr;
+      p.life = Math.max(0, 1 - elapsed / 2600);
+      ctx.save();
+      ctx.globalAlpha = p.life;
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
+      ctx.restore();
+    });
+    if (elapsed < 2600) requestAnimationFrame(draw);
+    else ctx.clearRect(0, 0, canvas.width, canvas.height);
+  };
+  requestAnimationFrame(draw);
+}
+
+// Material-style ripple on button presses.
+function attachRipples() {
+  document.querySelectorAll(".btn").forEach((btn) => {
+    if (btn.dataset.ripple) return;
+    btn.dataset.ripple = "1";
+    btn.addEventListener("click", (e) => {
+      if (prefersReducedMotion()) return;
+      const rect = btn.getBoundingClientRect();
+      const d = Math.max(rect.width, rect.height);
+      const r = document.createElement("span");
+      r.className = "ripple";
+      r.style.width = r.style.height = `${d}px`;
+      r.style.left = `${e.clientX - rect.left - d / 2}px`;
+      r.style.top = `${e.clientY - rect.top - d / 2}px`;
+      btn.appendChild(r);
+      setTimeout(() => r.remove(), 600);
+    });
+  });
+}
+
+// =============================================================================
 // Config
 // =============================================================================
 
@@ -91,6 +208,7 @@ function showConfigStatus(msg, isError = false) {
     el.textContent = "";
     el.className = "config-status-msg";
   }, 4000);
+  showToast(msg.replace(/^✓\s*/, ""), isError ? "error" : "success");
 }
 
 function clearConfigStatus() {
@@ -278,9 +396,17 @@ function setActionsEnabled(enabled) {
 }
 
 function renderProgressSteps(steps) {
-  const icon = (s) => (s.status === "success" ? "✓" : s.status === "failed" ? "✗" : s.status === "skipped" ? "⊘" : "⋯");
+  const icon = (s) => (s.status === "success" ? "✓" : s.status === "failed" ? "✗" : s.status === "skipped" ? "⊘" : "●");
   const cls = (s) => (s.status === "running" ? "running" : s.status);
-  DOM.progressSteps().innerHTML = steps.map((s) => `<div class="progress-step ${cls(s)}">${icon(s)} ${s.name}</div>`).join("");
+  DOM.progressSteps().innerHTML = steps
+    .map(
+      (s) =>
+        `<div class="progress-step ${cls(s)}"><span class="step-dot"></span><span class="step-icon">${icon(s)}</span><span class="step-name">${escapeHtml(s.name || "")}</span></div>`
+    )
+    .join("");
+  // Keep the active step in view as the timeline grows.
+  const running = DOM.progressSteps().querySelector(".progress-step.running");
+  if (running) running.scrollIntoView({ block: "nearest" });
 }
 
 function renderProgressWarnings(warnings) {
@@ -329,9 +455,11 @@ function startStepTimer(ctx) {
     if (!ctx.stepStart) return;
     const elapsed = Math.floor((Date.now() - ctx.stepStart) / 1000);
     const budget = ctx.stepTimeout ? ` / max ${ctx.stepTimeout}s` : "";
-    // A dedicated "elapsed" line reassures the operator a slow step (inquiry
-    // analysis, translation upload) is still working, not hung.
-    DOM.progressText().textContent = `${ctx.stepLabel} — running ${elapsed}s${budget}`;
+    const sub = ctx.subMessage ? ` · ${ctx.subMessage}` : "";
+    // A dedicated "elapsed" line (plus any sub-step message) reassures the
+    // operator a slow step (inquiry uploads/analysis, translation) is still
+    // working, not hung.
+    DOM.progressText().textContent = `${ctx.stepBase}${sub} — running ${elapsed}s${budget}`;
   }, 1000);
 }
 
@@ -343,18 +471,26 @@ function handleProgressEvent(ev, jobType, ctx) {
     const t = ctx.total || ev.step;
     steps.push({ num: ev.step, name: ev.name, status: "running" });
     DOM.progressBar().style.width = `${((ev.step - 1) / t) * 100}%`;
-    ctx.stepLabel = `Step ${ev.step}/${t}: ${ev.name}`;
+    ctx.stepBase = `Step ${ev.step}/${t}: ${ev.name}`;
+    ctx.subMessage = "";
     ctx.stepStart = Date.now();
     ctx.stepTimeout = ev.timeout || null;
-    DOM.progressText().textContent = `${ctx.stepLabel}...`;
+    DOM.progressText().textContent = `${ctx.stepBase}...`;
     startStepTimer(ctx);
     renderProgressSteps(steps);
+    return;
+  }
+
+  if (ev.type === "substep") {
+    // Fine-grained progress within a long step (e.g. per-file inquiry upload).
+    ctx.subMessage = (ev.message || "").trim();
     return;
   }
 
   if (ev.type === "step_done") {
     stopStepTimer(ctx);
     ctx.stepStart = null;
+    ctx.subMessage = "";
     const s = steps.find((x) => x.num === ev.step);
     if (s) s.status = ev.status;
     if (ev.total) ctx.total = ev.total;
@@ -410,6 +546,12 @@ function handleProgressEvent(ev, jobType, ctx) {
   if (ev.type === "complete") {
     stopStepTimer(ctx);
     DOM.progressBar().style.width = "100%";
+    if (ev.success) {
+      celebrate();
+      showToast(`${jobType === "validation" ? "Validation" : "Population"} completed successfully`, "success");
+    } else {
+      showToast(`${jobType === "validation" ? "Validation" : "Population"} finished with issues — see results`, "warning", 6000);
+    }
     if (jobType === "population" && ev.run_status) {
       const rs = ev.run_status;
       DOM.progressText().textContent = `Done: ${rs.successful_steps ?? 0}/${rs.total_steps ?? 0} steps | ${ev.duration || ""}`;
@@ -539,6 +681,7 @@ function renderResults() {
     </div>`;
   }
   DOM.resultsContent().innerHTML = html;
+  animateCounts(DOM.resultsContent());
 }
 
 function buildPopulationResultCard(r) {
@@ -557,9 +700,16 @@ function buildPopulationResultCard(r) {
   }
   // Detailed errors stay in the live panel / run log; the card stays readable
   // with the friendly manual checklist below (which names each affected item).
+  const stats = `<div class="result-stats">
+    <div class="stat-tile ok"><div class="stat-num" data-count="${rs.successful_steps ?? 0}">0</div><div class="stat-label">Steps done</div></div>
+    <div class="stat-tile ${errorsCount > 0 ? "issues" : ""}"><div class="stat-num" data-count="${errorsCount}">0</div><div class="stat-label">Issues</div></div>
+    <div class="stat-tile"><div class="stat-num" data-count="${rs.skipped_steps ?? 0}">0</div><div class="stat-label">Skipped</div></div>
+    <div class="stat-tile"><div class="stat-num-static">${escapeHtml(r.duration || "—")}</div><div class="stat-label">Duration</div></div>
+  </div>`;
   return `<div class="result-card ${status}">
     <h3>${heading}</h3>
-    <div class="detail">${r.duration || ""} | Data inserted: ${r.export_path ? r.export_path.split("/").pop() : "—"}</div>
+    ${stats}
+    <div class="detail">Data inserted: ${r.export_path ? escapeHtml(r.export_path.split("/").pop()) : "—"}</div>
     ${r.error ? `<div class="errors-list"><ul><li>${escapeHtml(r.error)}</li></ul></div>` : ""}
     ${(r.manual_checklist || []).length ? `<ul class="checklist">${(r.manual_checklist || []).map((c) => `<li>${escapeHtml(c)}</li>`).join("")}</ul>` : ""}
   </div>`;
@@ -567,12 +717,18 @@ function buildPopulationResultCard(r) {
 
 function buildValidationResultCard(r) {
   const status = r.success ? "success" : "failure";
+  const stats = `<div class="result-stats">
+    <div class="stat-tile ok"><div class="stat-num" data-count="${r.passed ?? 0}">0</div><div class="stat-label">Passed</div></div>
+    <div class="stat-tile ${(r.failed ?? 0) > 0 ? "bad" : ""}"><div class="stat-num" data-count="${r.failed ?? 0}">0</div><div class="stat-label">Failed</div></div>
+    <div class="stat-tile"><div class="stat-num" data-count="${r.validated ?? 0}">0</div><div class="stat-label">Checked</div></div>
+  </div>`;
   return `<div class="result-card ${status}">
-    <h3>Validation: ${r.success ? "✓" : "✗"} Passed ${r.passed ?? 0} | Failed ${r.failed ?? 0}</h3>
-    <div class="detail">Acknowledged: ${(r.acknowledged || []).map((a) => a[0]).join(", ") || "—"}</div>
-    ${(r.errors || []).length ? `<div class="errors-list"><ul>${(r.errors || []).map((e) => `<li>${e}</li>`).join("")}</ul></div>` : ""}
-    ${(r.manual_checklist || []).length ? `<ul class="checklist">${(r.manual_checklist || []).map((c) => `<li>${c}</li>`).join("")}</ul>` : ""}
-    ${r.error ? `<div class="errors-list"><ul><li>${r.error}</li></ul></div>` : ""}
+    <h3>Validation: ${r.success ? "✓ Data survived the upgrade" : "✗ Discrepancies found"}</h3>
+    ${stats}
+    <div class="detail">Acknowledged: ${escapeHtml((r.acknowledged || []).map((a) => a[0]).join(", ") || "—")}</div>
+    ${(r.errors || []).length ? `<div class="errors-list"><ul>${(r.errors || []).map((e) => `<li>${escapeHtml(e)}</li>`).join("")}</ul></div>` : ""}
+    ${(r.manual_checklist || []).length ? `<ul class="checklist">${(r.manual_checklist || []).map((c) => `<li>${escapeHtml(c)}</li>`).join("")}</ul>` : ""}
+    ${r.error ? `<div class="errors-list"><ul><li>${escapeHtml(r.error)}</li></ul></div>` : ""}
   </div>`;
 }
 
@@ -625,6 +781,7 @@ async function runPopulation() {
     const data = await r.json();
     if (data.job_id) {
       clearConfigStatus();
+      showToast(`Population started on ${target.ip} (${target.version})`, "info");
       streamProgress(data.job_id, "population");
     } else {
       const errMsg = data.error || "Unknown error";
@@ -664,6 +821,7 @@ async function runValidation() {
     const data = await r.json();
     if (data.job_id) {
       clearConfigStatus();
+      showToast("Validation started", "info");
       streamProgress(data.job_id, "validation");
     } else {
       const errMsg = data.error || "Unknown error";
@@ -757,6 +915,7 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && !DOM.previewModal().classList.contains("hidden")) hidePreviewModal();
 });
 
+attachRipples();
 fetchConfig();
 fetchExports();
 renderResults();

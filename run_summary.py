@@ -135,8 +135,11 @@ class RunSummary:
                 "MANUAL CHECK REQUIRED: Rancher env vars – Please confirm in Rancher UI (workload environment) that they match your config/export."
             )
         if self.created_items.get('cameras'):
+            cam_count = len(self.created_items.get('cameras') or [])
             items.append(
-                "MANUAL CHECK REQUIRED: Remember to disable streams before running the upgrade to have a steady state of alerts to remember."
+                f"MANUAL ACTION REQUIRED: {cam_count} camera(s) were created and are left LIVE and CONNECTED. "
+                "You are responsible for DISABLING these streams before running the upgrade, so alerts reach a "
+                "steady state you can validate against afterwards."
             )
         for w in self.warnings:
             if 'manual' in w.lower():
@@ -284,7 +287,8 @@ class RunSummary:
         if cameras_list:
             logger.warning("")
             logger.warning("⚠️  IMPORTANT – DO NOT SKIP:")
-            logger.warning("   Remember to disable streams before running the upgrade to have a steady state of alerts to remember.")
+            logger.warning("   %d camera(s) are left LIVE and CONNECTED. Disable these streams before running the", len(cameras_list))
+            logger.warning("   upgrade so alerts reach a steady state you can validate against afterwards.")
             logger.warning("")
         
         # Final status
