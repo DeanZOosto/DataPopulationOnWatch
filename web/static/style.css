@@ -893,6 +893,119 @@ section:hover {
 /* Confetti canvas */
 #confetti-canvas { position: fixed; inset: 0; z-index: 2500; pointer-events: none; }
 
+/* ==========================================================================
+   Workflow stepper — orients the (often infrequent) operator in the 4-phase
+   journey. Purely presentational; phase is set from run state in app.js.
+   ========================================================================== */
+.workflow {
+  margin: 0 0 1.25rem 0;
+  padding: 0.9rem 1.25rem;
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(37, 43, 51, 0.92), rgba(31, 37, 44, 0.86));
+  backdrop-filter: blur(8px) saturate(1.1);
+  -webkit-backdrop-filter: blur(8px) saturate(1.1);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  animation: cardIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.wf-steps {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.wf-step {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 1 1 0;
+  min-width: 0;
+}
+/* Connector line from this step's dot toward the next step. */
+.wf-step:not(:last-child)::after {
+  content: "";
+  flex: 1 1 auto;
+  height: 2px;
+  min-width: 12px;
+  margin: 0 0.25rem;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.12);
+  transition: background 0.3s ease;
+}
+.wf-dot {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: "Outfit", "Inter", sans-serif;
+  background: var(--bg-input);
+  color: var(--text-muted);
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  transition: all 0.3s ease;
+}
+.wf-text { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
+.wf-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.3s ease;
+}
+.wf-hint {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  opacity: 0.65;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Upcoming (default) is muted; done/current/issues light up.
+   Done/issues dots hide their number (font-size:0) and show a glyph via ::after. */
+.wf-step.is-done .wf-dot {
+  background: var(--success);
+  border-color: var(--success);
+  color: #0b1f13;
+  font-size: 0;
+}
+.wf-step.is-done .wf-dot::after { content: "✓"; font-size: 0.85rem; }
+.wf-step.is-done .wf-label { color: var(--text); }
+.wf-step.is-done:not(:last-child)::after { background: rgba(63, 185, 80, 0.55); }
+
+.wf-step.is-current .wf-dot {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  box-shadow: 0 0 0 0 rgba(74, 143, 247, 0.6);
+  animation: livePulse 1.8s infinite;
+}
+.wf-step.is-current .wf-label { color: var(--text); }
+.wf-step.is-current .wf-hint { opacity: 0.85; color: var(--accent); }
+
+.wf-step.is-issues .wf-dot {
+  background: var(--warning);
+  border-color: var(--warning);
+  color: #241a02;
+  font-size: 0;
+  animation: none;
+}
+.wf-step.is-issues .wf-dot::after { content: "!"; font-size: 0.9rem; font-weight: 700; }
+.wf-step.is-issues .wf-label { color: var(--text); }
+
+@media (max-width: 720px) {
+  .wf-hint { display: none; }
+  .wf-label { font-size: 0.78rem; }
+}
+
 /* Respect users who prefer reduced motion — keep it usable, drop the motion. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

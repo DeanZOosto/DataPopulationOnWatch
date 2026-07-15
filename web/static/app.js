@@ -113,12 +113,15 @@ function celebrate() {
   ctx.scale(dpr, dpr);
   const W = window.innerWidth;
   const colors = ["#4a8ff7", "#2dd4bf", "#3fb950", "#7c5cff", "#f7c948"];
-  const parts = Array.from({ length: 140 }, () => ({
-    x: W / 2 + (Math.random() - 0.5) * 220,
-    y: window.innerHeight * 0.28,
-    vx: (Math.random() - 0.5) * 9,
-    vy: Math.random() * -11 - 4,
-    size: Math.random() * 7 + 4,
+  // Deliberately restrained: a brief, small flourish rather than a full-screen
+  // shower — this tool is often driven in front of a customer.
+  const DURATION = 1500;
+  const parts = Array.from({ length: 55 }, () => ({
+    x: W / 2 + (Math.random() - 0.5) * 140,
+    y: window.innerHeight * 0.3,
+    vx: (Math.random() - 0.5) * 6,
+    vy: Math.random() * -8 - 3,
+    size: Math.random() * 5 + 3,
     color: colors[(Math.random() * colors.length) | 0],
     rot: Math.random() * Math.PI,
     vr: (Math.random() - 0.5) * 0.3,
@@ -129,23 +132,49 @@ function celebrate() {
     const elapsed = now - start;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     parts.forEach((p) => {
-      p.vy += 0.25; // gravity
+      p.vy += 0.22; // gravity
       p.x += p.vx;
       p.y += p.vy;
       p.rot += p.vr;
-      p.life = Math.max(0, 1 - elapsed / 2600);
+      p.life = Math.max(0, 1 - elapsed / DURATION);
       ctx.save();
-      ctx.globalAlpha = p.life;
+      ctx.globalAlpha = p.life * 0.85;
       ctx.translate(p.x, p.y);
       ctx.rotate(p.rot);
       ctx.fillStyle = p.color;
       ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
       ctx.restore();
     });
-    if (elapsed < 2600) requestAnimationFrame(draw);
+    if (elapsed < DURATION) requestAnimationFrame(draw);
     else ctx.clearRect(0, 0, canvas.width, canvas.height);
   };
   requestAnimationFrame(draw);
+}
+
+// Workflow stepper — orient the operator in the 4-phase journey. This is a
+// coarse orientation aid driven from run state, NOT a precise state machine:
+// phase 3 ("Upgrade OnWatch") happens outside this tool, so we can only mark it
+// as the *next* thing after a population finishes.
+const WF_ORDER = ["configure", "populate", "upgrade", "validate"];
+function setWorkflowPhase(phase, { done = false, issuesPhase = null } = {}) {
+  const nav = document.getElementById("workflow");
+  if (!nav) return;
+  const curIdx = WF_ORDER.indexOf(phase);
+  if (curIdx < 0) return;
+  nav.querySelectorAll(".wf-step").forEach((el) => {
+    const idx = WF_ORDER.indexOf(el.dataset.phase);
+    el.classList.remove("is-current", "is-done", "is-upcoming", "is-issues");
+    if (idx < curIdx) el.classList.add("is-done");
+    else if (idx === curIdx) el.classList.add(done ? "is-done" : "is-current");
+    else el.classList.add("is-upcoming");
+  });
+  if (issuesPhase) {
+    const el = nav.querySelector(`.wf-step[data-phase="${issuesPhase}"]`);
+    if (el) {
+      el.classList.remove("is-done", "is-current", "is-upcoming");
+      el.classList.add("is-issues");
+    }
+  }
 }
 
 // Material-style ripple on button presses.
@@ -540,6 +569,9 @@ function handleProgressEvent(ev, jobType, ctx) {
     DOM.progressText().textContent = "Run interrupted";
     const cp = ev.checkpoint ? ` Partial data was checkpointed to <code>${escapeHtml(ev.checkpoint)}</code> — you can validate against it or re-run.` : "";
     DOM.progressSummary().innerHTML = `<div class="summary-card failure">⚠️ ${escapeHtml(ev.message || "Run was interrupted.")}${cp}</div>`;
+    setWorkflowPhase(jobType === "validation" ? "validate" : "populate", {
+      issuesPhase: jobType === "validation" ? "validate" : "populate",
+    });
     return;
   }
 
@@ -568,6 +600,9 @@ function handleProgressEvent(ev, jobType, ctx) {
       };
       renderResults();
       scrollToResults();
+      // Population finished — the operator's next step is the OnWatch upgrade
+      // (done outside this tool), so advance the stepper to phase 3.
+      setWorkflowPhase("upgrade", ev.success ? {} : { issuesPhase: "populate" });
     }
     if (jobType === "validation" && ev.passed !== undefined) {
       DOM.progressText().textContent = `Done: ${ev.passed} passed, ${ev.failed} failed`;
@@ -584,6 +619,7 @@ function handleProgressEvent(ev, jobType, ctx) {
       };
       renderResults();
       scrollToResults();
+      setWorkflowPhase("validate", { done: true, issuesPhase: ev.success ? null : "validate" });
     }
   }
 }
@@ -782,6 +818,7 @@ async function runPopulation() {
     if (data.job_id) {
       clearConfigStatus();
       showToast(`Population started on ${target.ip} (${target.version})`, "info");
+      setWorkflowPhase("populate");
       streamProgress(data.job_id, "population");
     } else {
       const errMsg = data.error || "Unknown error";
@@ -822,6 +859,7 @@ async function runValidation() {
     if (data.job_id) {
       clearConfigStatus();
       showToast("Validation started", "info");
+      setWorkflowPhase("validate");
       streamProgress(data.job_id, "validation");
     } else {
       const errMsg = data.error || "Unknown error";
@@ -846,6 +884,7 @@ async function restoreActiveJob() {
     if (redirectToLoginIfUnauthorized(r)) return;
     const data = await r.json();
     if (data.running && data.running_job) {
+      setWorkflowPhase(data.running_job.type === "validation" ? "validate" : "populate");
       streamProgress(data.running_job.job_id, data.running_job.type);
       return;
     }
@@ -854,12 +893,20 @@ async function restoreActiveJob() {
       DOM.progressSection().scrollIntoView({ behavior: "smooth", block: "start" });
       const cp = last.checkpoint ? ` Partial data was checkpointed to <code>${escapeHtml(last.checkpoint)}</code> — you can validate against it or re-run.` : "";
       DOM.progressSummary().innerHTML = `<div class="summary-card failure">⚠️ Your last run was interrupted (the server restarted mid-run). Partial data may already be on OnWatch.${cp}</div>`;
+      setWorkflowPhase(last.type === "validation" ? "validate" : "populate", {
+        issuesPhase: last.type === "validation" ? "validate" : "populate",
+      });
       return;
     }
     if (last && last.result && (last.status === "done" || last.status === "error")) {
       lastRunType = last.type;
-      if (last.type === "population") latestPopulationResult = last.result;
-      else latestValidationResult = last.result;
+      if (last.type === "population") {
+        latestPopulationResult = last.result;
+        setWorkflowPhase("upgrade", last.result.success ? {} : { issuesPhase: "populate" });
+      } else {
+        latestValidationResult = last.result;
+        setWorkflowPhase("validate", { done: true, issuesPhase: last.result.success ? null : "validate" });
+      }
       renderResults();
     }
   } catch (_) {
@@ -916,6 +963,7 @@ document.addEventListener("keydown", (e) => {
 });
 
 attachRipples();
+setWorkflowPhase("configure");
 fetchConfig();
 fetchExports();
 renderResults();

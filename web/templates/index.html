@@ -26,6 +26,27 @@
     </div>
   </header>
 
+  <nav class="workflow" id="workflow" aria-label="Upgrade workflow">
+    <ol class="wf-steps">
+      <li class="wf-step" data-phase="configure">
+        <span class="wf-dot">1</span>
+        <span class="wf-text"><span class="wf-label">Configure target</span><span class="wf-hint">IP &amp; version</span></span>
+      </li>
+      <li class="wf-step" data-phase="populate">
+        <span class="wf-dot">2</span>
+        <span class="wf-text"><span class="wf-label">Populate</span><span class="wf-hint">write data + snapshot</span></span>
+      </li>
+      <li class="wf-step" data-phase="upgrade">
+        <span class="wf-dot">3</span>
+        <span class="wf-text"><span class="wf-label">Upgrade OnWatch</span><span class="wf-hint">done in OnWatch, not here</span></span>
+      </li>
+      <li class="wf-step" data-phase="validate">
+        <span class="wf-dot">4</span>
+        <span class="wf-text"><span class="wf-label">Validate</span><span class="wf-hint">confirm data survived</span></span>
+      </li>
+    </ol>
+  </nav>
+
   <section class="guidance" id="guidance-section">
     <h2>
       <button type="button" id="guidance-toggle" class="guidance-toggle" aria-expanded="false">
